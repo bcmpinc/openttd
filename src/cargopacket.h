@@ -134,6 +134,8 @@ public:
 	{
 		return this->days_in_transit;
 	}
+	
+	void ResetTransitDays(); 
 
 	/**
 	 * Gets the type of the cargo's source. industry, town or head quarter.

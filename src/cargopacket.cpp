@@ -81,6 +81,11 @@ CargoPacket::CargoPacket(uint16 count, byte days_in_transit, StationID source, T
 	this->source_type = source_type;
 }
 
+void CargoPacket::ResetTransitDays()
+{
+	this->days_in_transit = 0x00;
+}
+
 /**
  * Split this packet in two and return the split off part.
  * @param new_size Size of the split part.
