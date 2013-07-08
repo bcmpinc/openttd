@@ -44,6 +44,7 @@
 #include "waypoint_func.h"
 #include "window_func.h"
 #include "tilehighlight_func.h"
+#include "clipboard_gui.h"
 #include "window_gui.h"
 #include "linkgraph/linkgraph_gui.h"
 
@@ -902,6 +903,32 @@ static void DrawTileSelectionRect(const TileInfo *ti, PaletteID pal)
 	DrawSelectionSprite(sel, pal, ti, 7, FOUNDATION_PART_NORMAL);
 }
 
+/**
+ * Draws a selection point on a tile.
+ *
+ * @param ti TileInfo Tile that is being drawn
+ * @param pal Palette to apply.
+ */
+static void DrawPointSelection(const TileInfo *ti, PaletteID pal)
+{
+	/* Figure out the Z coordinate for the single dot. */
+	int z = 0;
+	FoundationPart foundation_part = FOUNDATION_PART_NORMAL;
+	if (ti->tileh & SLOPE_N) {
+		z += TILE_HEIGHT;
+		if (RemoveHalftileSlope(ti->tileh) == SLOPE_STEEP_N) z += TILE_HEIGHT;
+	}
+	if (IsHalftileSlope(ti->tileh)) {
+		Corner halftile_corner = GetHalftileSlopeCorner(ti->tileh);
+		if ((halftile_corner == CORNER_W) || (halftile_corner == CORNER_E)) z += TILE_HEIGHT;
+		if (halftile_corner != CORNER_S) {
+			foundation_part = FOUNDATION_PART_HALFTILE;
+			if (IsSteepSlope(ti->tileh)) z -= TILE_HEIGHT;
+		}
+	}
+	DrawSelectionSprite(_cur_dpi->zoom <= ZOOM_LVL_DETAIL ? SPR_DOT : SPR_DOT_SMALL, pal, ti, z, foundation_part);
+}
+
 static bool IsPartOfAutoLine(int px, int py)
 {
 	px -= _thd.selstart.x;
@@ -969,6 +996,31 @@ static void DrawAutorailSelection(const TileInfo *ti, uint autorail_type)
 	DrawSelectionSprite(image, _thd.make_square_red ? PALETTE_SEL_TILE_RED : pal, ti, 7, foundation_part);
 }
 
+static void DrawPastePreviewSelection(const TileInfo *ti, bool is_redsq)
+{
+	TilePastePreview tile_preview;
+	GetTilePastePreview(ti->tile, &tile_preview);
+
+	/* draw tile rectangle */
+	if (!is_redsq && tile_preview.highlight_tile_rect) DrawTileSelectionRect(ti, PAL_NONE);
+
+	/* draw tracks */
+	Track t;
+	FOR_EACH_SET_TRACK(t, tile_preview.highlight_track_bits) DrawAutorailSelection(ti, t);
+
+	/* draw height point */
+	PaletteID pal;
+	int height_diff = tile_preview.tile_height - TileHeight(ti->tile);
+	if (height_diff > 0) {
+		pal = PALETTE_SEL_TILE_RED; // target height is grater then current
+	} else if (height_diff < 0) {
+		pal = PALETTE_SEL_TILE_BLUE; // target height is lower then current
+	} else {
+		pal = PAL_NONE; // target and current height is the same
+	}
+	DrawPointSelection(ti, pal);
+}
+
 /**
  * Checks if the specified tile is selected and if so draws selection using correct selectionstyle.
  * @param *ti TileInfo Tile that is being drawn
@@ -994,22 +1046,11 @@ draw_inner:
 		if (_thd.drawstyle & HT_RECT) {
 			if (!is_redsq) DrawTileSelectionRect(ti, _thd.make_square_red ? PALETTE_SEL_TILE_RED : PAL_NONE);
 		} else if (_thd.drawstyle & HT_POINT) {
-			/* Figure out the Z coordinate for the single dot. */
-			int z = 0;
-			FoundationPart foundation_part = FOUNDATION_PART_NORMAL;
-			if (ti->tileh & SLOPE_N) {
-				z += TILE_HEIGHT;
-				if (RemoveHalftileSlope(ti->tileh) == SLOPE_STEEP_N) z += TILE_HEIGHT;
+			if (_thd.place_mode & HT_PASTE_PREVIEW) {
+				DrawPastePreviewSelection(ti, is_redsq);
+			} else {
+				DrawPointSelection(ti, PAL_NONE);
 			}
-			if (IsHalftileSlope(ti->tileh)) {
-				Corner halftile_corner = GetHalftileSlopeCorner(ti->tileh);
-				if ((halftile_corner == CORNER_W) || (halftile_corner == CORNER_E)) z += TILE_HEIGHT;
-				if (halftile_corner != CORNER_S) {
-					foundation_part = FOUNDATION_PART_HALFTILE;
-					if (IsSteepSlope(ti->tileh)) z -= TILE_HEIGHT;
-				}
-			}
-			DrawSelectionSprite(_cur_dpi->zoom <= ZOOM_LVL_DETAIL ? SPR_DOT : SPR_DOT_SMALL, PAL_NONE, ti, z, foundation_part);
 		} else if (_thd.drawstyle & HT_RAIL) {
 			/* autorail highlight piece under cursor */
 			HighLightStyle type = _thd.drawstyle & HT_DIR_MASK;
@@ -1953,7 +1994,7 @@ static void PlaceObject()
 	pt = GetTileBelowCursor();
 	if (pt.x == -1) return;
 
-	if ((_thd.place_mode & HT_DRAG_MASK) == HT_POINT) {
+	if ((_thd.place_mode & HT_DRAG_MASK) == HT_POINT && !(_thd.place_mode & HT_PASTE_PREVIEW)) {
 		pt.x += TILE_SIZE / 2;
 		pt.y += TILE_SIZE / 2;
 	}
@@ -2189,8 +2230,10 @@ void UpdateTileSelection()
 					break;
 				case HT_POINT:
 					new_drawstyle = HT_POINT;
-					x1 += TILE_SIZE / 2;
-					y1 += TILE_SIZE / 2;
+					if (!(_thd.place_mode & HT_PASTE_PREVIEW)) {
+						x1 += TILE_SIZE / 2;
+						y1 += TILE_SIZE / 2;
+					}
 					break;
 				case HT_RAIL:
 					/* Draw one highlighted tile in any direction */
@@ -2932,6 +2975,19 @@ EventState VpHandlePlaceSizingDrag()
 	w->OnPlaceMouseUp(_thd.select_method, _thd.select_proc, _thd.selend, TileVirtXY(_thd.selstart.x, _thd.selstart.y), TileVirtXY(_thd.selend.x, _thd.selend.y));
 
 	return ES_HANDLED;
+}
+
+extern EventState VpHandleMouseWheel(int mousewheel)
+{
+	EventState ret = ES_NOT_HANDLED;
+
+	Window *w = _thd.GetCallbackWnd();
+	if (w != NULL) {
+		ret = w->OnPlaceMouseWheel(GetTileBelowCursor(), mousewheel);
+		if (ret == ES_HANDLED) SetSelectionTilesDirty();
+	}
+
+	return ret;
 }
 
 void SetObjectToPlaceWnd(CursorID icon, PaletteID pal, HighLightStyle mode, Window *w)

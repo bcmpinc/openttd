@@ -13,6 +13,8 @@
 
 #include "cmd_helper.h"
 #include "command_func.h"
+#include "copypaste_cmd.h"
+#include "clipboard_func.h"
 #include "landscape.h"
 #include "bridge_map.h"
 #include "town.h"
@@ -142,10 +144,15 @@ extern CommandCost CanExpandRailStation(const BaseStation *st, TileArea &new_ta,
 
 /**
  * Convert existing rail to waypoint. Eg build a waypoint station over
- * piece of rail
+ * piece of rail.
+ *
+ *  When pasteing a waypoint (DC_PASTE) and there is no
+ * "suitable track" then the command is obligated to build one.
+ *
  * @param start_tile northern most tile where waypoint will be built
  * @param flags type of operation
  * @param p1 various bitstuffed elements
+ * - p1 = (bit  0-3)  - rail type (DC_PASTE only)
  * - p1 = (bit  4)    - orientation (Axis)
  * - p1 = (bit  8-15) - width of waypoint
  * - p1 = (bit 16-23) - height of waypoint
@@ -159,6 +166,7 @@ extern CommandCost CanExpandRailStation(const BaseStation *st, TileArea &new_ta,
 CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
 {
 	/* Unpack parameters */
+	RailType rt    = Extract<RailType, 0, 4>(p1); // DC_PASTE only
 	Axis axis      = Extract<Axis, 4, 1>(p1);
 	byte width     = GB(p1,  8, 8);
 	byte height    = GB(p1, 16, 8);
@@ -167,6 +175,8 @@ CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint
 	StationClassID spec_class = Extract<StationClassID, 0, 8>(p2);
 	byte spec_index           = GB(p2, 8, 8);
 	StationID station_to_join = GB(p2, 16, 16);
+
+	if ((flags & DC_PASTE) && !ValParamRailtype(rt)) return CMD_ERROR;
 
 	/* Check if the given station class is valid */
 	if (spec_class != STAT_CLASS_WAYP) return CMD_ERROR;
@@ -180,18 +190,25 @@ CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint
 
 	bool reuse = (station_to_join != NEW_STATION);
 	if (!reuse) station_to_join = INVALID_STATION;
-	bool distant_join = (station_to_join != INVALID_STATION);
 
-	if (distant_join && (!_settings_game.station.distant_join_stations || !Waypoint::IsValidID(station_to_join))) return CMD_ERROR;
+	if (station_to_join != INVALID_STATION && !Waypoint::IsValidID(station_to_join)) return CMD_ERROR;
 
 	/* Make sure the area below consists of clear tiles. (OR tiles belonging to a certain rail station) */
 	StationID est = INVALID_STATION;
 
-	/* Check whether the tiles we're building on are valid rail or not. */
+	CommandCost cost(EXPENSES_CONSTRUCTION);
+
+	/* Check whether the tiles we're building on are valid for the waypoint. */
 	TileIndexDiff offset = TileOffsByDiagDir(AxisToDiagDir(OtherAxis(axis)));
 	for (int i = 0; i < count; i++) {
 		TileIndex tile = start_tile + i * offset;
 		CommandCost ret = IsValidTileForWaypoint(tile, axis, &est);
+		if (ret.Failed() && (flags & DC_PASTE)) {
+			/* place a rail track if not present already */
+			ret = DoCommand(tile, 0, 0, DC_AUTO, CMD_LANDSCAPE_CLEAR);
+			if (ret.Succeeded()) ret = DoCommand(tile, rt, AxisToTrack(axis), flags, CMD_BUILD_SINGLE_RAIL);
+			if (ret.Succeeded()) cost.AddCost(ret);
+		}
 		if (ret.Failed()) return ret;
 	}
 
@@ -228,7 +245,7 @@ CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint
 			/* Move existing (recently deleted) waypoint to the new location */
 			wp->xy = start_tile;
 		}
-		wp->owner = GetTileOwner(start_tile);
+		wp->owner = _current_company;
 
 		wp->rect.BeforeAddRect(start_tile, width, height, StationRect::ADD_TRY);
 
@@ -272,7 +289,8 @@ CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint
 		DirtyCompanyInfrastructureWindows(wp->owner);
 	}
 
-	return CommandCost(EXPENSES_CONSTRUCTION, count * _price[PR_BUILD_WAYPOINT_RAIL]);
+	cost.AddCost(count * _price[PR_BUILD_WAYPOINT_RAIL]);
+	return cost;
 }
 
 /**
@@ -286,7 +304,18 @@ CommandCost CmdBuildRailWaypoint(TileIndex start_tile, DoCommandFlag flags, uint
  */
 CommandCost CmdBuildBuoy(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
 {
-	if (tile == 0 || !HasTileWaterGround(tile)) return_cmd_error(STR_ERROR_SITE_UNSUITABLE);
+	if (tile == 0) return_cmd_error(STR_ERROR_SITE_UNSUITABLE);
+
+	WaterClass wc;
+	if ((flags & DC_PASTE) && !(flags & DC_EXEC)) {
+		/* When pasting a buoy, there may be no water yet (a canal will be placed when DC_EXE'ing).
+		 * Ignore that there is no water so we can calculate the cost more precisely. */
+		wc = WATER_CLASS_INVALID;
+	} else {
+		if (!HasTileWaterGround(tile)) return_cmd_error(STR_ERROR_SITE_UNSUITABLE);
+		wc = GetWaterClass(tile);
+	}
+
 	if (MayHaveBridgeAbove(tile) && IsBridgeAbove(tile)) return_cmd_error(STR_ERROR_MUST_DEMOLISH_BRIDGE_FIRST);
 
 	if (GetTileSlope(tile) != SLOPE_FLAT) return_cmd_error(STR_ERROR_SITE_UNSUITABLE);
@@ -321,7 +350,8 @@ CommandCost CmdBuildBuoy(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 
 		if (wp->town == NULL) MakeDefaultName(wp);
 
-		MakeBuoy(tile, wp->index, GetWaterClass(tile));
+		assert(wc != WATER_CLASS_INVALID);
+		MakeBuoy(tile, wp->index, wc);
 
 		wp->UpdateVirtCoord();
 		InvalidateWindowData(WC_WAYPOINT_VIEW, wp->index);
@@ -419,4 +449,45 @@ CommandCost CmdRenameWaypoint(TileIndex tile, DoCommandFlag flags, uint32 p1, ui
 		wp->UpdateVirtCoord();
 	}
 	return CommandCost();
+}
+
+extern ClipboardStationsBuilder _clipboard_stations_builder;
+
+void CopyPastePlaceRailWaypoint(GenericTileIndex tile, StationID sid, Axis axis, byte gfx, StationClassID spec_class, byte spec_index, RailType rt, bool adjacent)
+{
+	if (IsMainMapTile(tile)) {
+		TileIndex t = AsMainMapTile(tile);
+		/* build the waypoint */
+		uint32 p1 = 0;
+		SB(p1, 0, 4, rt);
+		SB(p1, 4, 1, axis);
+		SB(p1, 8, 8, 1);  // width
+		SB(p1, 16, 8, 1); // height
+		SB(p1, 24, 1, adjacent);
+		uint32 p2 = 0;
+		SB(p2, 0, 8, spec_class);
+		SB(p2, 8, 8, spec_index);
+		SB(p2, 16, 16, sid);
+		_current_pasting->DoCommand(t, p1, p2, CMD_BUILD_RAIL_WAYPOINT | CMD_MSG(STR_ERROR_CAN_T_BUILD_TRAIN_WAYPOINT));
+	} else {
+		MakeRailWaypoint(tile, OWNER_NONE, sid, axis, gfx - axis, rt);
+		byte custom_specindex = _clipboard_stations_builder.AddWaypointTile(tile, sid, spec_class, spec_index);
+		SetCustomStationSpecIndex(tile, custom_specindex);
+	}
+}
+
+void CopyPastePlaceBuoy(GenericTileIndex tile, StationID sid, WaterClass wc)
+{
+	if (IsMainMapTile(tile)) {
+		TileIndex t = AsMainMapTile(tile);
+		/* build a piece of canal if not on water */
+		if (!HasTileWaterGround(t)) CopyPastePlaceCannal(tile);
+		if (_current_pasting->IsInterrupted()) return;
+		/* build the buoy */
+		_current_pasting->DoCommand(t, 0, 0, CMD_BUILD_BUOY | CMD_MSG(STR_ERROR_CAN_T_POSITION_BUOY_HERE));
+	} else {
+		SetTileOwner(tile, OWNER_NONE);
+		MakeBuoy(tile, sid, wc);
+		_clipboard_stations_builder.AddBuoyTile(tile, sid);
+	}
 }

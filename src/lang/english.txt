@@ -442,6 +442,7 @@ STR_AIRCRAFT_MENU_AIRPORT_CONSTRUCTION                          :Airport constru
 
 ############ range for landscaping menu starts
 STR_LANDSCAPING_MENU_LANDSCAPING                                :Landscaping
+STR_LANDSCAPING_MENU_CLIPBOARD                                  :Clipboard
 STR_LANDSCAPING_MENU_PLANT_TREES                                :Plant trees
 STR_LANDSCAPING_MENU_PLACE_SIGN                                 :Place sign
 ############ range ends here
@@ -2345,6 +2346,27 @@ STR_BRIDGE_NAME_CONCRETE                                        :Concrete
 STR_BRIDGE_NAME_TUBULAR_STEEL                                   :Tubular, Steel
 STR_BRIDGE_TUBULAR_SILICON                                      :Tubular, Silicon
 
+# Clipboard toolbar window
+STR_CLIPBOARD_TOOLBAR_CAPTION                                   :{WHITE}Clipboard
+STR_CLIPBOARD_TOOLTIP_COPY                                      :{BLACK}Select area to copy
+STR_CLIPBOARD_TOOLTIP_COPY_WITH_RAIL_TRANSPORT                  :{BLACK}Paste rail transport infrastructure
+STR_CLIPBOARD_TOOLTIP_COPY_WITH_ROAD_TRANSPORT                  :{BLACK}Paste road transport infrastructure
+STR_CLIPBOARD_TOOLTIP_COPY_WITH_WATER_TRANSPORT                 :{BLACK}Paste water transport infrastructure
+STR_CLIPBOARD_TOOLTIP_COPY_WITH_AIR_TRANSPORT                   :{BLACK}Paste air transport infrastructure
+STR_CLIPBOARD_TOOLTIP_PASTE                                     :{BLACK}Paste selected area
+STR_CLIPBOARD_TOOLTIP_TERRAFORM                                 :{BLACK}Terraform land when pasting{}(red) no terraforming{}(yellow) minimal terraforming{}(green) full terraforming
+STR_CLIPBOARD_TOOLTIP_CONVERT_RAIL                              :{BLACK}Converts rail infrastructure to{}current rail type when pasting
+STR_CLIPBOARD_TOOLTIP_MIRROR_SIGNALS                            :{BLACK}Mirror signals when pasting
+STR_CLIPBOARD_TOOLTIP_UPGRADE_BRIDGES                           :{BLACK}Upgrade bridges when pasting
+STR_CLIPBOARD_TOOLTIP_TRANSFORMATION                            :{BLACK}Current transformation,{}click to reset
+STR_CLIPBOARD_TOOLTIP_ROTATE_LEFT                               :{BLACK}Rotate by 90 degree anticlockwise
+STR_CLIPBOARD_TOOLTIP_ROTATE_RIGHT                              :{BLACK}Rotate by 90 degree clockwise
+STR_CLIPBOARD_TOOLTIP_REFLECT_NE_SW                             :{BLACK}Reflect against NW-SE axis
+STR_CLIPBOARD_TOOLTIP_REFLECT_NW_SE                             :{BLACK}Reflect against NE-SW axis
+STR_CLIPBOARD_HEIGHT_DIFF                                       :{GOLD}{STRING1}
+STR_CLIPBOARD_HEIGHT_DIFF_NEGATIVE                              :-{NUM}
+STR_CLIPBOARD_HEIGHT_DIFF_NEUTRAL                               : {NUM}
+STR_CLIPBOARD_HEIGHT_DIFF_POSITIVE                              :+{NUM}
 
 # Road construction toolbar
 STR_ROAD_TOOLBAR_ROAD_CONSTRUCTION_CAPTION                      :{WHITE}Road Construction
@@ -2434,6 +2456,7 @@ STR_LANDSCAPING_TOOLBAR                                         :{WHITE}Landscap
 STR_LANDSCAPING_TOOLTIP_LOWER_A_CORNER_OF_LAND                  :{BLACK}Lower a corner of land. Dragging lowers the first selected corner and levels the selected area to the new corner height. Ctrl selects the area diagonally. Shift toggles building/showing cost estimate
 STR_LANDSCAPING_TOOLTIP_RAISE_A_CORNER_OF_LAND                  :{BLACK}Raise a corner of land. Dragging raises the first selected corner and levels the selected area to the new corner height. Ctrl selects the area diagonally. Shift toggles building/showing cost estimate
 STR_LANDSCAPING_LEVEL_LAND_TOOLTIP                              :{BLACK}Level an area of land to the height of the first selected corner. Ctrl selects the area diagonally. Shift toggles building/showing cost estimate
+STR_LANDSCAPING_TOOLTIP_SHOW_CLIPBOARD_TOOLBAR                  :{BLACK}Show clipboard toolbar
 STR_LANDSCAPING_TOOLTIP_PURCHASE_LAND                           :{BLACK}Purchase land for future use. Shift toggles building/showing cost estimate
 
 # Object construction window
@@ -4041,6 +4064,8 @@ STR_ERROR_TREE_PLANT_LIMIT_REACHED                              :{WHITE}... tree
 STR_ERROR_NAME_MUST_BE_UNIQUE                                   :{WHITE}Name must be unique
 STR_ERROR_GENERIC_OBJECT_IN_THE_WAY                             :{WHITE}{1:STRING} in the way
 STR_ERROR_NOT_ALLOWED_WHILE_PAUSED                              :{WHITE}Not allowed while paused
+STR_ERROR_NOTHING_TO_DO                                         :{WHITE}... there is nothing to do
+STR_ERROR_INAPPLICABLE_TRANSFORMATION                           :{WHITE}... inapplicable transformation
 
 # Local authority errors
 STR_ERROR_LOCAL_AUTHORITY_REFUSES_TO_ALLOW_THIS                 :{WHITE}{TOWN} local authority refuses to allow this
@@ -4115,7 +4140,9 @@ STR_ERROR_CAN_T_BUILD_CARGO_TRAM_STATION                        :{WHITE}Can't bu
 STR_ERROR_CAN_T_BUILD_DOCK_HERE                                 :{WHITE}Can't build dock here...
 STR_ERROR_CAN_T_BUILD_AIRPORT_HERE                              :{WHITE}Can't build airport here...
 
+STR_ERROR_ADJOINS_EXISTING                                      :{WHITE}Adjoins existing station/loading area
 STR_ERROR_ADJOINS_MORE_THAN_ONE_EXISTING                        :{WHITE}Adjoins more than one existing station/loading area
+STR_ERROR_CAN_T_DISTANT_JOIN                                    :{WHITE}Can't distant-join station/loading area
 STR_ERROR_STATION_TOO_SPREAD_OUT                                :{WHITE}... station too spread out
 STR_ERROR_TOO_MANY_STATIONS_LOADING                             :{WHITE}Too many stations/loading areas
 STR_ERROR_TOO_MANY_STATION_SPECS                                :{WHITE}Too many railway station parts
@@ -4263,6 +4290,10 @@ STR_ERROR_OBJECT_IN_THE_WAY                                     :{WHITE}Object i
 STR_ERROR_COMPANY_HEADQUARTERS_IN                               :{WHITE}... company headquarters in the way
 STR_ERROR_CAN_T_PURCHASE_THIS_LAND                              :{WHITE}Can't purchase this land area...
 STR_ERROR_YOU_ALREADY_OWN_IT                                    :{WHITE}... you already own it!
+
+# Clipboard related errors
+STR_COPY_PASTE_ERROR_SUMMARY                                    :{WHITE}{8:STRING}
+STR_ERROR_CAN_T_PASTE_HERE                                      :{WHITE}Can't paste here...
 
 # Group related errors
 STR_ERROR_GROUP_CAN_T_CREATE                                    :{WHITE}Can't create group...

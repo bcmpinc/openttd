@@ -28,11 +28,16 @@
  * @return the height of the tile
  * @pre tile < MapSize()
  */
-static inline uint TileHeight(TileIndex tile)
+template <bool Tgeneric>
+static inline uint TileHeight(typename TileIndexT<Tgeneric>::T tile)
 {
-	assert(tile < MapSize());
-	return GB(_m[tile].type_height, 0, 4);
+	assert(IsValidTileIndex(tile));
+	return GB(GetTile(tile)->type_height, 0, 4);
 }
+/** @copydoc TileHeight(TileIndexT<Tgeneric>::T) */
+static inline uint TileHeight(TileIndex tile) { return TileHeight<false>(tile); }
+/** @copydoc TileHeight(TileIndexT<Tgeneric>::T) */
+static inline uint TileHeight(GenericTileIndex tile) { return TileHeight<true>(tile); }
 
 /**
  * Sets the height of a tile.
@@ -44,12 +49,17 @@ static inline uint TileHeight(TileIndex tile)
  * @pre tile < MapSize()
  * @pre heigth <= MAX_TILE_HEIGHT
  */
-static inline void SetTileHeight(TileIndex tile, uint height)
+template <bool Tgeneric>
+static inline void SetTileHeight(typename TileIndexT<Tgeneric>::T tile, uint height)
 {
-	assert(tile < MapSize());
+	assert(IsValidTileIndex(tile));
 	assert(height <= MAX_TILE_HEIGHT);
-	SB(_m[tile].type_height, 0, 4, height);
+	SB(GetTile(tile)->type_height, 0, 4, height);
 }
+/** @copydoc SetTileHeight(TileIndexT<Tgeneric>::T,uint) */
+static inline void SetTileHeight(TileIndex tile, uint height) { SetTileHeight<false>(tile, height); }
+/** @copydoc SetTileHeight(TileIndexT<Tgeneric>::T,uint) */
+static inline void SetTileHeight(GenericTileIndex tile, uint height) { SetTileHeight<true>(tile, height); }
 
 /**
  * Returns the height of a tile in pixels.
@@ -59,10 +69,15 @@ static inline void SetTileHeight(TileIndex tile, uint height)
  * @param tile The tile to get the height
  * @return The height of the tile in pixel
  */
-static inline uint TilePixelHeight(TileIndex tile)
+template <bool Tgeneric>
+static inline uint TilePixelHeight(typename TileIndexT<Tgeneric>::T tile)
 {
 	return TileHeight(tile) * TILE_HEIGHT;
 }
+/** @copydoc TilePixelHeight(TileIndexT<Tgeneric>::T) */
+static inline uint TilePixelHeight(TileIndex tile) { return TilePixelHeight<false>(tile); }
+/** @copydoc TilePixelHeight(TileIndexT<Tgeneric>::T) */
+static inline uint TilePixelHeight(GenericTileIndex tile) { return TilePixelHeight<true>(tile); }
 
 /**
  * Get the tiletype of a given tile.
@@ -71,11 +86,16 @@ static inline uint TilePixelHeight(TileIndex tile)
  * @return The tiletype of the tile
  * @pre tile < MapSize()
  */
-static inline TileType GetTileType(TileIndex tile)
+template <bool Tgeneric>
+static inline TileType GetTileType(typename TileIndexT<Tgeneric>::T tile)
 {
-	assert(tile < MapSize());
-	return (TileType)GB(_m[tile].type_height, 4, 4);
+	assert(IsValidTileIndex(tile));
+	return (TileType)GB(GetTile(tile)->type_height, 4, 4);
 }
+/** @copydoc GetTileType(TileIndexT<Tgeneric>::T) */
+static inline TileType GetTileType(TileIndex tile) { return GetTileType<false>(tile); }
+/** @copydoc GetTileType(TileIndexT<Tgeneric>::T) */
+static inline TileType GetTileType(GenericTileIndex tile) { return GetTileType<true>(tile); }
 
 /**
  * Set the type of a tile
@@ -89,15 +109,40 @@ static inline TileType GetTileType(TileIndex tile)
  * @pre tile < MapSize()
  * @pre type MP_VOID <=> tile is on the south-east or south-west edge.
  */
-static inline void SetTileType(TileIndex tile, TileType type)
+template <bool Tgeneric>
+static inline void SetTileType(typename TileIndexT<Tgeneric>::T tile, TileType type);
+
+template <>
+inline void SetTileType<false>(TileIndex tile, TileType type)
 {
-	assert(tile < MapSize());
-	/* VOID tiles (and no others) are exactly allowed at the lower left and right
-	 * edges of the map. If _settings_game.construction.freeform_edges is true,
-	 * the upper edges of the map are also VOID tiles. */
-	assert((TileX(tile) == MapMaxX() || TileY(tile) == MapMaxY() || (_settings_game.construction.freeform_edges && (TileX(tile) == 0 || TileY(tile) == 0))) == (type == MP_VOID));
-	SB(_m[tile].type_height, 4, 4, type);
+	assert(IsValidTileIndex(tile));
+
+	/* VOID tiles (and no others) are exactly allowed at the lower left and right edges of the
+	 * map. If _settings_game.construction.freeform_edges is true, the upper edges of the map are also VOID tiles. */
+	assert((TileX(tile) == MapMaxX(MapOf(tile)) || TileY(tile) == MapMaxY(MapOf(tile)) ||
+			(_settings_game.construction.freeform_edges && (TileX(tile) == 0 || TileY(tile) == 0))) == (type == MP_VOID));
+
+	SB(GetTile(tile)->type_height, 4, 4, type);
 }
+
+template <>
+inline void SetTileType<true>(GenericTileIndex tile, TileType type)
+{
+	assert(IsValidTileIndex(tile));
+
+	/* VOID tiles (and no others) are exactly allowed at the lower left and right edges of the
+	 * map. If _settings_game.construction.freeform_edges is true, the upper edges of the main map
+	 * are also VOID tiles. */
+	assert((TileX(tile) == MapMaxX(MapOf(tile)) || TileY(tile) == MapMaxY(MapOf(tile)) ||
+			(IsMainMapTile(tile) && _settings_game.construction.freeform_edges && (TileX(tile) == 0 || TileY(tile) == 0))) == (type == MP_VOID));
+
+	SB(GetTile(tile)->type_height, 4, 4, type);
+}
+
+/** @copydoc SetTileType(TileIndexT<Tgeneric>::T,TileType) */
+static inline void SetTileType(TileIndex tile, TileType type) { SetTileType<false>(tile, type); }
+/** @copydoc SetTileType(TileIndexT<Tgeneric>::T,TileType) */
+static inline void SetTileType(GenericTileIndex tile, TileType type) { SetTileType<true>(tile, type); }
 
 /**
  * Checks if a tile is a give tiletype.
@@ -108,10 +153,15 @@ static inline void SetTileType(TileIndex tile, TileType type)
  * @param type The type to check against
  * @return true If the type matches against the type of the tile
  */
-static inline bool IsTileType(TileIndex tile, TileType type)
+template <bool Tgeneric>
+static inline bool IsTileType(typename TileIndexT<Tgeneric>::T tile, TileType type)
 {
 	return GetTileType(tile) == type;
 }
+/** @copydoc IsTileType(TileIndexT<Tgeneric>::T,TileType) */
+static inline bool IsTileType(TileIndex tile, TileType type) { return IsTileType<false>(tile, type); }
+/** @copydoc IsTileType(TileIndexT<Tgeneric>::T,TileType) */
+static inline bool IsTileType(GenericTileIndex tile, TileType type) { return IsTileType<true>(tile, type); }
 
 /**
  * Checks if a tile is valid
@@ -119,10 +169,15 @@ static inline bool IsTileType(TileIndex tile, TileType type)
  * @param tile The tile to check
  * @return True if the tile is on the map and not one of MP_VOID.
  */
-static inline bool IsValidTile(TileIndex tile)
+template <bool Tgeneric>
+static inline bool IsValidTile(typename TileIndexT<Tgeneric>::T tile)
 {
-	return tile < MapSize() && !IsTileType(tile, MP_VOID);
+	return IsValidTileIndex(tile) && !IsTileType(tile, MP_VOID);
 }
+/** @copydoc IsValidTile(TileIndexT<Tgeneric>::T) */
+static inline bool IsValidTile(TileIndex tile) { return IsValidTile<false>(tile); }
+/** @copydoc IsValidTile(TileIndexT<Tgeneric>::T) */
+static inline bool IsValidTile(GenericTileIndex tile) { return IsValidTile<true>(tile); }
 
 /**
  * Returns the owner of a tile
@@ -136,14 +191,19 @@ static inline bool IsValidTile(TileIndex tile)
  * @pre IsValidTile(tile)
  * @pre The type of the tile must not be MP_HOUSE and MP_INDUSTRY
  */
-static inline Owner GetTileOwner(TileIndex tile)
+template <bool Tgeneric>
+static inline Owner GetTileOwner(typename TileIndexT<Tgeneric>::T tile)
 {
 	assert(IsValidTile(tile));
 	assert(!IsTileType(tile, MP_HOUSE));
 	assert(!IsTileType(tile, MP_INDUSTRY));
 
-	return (Owner)GB(_m[tile].m1, 0, 5);
+	return (Owner)GB(GetTile(tile)->m1, 0, 5);
 }
+/** @copydoc GetTileOwner(TileIndexT<Tgeneric>::T) */
+static inline Owner GetTileOwner(TileIndex tile) { return GetTileOwner<false>(tile); }
+/** @copydoc GetTileOwner(TileIndexT<Tgeneric>::T) */
+static inline Owner GetTileOwner(GenericTileIndex tile) { return GetTileOwner<true>(tile); }
 
 /**
  * Sets the owner of a tile
@@ -156,14 +216,19 @@ static inline Owner GetTileOwner(TileIndex tile)
  * @pre IsValidTile(tile)
  * @pre The type of the tile must not be MP_HOUSE and MP_INDUSTRY
  */
-static inline void SetTileOwner(TileIndex tile, Owner owner)
+template <bool Tgeneric>
+static inline void SetTileOwner(typename TileIndexT<Tgeneric>::T tile, Owner owner)
 {
 	assert(IsValidTile(tile));
 	assert(!IsTileType(tile, MP_HOUSE));
 	assert(!IsTileType(tile, MP_INDUSTRY));
 
-	SB(_m[tile].m1, 0, 5, owner);
+	SB(GetTile(tile)->m1, 0, 5, owner);
 }
+/** @copydoc SetTileOwner(TileIndexT<Tgeneric>::T,Owner) */
+static inline void SetTileOwner(TileIndex tile, Owner owner) { SetTileOwner<false>(tile, owner); }
+/** @copydoc SetTileOwner(TileIndexT<Tgeneric>::T,Owner) */
+static inline void SetTileOwner(GenericTileIndex tile, Owner owner) { SetTileOwner<true>(tile, owner); }
 
 /**
  * Checks if a tile belongs to the given owner
@@ -172,10 +237,15 @@ static inline void SetTileOwner(TileIndex tile, Owner owner)
  * @param owner The owner to check against
  * @return True if a tile belongs the the given owner
  */
-static inline bool IsTileOwner(TileIndex tile, Owner owner)
+template <bool Tgeneric>
+static inline bool IsTileOwner(typename TileIndexT<Tgeneric>::T tile, Owner owner)
 {
 	return GetTileOwner(tile) == owner;
 }
+/** @copydoc IsTileOwner(TileIndexT<Tgeneric>::T,Owner) */
+static inline bool IsTileOwner(TileIndex tile, Owner owner) { return IsTileOwner<false>(tile, owner); }
+/** @copydoc IsTileOwner(TileIndexT<Tgeneric>::T,Owner) */
+static inline bool IsTileOwner(GenericTileIndex tile, Owner owner) { return IsTileOwner<true>(tile, owner); }
 
 /**
  * Set the tropic zone
@@ -187,7 +257,7 @@ static inline void SetTropicZone(TileIndex tile, TropicZone type)
 {
 	assert(tile < MapSize());
 	assert(!IsTileType(tile, MP_VOID) || type == TROPICZONE_NORMAL);
-	SB(_m[tile].m6, 0, 2, type);
+	SB(GetTile(tile)->m6, 0, 2, type);
 }
 
 /**
@@ -199,7 +269,7 @@ static inline void SetTropicZone(TileIndex tile, TropicZone type)
 static inline TropicZone GetTropicZone(TileIndex tile)
 {
 	assert(tile < MapSize());
-	return (TropicZone)GB(_m[tile].m6, 0, 2);
+	return (TropicZone)GB(GetTile(tile)->m6, 0, 2);
 }
 
 /**
@@ -211,7 +281,7 @@ static inline TropicZone GetTropicZone(TileIndex tile)
 static inline byte GetAnimationFrame(TileIndex t)
 {
 	assert(IsTileType(t, MP_HOUSE) || IsTileType(t, MP_OBJECT) || IsTileType(t, MP_INDUSTRY) ||IsTileType(t, MP_STATION));
-	return _me[t].m7;
+	return GetTileEx(t)->m7;
 }
 
 /**
@@ -223,12 +293,29 @@ static inline byte GetAnimationFrame(TileIndex t)
 static inline void SetAnimationFrame(TileIndex t, byte frame)
 {
 	assert(IsTileType(t, MP_HOUSE) || IsTileType(t, MP_OBJECT) || IsTileType(t, MP_INDUSTRY) ||IsTileType(t, MP_STATION));
-	_me[t].m7 = frame;
+	GetTileEx(t)->m7 = frame;
 }
 
-Slope GetTileSlope(TileIndex tile, int *h = NULL);
-int GetTileZ(TileIndex tile);
-int GetTileMaxZ(TileIndex tile);
+template <bool Tgeneric>
+Slope GetTileSlope(typename TileIndexT<Tgeneric>::T tile, int *h = NULL);
+/** @copydoc GetTileSlope(TileIndexT<Tgeneric>::T,int*) */
+static inline Slope GetTileSlope(TileIndex tile, int *h = NULL) { return GetTileSlope<false>(tile, h); }
+/** @copydoc GetTileSlope(TileIndexT<Tgeneric>::T,int*) */
+static inline Slope GetTileSlope(GenericTileIndex tile, int *h = NULL) { return GetTileSlope<true>(tile, h); }
+
+template <bool Tgeneric>
+int GetTileZ(typename TileIndexT<Tgeneric>::T tile);
+/** @copydoc GetTileZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileZ(TileIndex tile) { return GetTileZ<false>(tile); }
+/** @copydoc GetTileZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileZ(GenericTileIndex tile) { return GetTileZ<true>(tile); }
+
+template <bool Tgeneric>
+int GetTileMaxZ(typename TileIndexT<Tgeneric>::T tile);
+/** @copydoc GetTileMaxZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileMaxZ(TileIndex tile) { return GetTileMaxZ<false>(tile); }
+/** @copydoc GetTileMaxZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileMaxZ(GenericTileIndex tile) { return GetTileMaxZ<true>(tile); }
 
 /**
  * Return the slope of a given tile
@@ -236,32 +323,47 @@ int GetTileMaxZ(TileIndex tile);
  * @param h    If not \c NULL, pointer to storage of z height
  * @return Slope of the tile, except for the HALFTILE part
  */
-static inline Slope GetTilePixelSlope(TileIndex tile, int *h)
+template <bool Tgeneric>
+static inline Slope GetTilePixelSlope(typename TileIndexT<Tgeneric>::T tile, int *h)
 {
 	Slope s = GetTileSlope(tile, h);
 	if (h != NULL) *h *= TILE_HEIGHT;
 	return s;
 }
+/** @copydoc GetTilePixelSlope(TileIndexT<Tgeneric>::T,int*) */
+static inline Slope GetTilePixelSlope(TileIndex tile, int *h) { return GetTilePixelSlope<false>(tile, h); }
+/** @copydoc GetTilePixelSlope(TileIndexT<Tgeneric>::T,int*) */
+static inline Slope GetTilePixelSlope(GenericTileIndex tile, int *h) { return GetTilePixelSlope<true>(tile, h); }
 
 /**
  * Get bottom height of the tile
  * @param tile Tile to compute height of
  * @return Minimum height of the tile
  */
-static inline int GetTilePixelZ(TileIndex tile)
+template <bool Tgeneric>
+static inline int GetTilePixelZ(typename TileIndexT<Tgeneric>::T tile)
 {
 	return GetTileZ(tile) * TILE_HEIGHT;
 }
+/** @copydoc GetTilePixelZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTilePixelZ(TileIndex tile) { return GetTilePixelZ<false>(tile); }
+/** @copydoc GetTilePixelZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTilePixelZ(GenericTileIndex tile) { return GetTilePixelZ<true>(tile); }
 
 /**
  * Get top height of the tile
  * @param t Tile to compute height of
  * @return Maximum height of the tile
  */
-static inline int GetTileMaxPixelZ(TileIndex tile)
+template <bool Tgeneric>
+static inline int GetTileMaxPixelZ(typename TileIndexT<Tgeneric>::T tile)
 {
 	return GetTileMaxZ(tile) * TILE_HEIGHT;
 }
+/** @copydoc GetTileMaxPixelZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileMaxPixelZ(TileIndex tile) { return GetTileMaxPixelZ<false>(tile); }
+/** @copydoc GetTileMaxPixelZ(TileIndexT<Tgeneric>::T) */
+static inline int GetTileMaxPixelZ(GenericTileIndex tile) { return GetTileMaxPixelZ<true>(tile); }
 
 
 /**
