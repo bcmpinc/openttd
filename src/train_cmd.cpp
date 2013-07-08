@@ -3074,9 +3074,17 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 	Train *first = v->First();
 	Train *prev;
 	bool direction_changed = false; // has direction of any part changed?
+	int progress = v->GetAdvanceDistance();
 
 	/* For every vehicle after and including the given vehicle */
 	for (prev = v->Previous(); v != nomove; prev = v, v = v->Next()) {
+		int reps=1;
+		if (prev!=NULL) {
+			int dist = v->progress + progress;
+			reps        = dist/v->GetAdvanceDistance();
+			v->progress = dist%v->GetAdvanceDistance();
+		}
+		while (reps--) {
 		DiagDirection enterdir = DIAGDIR_BEGIN;
 		bool update_signals_crossing = false; // will we update signals or crossing state?
 
@@ -3203,6 +3211,10 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 							/* Vehicles entering tunnels enter the wormhole earlier than for bridges.
 							 * However, just choose the track into the wormhole. */
 							assert(IsTunnel(prev->tile));
+							chosen_track = bits;
+						} else if (prev->track == TRACK_BIT_DEPOT) {
+							/* The previous vehicle might be entering the depot too soon. */
+							assert(IsDepotTile(prev->tile));
 							chosen_track = bits;
 						} else {
 							chosen_track = prev->track;
@@ -3359,6 +3371,7 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 				if (IsLevelCrossingTile(gp.old_tile)) UpdateLevelCrossing(gp.old_tile);
 			}
 		}
+		} // End non-indented while loop.
 
 		/* Do not check on every tick to save some computing time. */
 		if (v->IsFrontEngine() && v->tick_counter % _settings_game.pf.path_backoff_interval == 0) CheckNextTrainTile(v);
