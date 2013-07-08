@@ -18,26 +18,27 @@
  * @param h    If not \c NULL, pointer to storage of z height
  * @return Slope of the tile, except for the HALFTILE part
  */
-Slope GetTileSlope(TileIndex tile, int *h)
+template <bool Tgeneric>
+Slope GetTileSlope(typename TileIndexT<Tgeneric>::T tile, int *h)
 {
-	assert(tile < MapSize());
+	assert(IsValidTileIndex(tile));
 
 	uint x = TileX(tile);
 	uint y = TileY(tile);
 
-	if (x == MapMaxX() || y == MapMaxY() ||
-			((x == 0 || y == 0) && _settings_game.construction.freeform_edges)) {
+	if (x == MapMaxX(MapOf(tile)) || y == MapMaxY(MapOf(tile)) ||
+			((x == 0 || y == 0) && IsMainMapTile(tile) && _settings_game.construction.freeform_edges)) {
 		if (h != NULL) *h = TileHeight(tile);
 		return SLOPE_FLAT;
 	}
 
 	int a = TileHeight(tile); // Height of the N corner
 	int min = a; // Minimal height of all corners examined so far
-	int b = TileHeight(tile + TileDiffXY(1, 0)); // Height of the W corner
+	int b = TileHeight(tile + TileDiffXY(1, 0, MapOf(tile))); // Height of the W corner
 	if (min > b) min = b;
-	int c = TileHeight(tile + TileDiffXY(0, 1)); // Height of the E corner
+	int c = TileHeight(tile + TileDiffXY(0, 1, MapOf(tile))); // Height of the E corner
 	if (min > c) min = c;
-	int d = TileHeight(tile + TileDiffXY(1, 1)); // Height of the S corner
+	int d = TileHeight(tile + TileDiffXY(1, 1, MapOf(tile))); // Height of the S corner
 	if (min > d) min = d;
 
 	/* Due to the fact that tiles must connect with each other without leaving gaps, the
@@ -61,37 +62,48 @@ Slope GetTileSlope(TileIndex tile, int *h)
 
 	return (Slope)r;
 }
+/* instantiate */
+template Slope GetTileSlope<false>(TileIndex tile, int *h);
+template Slope GetTileSlope<true>(GenericTileIndex tile, int *h);
 
 /**
  * Get bottom height of the tile
  * @param tile Tile to compute height of
  * @return Minimum height of the tile
  */
-int GetTileZ(TileIndex tile)
+template <bool Tgeneric>
+int GetTileZ(typename TileIndexT<Tgeneric>::T tile)
 {
-	if (TileX(tile) == MapMaxX() || TileY(tile) == MapMaxY()) return 0;
+	if (TileX(tile) == MapMaxX(MapOf(tile)) || TileY(tile) == MapMaxY(MapOf(tile))) return 0;
 
 	int h = TileHeight(tile); // N corner
-	h = min(h, TileHeight(tile + TileDiffXY(1, 0))); // W corner
-	h = min(h, TileHeight(tile + TileDiffXY(0, 1))); // E corner
-	h = min(h, TileHeight(tile + TileDiffXY(1, 1))); // S corner
+	h = min(h, TileHeight(tile + TileDiffXY(1, 0, MapOf(tile)))); // W corner
+	h = min(h, TileHeight(tile + TileDiffXY(0, 1, MapOf(tile)))); // E corner
+	h = min(h, TileHeight(tile + TileDiffXY(1, 1, MapOf(tile)))); // S corner
 
 	return h;
 }
+/* instantiate */
+template int GetTileZ<false>(TileIndex tile);
+template int GetTileZ<true>(GenericTileIndex tile);
 
 /**
  * Get top height of the tile
  * @param t Tile to compute height of
  * @return Maximum height of the tile
  */
-int GetTileMaxZ(TileIndex t)
+template <bool Tgeneric>
+int GetTileMaxZ(typename TileIndexT<Tgeneric>::T t)
 {
-	if (TileX(t) == MapMaxX() || TileY(t) == MapMaxY()) return 0;
+	if (TileX(t) == MapMaxX(MapOf(t)) || TileY(t) == MapMaxY(MapOf(t))) return 0;
 
 	int h = TileHeight(t); // N corner
-	h = max<int>(h, TileHeight(t + TileDiffXY(1, 0))); // W corner
-	h = max<int>(h, TileHeight(t + TileDiffXY(0, 1))); // E corner
-	h = max<int>(h, TileHeight(t + TileDiffXY(1, 1))); // S corner
+	h = max<int>(h, TileHeight(t + TileDiffXY(1, 0, MapOf(t)))); // W corner
+	h = max<int>(h, TileHeight(t + TileDiffXY(0, 1, MapOf(t)))); // E corner
+	h = max<int>(h, TileHeight(t + TileDiffXY(1, 1, MapOf(t)))); // S corner
 
 	return h;
 }
+/* instantiate */
+template int GetTileMaxZ<false>(TileIndex t);
+template int GetTileMaxZ<true>(GenericTileIndex t);

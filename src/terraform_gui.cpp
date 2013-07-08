@@ -187,6 +187,12 @@ struct TerraformToolbarWindow : Window {
 				this->last_user_action = widget;
 				break;
 
+			case WID_TT_CLIPBOARD: // Show the clipboard toolbar
+				/* This button is NOT a place-push-button, so don't treat it as such */
+				this->HandleButtonClick(WID_TT_CLIPBOARD);
+				ShowClipboardToolbar();
+				break;
+
 			case WID_TT_DEMOLISH: // Demolish aka dynamite button
 				HandlePlacePushButton(this, WID_TT_DEMOLISH, ANIMCURSOR_DEMOLISH, HT_RECT | HT_DIAGONAL);
 				this->last_user_action = widget;
@@ -332,6 +338,8 @@ static const NWidgetPart _nested_terraform_widgets[] = {
 
 		NWidget(WWT_PANEL, COLOUR_DARK_GREEN), SetMinimalSize(4, 22), EndContainer(),
 
+		NWidget(WWT_PUSHIMGBTN, COLOUR_DARK_GREEN, WID_TT_CLIPBOARD), SetMinimalSize(22, 22),
+								SetFill(0, 1), SetDataTip(SPR_IMG_CLIPBOARD, STR_LANDSCAPING_TOOLTIP_SHOW_CLIPBOARD_TOOLBAR),
 		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, WID_TT_DEMOLISH), SetMinimalSize(22, 22),
 								SetFill(0, 1), SetDataTip(SPR_IMG_DYNAMITE, STR_TOOLTIP_DEMOLISH_BUILDINGS_ETC),
 		NWidget(WWT_IMGBTN, COLOUR_DARK_GREEN, WID_TT_BUY_LAND), SetMinimalSize(22, 22),
