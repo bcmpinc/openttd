@@ -552,6 +552,31 @@ void FixupTrainLengths()
 	}
 }
 
+/** Fixup old train spacing. */
+void FixupTrainLengthsInCorners()
+{
+	/* Vehicle center was moved from 4 units behind the front to half the length
+	 * behind the front. Move vehicles so they end up on the same spot. */
+	Vehicle *v;
+	FOR_ALL_VEHICLES(v) {
+		if (v->type == VEH_TRAIN && v->IsPrimaryVehicle()) {
+			for (Train *u = Train::From(v); u != NULL; u = u->Next()) {
+				if (u->track == TRACK_BIT_DEPOT || (u->vehstatus & VS_CRASHED)) continue;
+				Train *next = u->Next();
+				if (next == NULL) break;
+				
+				int distance = u->CalcNextVehicleOffset();
+				assert(distance>0);
+				while (max(abs(u->x_pos - next->x_pos), abs(u->y_pos - next->y_pos)) > distance) {
+					if (!TrainController(next, NULL, false)) break;
+				}
+			}
+			/* Update all cached properties after moving the vehicle chain around. */
+			Train::From(v)->ConsistChanged(true);
+		}
+	}
+}
+
 static uint8  _cargo_days;
 static uint16 _cargo_source;
 static uint32 _cargo_source_xy;

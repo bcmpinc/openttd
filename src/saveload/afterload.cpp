@@ -2814,6 +2814,9 @@ bool AfterLoadGame()
 		_settings_game.locale.units_height   = Clamp(_old_units, 0, 2);
 	}
 
+	if (IsSavegameVersionBefore(190)) FixupTrainLengthsInCorners();
+	
+	
 	/* Road stops is 'only' updating some caches */
 	AfterLoadRoadStops();
 	AfterLoadLabelMaps();

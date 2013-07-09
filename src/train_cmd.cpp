@@ -93,7 +93,7 @@ void CheckTrainsLengths()
 			for (const Train *u = v, *w = v->Next(); w != NULL; u = w, w = w->Next()) {
 				if (u->track != TRACK_BIT_DEPOT) {
 					if ((w->track != TRACK_BIT_DEPOT &&
-							max(abs(u->x_pos - w->x_pos), abs(u->y_pos - w->y_pos)) != u->CalcNextVehicleOffset()) ||
+							abs(max(abs(u->x_pos - w->x_pos), abs(u->y_pos - w->y_pos)) - u->CalcNextVehicleOffset()))>1 ||
 							(w->track == TRACK_BIT_DEPOT && TicksToLeaveDepot(u) <= 0)) {
 						SetDParam(0, v->index);
 						SetDParam(1, v->owner);

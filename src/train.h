@@ -157,7 +157,12 @@ struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
 		 * longer than the part after the center. This means we have to round up the
 		 * length of the next vehicle but may not round the length of the current
 		 * vehicle. */
-		return this->gcache.cached_veh_length / 2 + (this->Next() != NULL ? this->Next()->gcache.cached_veh_length + 1 : 0) / 2;
+		int distance = 3;
+		distance += this->gcache.cached_veh_length * ((this->direction & 1)?4:3);
+		if (this->Next()!=NULL) {
+			distance += this->Next()->gcache.cached_veh_length * ((this->Next()->direction & 1)?4:3);
+		}
+		return distance/8;
 	}
 
 protected: // These functions should not be called outside acceleration code.
