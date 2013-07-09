@@ -1243,6 +1243,7 @@ STR_CONFIG_SETTING_DISABLED                                     :отключе�
 STR_CONFIG_SETTING_COMPANIES_OFF                                :нет
 STR_CONFIG_SETTING_COMPANIES_OWN                                :для своей компании
 STR_CONFIG_SETTING_COMPANIES_ALL                                :для всех компаний
+STR_CONFIG_SETTING_ATC_SPEED_ADAPTION                           :{LTBLUE}Включить АУП регулировку скорости: {ORANGE}{STRING}
 
 STR_CONFIG_SETTING_NONE                                         :нет
 STR_CONFIG_SETTING_ORIGINAL                                     :оригинальное

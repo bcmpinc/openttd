@@ -1093,6 +1093,7 @@ STR_CONFIG_SETTING_DISABLED                                     :Disabled
 STR_CONFIG_SETTING_COMPANIES_OFF                                :Off
 STR_CONFIG_SETTING_COMPANIES_OWN                                :Own company
 STR_CONFIG_SETTING_COMPANIES_ALL                                :All companies
+STR_CONFIG_SETTING_ATC_SPEED_ADAPTION                           :{LTBLUE}Enable ATC-style speed adaption: {ORANGE}{STRING1}
 
 STR_CONFIG_SETTING_NONE                                         :None
 STR_CONFIG_SETTING_ORIGINAL                                     :Original

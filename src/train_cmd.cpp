@@ -402,6 +402,52 @@ int Train::GetCurrentMaxSpeed() const
 		}
 	}
 
+	if(_settings_game.vehicle.atc_speed_adaption == true) {
+		CFollowTrackRail ft(this);
+		Trackdir old_td = this->GetVehicleTrackdir();
+		if (ft.Follow(this->tile, this->GetVehicleTrackdir())) {
+			/* Basic idea: Follow the track for 20 tiles or 3 signals (i.e. at most two signal blocks) looking for other trains. */
+			/* If we find one (that meets certain restrictions), we limit the max speed to the speed of that train. */
+			int num_tiles = 0;
+			int num_signals = 0;
+			do {
+				old_td = ft.m_old_td;
+				/* Increment signal counter if we're on a signal */
+				if (IsTileType(ft.m_new_tile, MP_RAILWAY) && ///< Tile has rails
+						KillFirstBit(ft.m_new_td_bits) == TRACKDIR_BIT_NONE && ///< Tile has exactly *one* track
+						HasSignalOnTrack(ft.m_new_tile, TrackBitsToTrack(TrackdirBitsToTrackBits(ft.m_new_td_bits)))) { ///< Tile has signal
+					num_signals++;
+				}
+				/* Check if tile has train/is reserved */
+				if (KillFirstBit(ft.m_new_td_bits) == TRACKDIR_BIT_NONE && ///< Tile has exactly *one* track
+						HasReservedTracks(ft.m_new_tile, TrackdirBitsToTrackBits(ft.m_new_td_bits))) { ///< Tile is reserved
+					Train* other_train = GetTrainForReservation(ft.m_new_tile, TrackBitsToTrack(TrackdirBitsToTrackBits(ft.m_new_td_bits)));
+					if(other_train != this && ///< Other train is not this train
+							TrackdirToTrackdirBits(ReverseTrackdir(other_train->GetVehicleTrackdir())) != ft.m_new_td_bits && ///< Other train not travelling in opposite direction
+							other_train->GetAccelerationStatus() != AS_BRAKE) { ///< Other train is not braking
+						// There is a train in front of us so slow down.
+						int atc_speed = other_train->GetCurrentSpeed();
+						/* Check that the ATC speed is sufficiently large.
+						   Avoids assertion error in UpdateSpeed(). */
+						if (atc_speed <= 24) atc_speed=24;
+						max_speed = min(max_speed, atc_speed);
+						break;
+					}
+				}
+				/* Decide what in direction to continue: reservation, straight or "first" direction. */
+				/* Abort if there's no reservation even though the tile contains multiple tracks. */
+				if(GetReservedTrackbits(ft.m_new_tile) != TRACK_BIT_NONE) { ///< Is there a reservation to follow?
+					old_td = FindFirstTrackdir(TrackBitsToTrackdirBits(GetReservedTrackbits(ft.m_new_tile)));
+				} else if (KillFirstBit(ft.m_new_td_bits) != TRACKDIR_BIT_NONE) { ///< Tile has more than one track
+					break;
+				} else { ///< There's only one direction to go, isn't there?
+					old_td = FindFirstTrackdir(ft.m_new_td_bits);
+				}
+				num_tiles++;
+			} while(num_tiles < 20 && num_signals < 3 && ft.Follow(ft.m_new_tile, old_td));
+		}
+	}
+	
 	for (const Train *u = this; u != NULL; u = u->Next()) {
 		if (_settings_game.vehicle.train_acceleration_model == AM_REALISTIC && u->track == TRACK_BIT_DEPOT) {
 			max_speed = min(max_speed, 61);
