@@ -119,6 +119,7 @@ struct GUISettings {
 	bool   timetable_in_ticks;               ///< whether to show the timetable in ticks rather than days
 	bool   quick_goto;                       ///< Allow quick access to 'goto button' in vehicle orders window
 	bool   auto_euro;                        ///< automatically switch to euro in 2002
+	byte   simulated_wormhole_signals;       ///< simulate signals in tunnel
 	byte   drag_signals_density;             ///< many signals density
 	bool   drag_signals_fixed_distance;      ///< keep fixed distance between signals when dragging
 	Year   semaphore_build_before;           ///< build semaphore signals automatically before this year
@@ -488,6 +489,7 @@ struct EconomySettings {
 	uint16 town_noise_population[3];         ///< population to base decision on noise evaluation (@see town_council_tolerance)
 	bool   allow_town_level_crossings;       ///< towns are allowed to build level crossings
 	bool   infrastructure_maintenance;       ///< enable monthly maintenance fee for owner infrastructure
+	uint8  daylength_factor;
 };
 
 struct LinkGraphSettings {

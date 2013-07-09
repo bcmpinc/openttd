@@ -811,4 +811,5 @@ extern const TileTypeProcs _tile_type_trees_procs = {
 	NULL,                     // vehicle_enter_tile_proc
 	GetFoundation_Trees,      // get_foundation_proc
 	TerraformTile_Trees,      // terraform_tile_proc
+	NULL                      // copypaste_tile_proc
 };

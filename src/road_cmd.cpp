@@ -11,6 +11,7 @@
 
 #include "stdafx.h"
 #include "cmd_helper.h"
+#include "copypaste_cmd.h"
 #include "road_internal.h"
 #include "viewport_func.h"
 #include "command_func.h"
@@ -35,6 +36,7 @@
 #include "date_func.h"
 #include "genworld.h"
 #include "company_gui.h"
+#include "clipboard_gui.h"
 
 #include "table/strings.h"
 
@@ -1837,6 +1839,179 @@ static CommandCost TerraformTile_Road(TileIndex tile, DoCommandFlag flags, int z
 	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
 }
 
+static void CopyPastePlaceRoad(GenericTileIndex tile, RoadBits roadbits_road, DisallowedRoadDirections drd, RoadBits roadbits_tram)
+{
+	if (IsMainMapTile(tile)) {
+		/* road */
+		if (roadbits_road != ROAD_NONE) {
+			if (IsNormalRoadTile(tile) && HasTileRoadType(tile, ROADTYPE_ROAD) &&
+					IsRoadOwner(tile, ROADTYPE_ROAD, _current_company) &&
+					(GetRoadBits(tile, ROADTYPE_ROAD) == roadbits_road)) {
+				drd &= ~GetDisallowedRoadDirections(tile);
+				if (drd == DRD_NONE) return;
+			}
+			_current_pasting->DoCommand(AsMainMapTile(tile), roadbits_road | (ROADTYPE_ROAD << 4) | (drd << 6), 0, CMD_BUILD_ROAD | CMD_MSG(STR_ERROR_CAN_T_BUILD_ROAD_HERE));
+			if (_current_pasting->IsInterrupted()) return;
+		}
+
+		/* tram */
+		if (roadbits_tram != ROAD_NONE) {
+			_current_pasting->DoCommand(AsMainMapTile(tile), roadbits_tram | (ROADTYPE_TRAM << 4), 0, CMD_BUILD_ROAD | CMD_MSG(STR_ERROR_CAN_T_BUILD_TRAMWAY_HERE));
+		}
+	} else {
+		RoadTypes rt = ROADTYPES_NONE;
+		if (roadbits_road != ROAD_NONE) rt |= ROADTYPES_ROAD;
+		if (roadbits_tram != ROAD_NONE) rt |= ROADTYPES_TRAM;
+		assert(rt != ROADTYPES_NONE);
+
+		MakeRoadNormal(tile, ROAD_NONE, rt, 0, OWNER_NONE, OWNER_NONE);
+		SetRoadBits(tile, roadbits_road, ROADTYPE_ROAD);
+		SetDisallowedRoadDirections(tile, drd);
+		SetRoadBits(tile, roadbits_tram, ROADTYPE_TRAM);
+	}
+}
+
+static void CopyPastePlaceRoadCrossing(GenericTileIndex tile, RoadTypes road_types, Axis road_axis, RailType railtype)
+{
+	if (IsMainMapTile(tile)) {
+		CopyPastePlaceRoad(tile, HasBit(road_types, ROADTYPE_ROAD) ? AxisToRoadBits(road_axis) : ROAD_NONE,
+				DRD_NONE, HasBit(road_types, ROADTYPE_TRAM) ? AxisToRoadBits(road_axis) : ROAD_NONE);
+		if (IsPastingInterrupted()) return;
+		CopyPastePlaceTracks(tile, railtype, AxisToTrackBits(OtherAxis(road_axis)));
+	} else {
+		MakeRoadCrossing(tile, OWNER_NONE, OWNER_NONE, OWNER_NONE, road_axis, railtype, road_types, 0);
+	}
+}
+
+static void CopyPastePlaceRoadDepot(GenericTileIndex tile, RoadType rt, DiagDirection dir)
+{
+	if (IsMainMapTile(tile)) {
+		TileIndex t = AsMainMapTile(tile);
+		if (IsRoadDepotTile(t) && IsTileOwner(t, _current_company) &&
+				 GetRoadDepotDirection(t) == dir && GetRoadTypes(t) == RoadTypeToRoadTypes(rt)) {
+			_current_pasting->CollectError(t, STR_ERROR_ALREADY_BUILT, STR_ERROR_CAN_T_BUILD_ROAD_DEPOT);
+		} else {
+			_current_pasting->DoCommand(t, dir | (rt << 2), 0, CMD_BUILD_ROAD_DEPOT | CMD_MSG(rt + STR_ERROR_CAN_T_BUILD_ROAD_DEPOT));
+		}
+	} else {
+		MakeRoadDepot(tile, OWNER_NONE, 0, dir, rt);
+	}
+}
+
+static bool IsRoadCopyable(GenericTileIndex tile, RoadType rt, CompanyID company = _current_company)
+{
+	return HasTileRoadType(tile, rt) && (!IsMainMapTile(tile) || IsRoadOwner(tile, rt, company));
+}
+
+/**
+ * Test a given road tile if there is any contented to be copied from it.
+ * @param tile the tile to test
+ * @param mode copy-paste mode
+ * @param company the #Company to check ownership against to
+ * @param preview (out, may be NULL) information on how to higlight preview of the tile
+ * @return whether this tile needs to be copy-pasted
+ */
+bool TestRoadTileCopyability(GenericTileIndex tile, CopyPasteMode mode, CompanyID company = _current_company, TileContentPastePreview *preview = NULL)
+{
+	if (preview != NULL) MemSetT(preview, 0);
+
+	if (!(mode & (CPM_WITH_ROAD_TRANSPORT | CPM_WITH_RAIL_TRANSPORT))) return false;
+
+	switch (GetRoadTileType(tile)) {
+		case ROAD_TILE_NORMAL:
+			if (!(mode & CPM_WITH_ROAD_TRANSPORT)) return false;
+			if (!IsRoadCopyable(tile, ROADTYPE_ROAD, company) && !IsRoadCopyable(tile, ROADTYPE_TRAM, company)) return false;
+			if (preview != NULL) preview->highlight_tile_rect = true;
+			break;
+
+		case ROAD_TILE_CROSSING: {
+			bool road_ok = (mode & CPM_WITH_ROAD_TRANSPORT) && (IsRoadCopyable(tile, ROADTYPE_ROAD, company) || IsRoadCopyable(tile, ROADTYPE_TRAM, company));
+			bool rail_ok = (mode & CPM_WITH_RAIL_TRANSPORT) && (!IsMainMapTile(tile) || IsTileOwner(tile, company));
+			if (!road_ok && !rail_ok) return false;
+			if (preview != NULL) {
+				if (road_ok) preview->highlight_tile_rect = true;
+				if (rail_ok) preview->highlight_track_bits = GetCrossingRailBits(tile);
+			}
+			break;
+		}
+
+		case ROAD_TILE_DEPOT:
+			if (!(mode & CPM_WITH_ROAD_TRANSPORT)) return false;
+			if (IsMainMapTile(tile) && !IsTileOwner(tile, company)) return false;
+			if (preview != NULL) preview->highlight_tile_rect = true;
+			break;
+	}
+
+	return true;
+}
+
+void CopyPasteTile_Road(GenericTileIndex src_tile, GenericTileIndex dst_tile, const CopyPasteParams &copy_paste)
+{
+	if (!TestRoadTileCopyability(src_tile, copy_paste.mode)) return;
+
+	/* Terraform tile if needed */
+	if (IsMainMapTile(dst_tile) && (copy_paste.mode & CPM_TERRAFORM_MASK) == CPM_TERRAFORM_MINIMAL) {
+		CopyPasteHeights(GenericTileArea(src_tile, 1, 1), dst_tile, copy_paste.transformation, copy_paste.height_delta);
+		if (IsPastingInterrupted()) return;
+	}
+
+	switch (GetRoadTileType(src_tile)) {
+		case ROAD_TILE_NORMAL: {
+			RoadBits roadbits_road = IsRoadCopyable(src_tile, ROADTYPE_ROAD) ?
+					TransformRoadBits(GetRoadBits(src_tile, ROADTYPE_ROAD), copy_paste.transformation) : ROAD_NONE;
+			RoadBits roadbits_tram = IsRoadCopyable(src_tile, ROADTYPE_TRAM) ?
+					TransformRoadBits(GetRoadBits(src_tile, ROADTYPE_TRAM), copy_paste.transformation) : ROAD_NONE;
+
+			/* transform DisallowedRoadDirections */
+			DisallowedRoadDirections drd = GetDisallowedRoadDirections(src_tile);
+			if (copy_paste.transformation != DTR_IDENTITY && (drd == DRD_SOUTHBOUND || drd == DRD_NORTHBOUND)) {
+				/* investigate current direction */
+				DiagDirection dir = (GetRoadBits(src_tile, ROADTYPE_ROAD) & ROAD_X) ? DIAGDIR_SW : DIAGDIR_SE;
+				if (drd == DRD_NORTHBOUND) dir = ReverseDiagDir(dir);
+				/* transform */
+				dir = TransformDiagDir(dir, copy_paste.transformation);
+				/* convert result to DisallowedRoadDirections */
+				drd = (dir == DIAGDIR_SW || dir == DIAGDIR_SE) ? DRD_SOUTHBOUND : DRD_NORTHBOUND;
+			}
+
+			/* paste roads */
+			CopyPastePlaceRoad(dst_tile, roadbits_road, drd, roadbits_tram);
+			break;
+		}
+
+		case ROAD_TILE_CROSSING: {
+			Axis road_axis = TransformAxis(GetCrossingRoadAxis(src_tile), copy_paste.transformation);
+			RoadTypes road_types = ROADTYPES_NONE;
+			if (copy_paste.mode & CPM_WITH_ROAD_TRANSPORT) {
+				if (IsRoadCopyable(src_tile, ROADTYPE_ROAD)) SetBit(road_types, ROADTYPE_ROAD);
+				if (IsRoadCopyable(src_tile, ROADTYPE_TRAM)) SetBit(road_types, ROADTYPE_TRAM);
+			}
+
+			if ((copy_paste.mode & CPM_WITH_RAIL_TRANSPORT) && (!IsMainMapTile(src_tile) || IsTileOwner(src_tile, _current_company))) {
+				RailType railtype = (copy_paste.mode & CPM_CONVERT_RAILTYPE) ? copy_paste.railtype : GetRailType(src_tile);
+				if (road_types != ROADTYPES_NONE) {
+					CopyPastePlaceRoadCrossing(dst_tile, road_types, road_axis, railtype);
+				} else {
+					CopyPastePlaceTracks(dst_tile, railtype, AxisToTrackBits(OtherAxis(road_axis)));
+				}
+			} else if (road_types != ROADTYPES_NONE) {
+				CopyPastePlaceRoad(dst_tile, HasBit(road_types, ROADTYPE_ROAD) ? AxisToRoadBits(road_axis) : ROAD_NONE,
+						DRD_NONE, HasBit(road_types, ROADTYPE_TRAM) ? AxisToRoadBits(road_axis) : ROAD_NONE);
+			}
+			break;
+		}
+
+		case ROAD_TILE_DEPOT:
+			/* paste depot */
+			CopyPastePlaceRoadDepot(dst_tile, (RoadType)FIND_FIRST_BIT(GetRoadTypes(src_tile)),
+					TransformDiagDir(GetRoadDepotDirection(src_tile), copy_paste.transformation));
+			break;
+
+		default:
+			NOT_REACHED(); // corrupted tile data?
+	}
+}
+
 /** Tile callback functions for road tiles */
 extern const TileTypeProcs _tile_type_road_procs = {
 	DrawTile_Road,           // draw_tile_proc
@@ -1853,4 +2028,5 @@ extern const TileTypeProcs _tile_type_road_procs = {
 	VehicleEnter_Road,       // vehicle_enter_tile_proc
 	GetFoundation_Road,      // get_foundation_proc
 	TerraformTile_Road,      // terraform_tile_proc
+	CopyPasteTile_Road,      // copypaste_tile_proc
 };

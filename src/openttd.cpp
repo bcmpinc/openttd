@@ -57,6 +57,7 @@
 #include "hotkeys.h"
 #include "newgrf.h"
 #include "misc/getoptdata.h"
+#include "clipboard_func.h"
 #include "game/game.hpp"
 #include "game/game_config.hpp"
 #include "town.h"
@@ -704,6 +705,7 @@ int openttd_main(int argc, char *argv[])
 #endif
 #endif
 
+	_settings_newgame.economy.daylength_factor=1; // This is used before it is initialized.
 	LoadFromConfig(true);
 
 	if (resolution.width != 0) _cur_resolution = resolution;
@@ -1040,8 +1042,13 @@ void SwitchToMode(SwitchMode new_mode)
 		}
 	}
 #endif /* ENABLE_NETWORK */
-	/* Make sure all AI controllers are gone at quitting game */
-	if (new_mode != SM_SAVE_GAME) AI::KillAll();
+	if (new_mode != SM_SAVE_GAME) {
+		/* Make sure all AI controllers are gone at quitting game */
+		AI::KillAll();
+
+		/* Clear the clipboard */
+		MakeClipboardEmpty();
+	}
 
 	switch (new_mode) {
 		case SM_EDITOR: // Switch to scenario editor
