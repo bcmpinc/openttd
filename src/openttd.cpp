@@ -708,6 +708,7 @@ int openttd_main(int argc, char *argv[])
 #endif
 #endif
 
+	_settings_newgame.economy.daylength_factor=1; // This is used before it is initialized.
 	LoadFromConfig(true);
 
 	if (resolution.width != 0) _cur_resolution = resolution;
