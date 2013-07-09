@@ -104,6 +104,8 @@ enum SaveLoadDialogMode {
 	SLD_SAVE_SCENARIO,  ///< Save a scenario.
 	SLD_LOAD_HEIGHTMAP, ///< Load a heightmap.
 	SLD_SAVE_HEIGHTMAP, ///< Save a heightmap.
+	SLD_LOAD_CLIPBOARD, ///< Load a clipboard content.
+	SLD_SAVE_CLIPBOARD, ///< Save a clipboard content.
 };
 
 /** The different types of files that the system knows about. */
@@ -125,6 +127,7 @@ enum FiosType {
 	FIOS_TYPE_DIRECT,
 	FIOS_TYPE_PNG,
 	FIOS_TYPE_BMP,
+	FIOS_TYPE_CLIPBOARD,
 	FIOS_TYPE_INVALID = 255,
 };
 
@@ -163,6 +166,7 @@ void ShowSaveLoadDialog(SaveLoadDialogMode mode);
 void FiosGetSavegameList(SaveLoadDialogMode mode);
 void FiosGetScenarioList(SaveLoadDialogMode mode);
 void FiosGetHeightmapList(SaveLoadDialogMode mode);
+void FiosGetClipboardList(SaveLoadDialogMode mode);
 
 void FiosFreeSavegameList();
 const char *FiosBrowseTo(const FiosItem *item);
