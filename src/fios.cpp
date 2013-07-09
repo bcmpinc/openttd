@@ -135,6 +135,7 @@ const char *FiosBrowseTo(const FiosItem *item)
 		case FIOS_TYPE_OLD_SCENARIO:
 		case FIOS_TYPE_PNG:
 		case FIOS_TYPE_BMP:
+		case FIOS_TYPE_CLIPBOARD:
 			return item->name;
 	}
 
@@ -182,6 +183,8 @@ static void FiosMakeFilename(char *buf, const char *path, const char *name, cons
 void FiosMakeSavegameName(char *buf, const char *name, size_t size)
 {
 	const char *extension = (_game_mode == GM_EDITOR) ? ".scn" : ".sav";
+	if (_saveload_mode == SLD_SAVE_CLIPBOARD || _saveload_mode == SLD_LOAD_CLIPBOARD)
+		extension = ".clip";
 
 	FiosMakeFilename(buf, _fios_path, name, extension, size);
 }
@@ -554,6 +557,48 @@ void FiosGetHeightmapList(SaveLoadDialogMode mode)
 
 	FiosGetFileList(mode, &FiosGetHeightmapListCallback, strcmp(base_path, _fios_path) == 0 ? HEIGHTMAP_DIR : NO_DIRECTORY);
 }
+
+/**
+ * Callback for FiosGetFileList. It tells if a file is a template or not.
+ * @param mode Save/load mode.
+ * @param file Name of the file to check.
+ * @param ext A pointer to the extension identifier inside file
+ * @param title Buffer if a callback wants to lookup the title of the file
+ * @return a FIOS_TYPE_* type of the found file, FIOS_TYPE_INVALID if not a template
+ * @see FiosGetFileList
+ * @see FiosGetSavegameList
+ */
+static FiosType FiosGetClipboardListCallback(SaveLoadDialogMode mode, const char *file, const char *ext, char *title, const char *last)
+{
+	/* Show template files
+	 * .tmpl OpenTTD template */
+	if (strcasecmp(ext, ".clip") != 0) return FIOS_TYPE_INVALID;
+	
+	GetFileTitle(file, title, last, CLIPBOARD_DIR);
+	return FIOS_TYPE_CLIPBOARD;
+}
+
+/**
+ * Get a list of templates.
+ * @param mode Save/load mode.
+ * @return A pointer to an array of FiosItem representing all the files to be shown in the save/load dialog.
+ * @see FiosGetFileList
+ */
+void FiosGetClipboardList(SaveLoadDialogMode mode)
+{
+	static char *_fios_clipboard_path = NULL;
+
+	if (_fios_clipboard_path == NULL) {
+		_fios_clipboard_path = MallocT<char>(MAX_PATH);
+		FioGetDirectory(_fios_clipboard_path, MAX_PATH, CLIPBOARD_DIR);
+	}
+
+	_fios_path = _fios_clipboard_path;
+
+	FiosGetFileList(mode, &FiosGetClipboardListCallback, CLIPBOARD_DIR);
+}
+
+
 
 /**
  * Get the directory for screenshots.
