@@ -398,7 +398,7 @@ void UpdateVehicleTimetable(Vehicle *v, bool travelling)
 			 * the timetable entry like is done for road vehicles/ships.
 			 * Thus always make sure at least one tick is used between the
 			 * processing of different orders when filling the timetable. */
-			time_taken = CeilDiv(max(time_taken, 1U), DAY_TICKS) * DAY_TICKS;
+			time_taken = CeilDiv(max(time_taken, 1U), ORIG_DAY_TICKS) * ORIG_DAY_TICKS;
 
 			ChangeTimetable(v, v->cur_real_order_index, time_taken, travelling ? MTF_TRAVEL_TIME : MTF_WAIT_TIME);
 		}
