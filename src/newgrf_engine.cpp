@@ -1045,7 +1045,6 @@ SpriteID GetRotorOverrideSprite(EngineID engine, const Aircraft *v, bool info_vi
 	return group->GetResult() + (info_view ? 0 : (v->Next()->Next()->state % group->GetNumResults()));
 }
 
-
 /**
  * Check if a wagon is currently using a wagon override
  * @param v The wagon to check
@@ -1307,3 +1306,114 @@ void FillNewGRFVehicleCache(const Vehicle *v)
 	/* Make sure really all bits are set. */
 	assert(v->grf_cache.cache_valid == (1 << NCVV_END) - 1);
 }
+
+// TODO MYGUI
+/*
+uint16 SimulateLengthCallback(EngineID eid) {
+	Engine *e = Engine::Get(eid);
+
+	// callback stuff
+	const SpriteGroup *group;
+	ResolverObject object;
+
+	// setup the newvehicleresolver
+	object.GetRandomBits = &VehicleGetRandomBits;
+	object.GetTriggers   = &VehicleGetTriggers;
+	object.SetTriggers   = &VehicleSetTriggers;
+	object.GetVariable   = &VehicleGetVariable;
+	object.ResolveReal   = &VehicleResolveReal;
+	object.u.vehicle.self   = 0;
+	object.u.vehicle.parent = 0;
+	object.u.vehicle.self_type = eid;
+ 	object.u.vehicle.info_view = false;
+	object.ResetState();
+	object.grffile         = (e != NULL ? e->grf_prop.grffile : NULL);
+
+	// more setup from train_cmd.cpp
+	object.callback        = CBID_VEHICLE_LENGTH;
+	object.callback_param1 = 0;
+	object.callback_param2 = 0;
+
+	group = e->grf_prop.spritegroup[CT_DEFAULT];
+	group = SpriteGroup::Resolve(group, &object);
+
+	if (group == NULL) return CALLBACK_FAILED;
+	return group->GetCallbackResult();
+}
+
+
+
+SpriteID GetTemplateImage(EngineID eid, uint8 sprnum) {
+	uint8 spritenum = sprnum;
+	SpriteID sprite;
+
+	//if (HasBit(tv->flags, VRF_REVERSE_DIRECTION)) direction = ReverseDir(direction);
+
+	if (is_custom_sprite(spritenum)) {
+		const SpriteGroup *group;
+
+		ResolverObject object;
+		// resolver
+		object.GetRandomBits = &VehicleGetRandomBits;
+		object.GetTriggers   = &VehicleGetTriggers;
+		object.SetTriggers   = &VehicleSetTriggers;
+		object.GetVariable   = &VehicleGetVariable;
+		object.ResolveReal   = &VehicleResolveReal;
+		object.u.vehicle.self   = 0;
+		object.u.vehicle.parent = 0;
+		object.u.vehicle.self_type = eid;
+		object.u.vehicle.info_view = false;
+		object.callback        = CBID_NO_CALLBACK;
+		object.callback_param1 = 0;
+		object.callback_param2 = 0;
+		object.ResetState();
+		const Engine *e = Engine::Get(eid);
+		object.grffile         = (e != NULL ? e->grf_prop.grffile : NULL);
+
+		group = SpriteGroup::Resolve(e->grf_prop.spritegroup[CT_DEFAULT], &object);
+		if (group == NULL || group->GetNumResults() == 0) sprite=0;
+		sprite = group->GetResult() + (DIR_W % group->GetNumResults());
+
+		if (sprite != 0) return sprite;
+
+		spritenum = Engine::Get(eid)->original_image_index;
+	}
+	//sprite = GetDefaultTrainSprite(spritenum, direction);
+};*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// TODO
+

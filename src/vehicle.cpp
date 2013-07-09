@@ -53,6 +53,9 @@
 
 #include "table/strings.h"
 
+// MYGUI
+#include "aaa_template_vehicle_func.h"
+
 #define GEN_HASH(x, y) ((GB((y), 6 + ZOOM_LVL_SHIFT, 6) << 6) + GB((x), 7 + ZOOM_LVL_SHIFT, 6))
 
 VehicleID _new_vehicle_id;
@@ -609,6 +612,13 @@ void ResetVehicleColourMap()
 typedef SmallMap<Vehicle *, bool, 4> AutoreplaceMap;
 static AutoreplaceMap _vehicles_to_autoreplace;
 
+/**
+ * List of vehicles that are issued for template replacement this tick.
+ * Mapping is {vehicle : leave depot after replacement}
+ */
+typedef SmallMap<Train *, bool, 4> TemplateReplacementMap;
+static TemplateReplacementMap _vehicles_to_templatereplace;
+
 void InitializeVehicles()
 {
 	_vehicles_to_autoreplace.Reset();
@@ -811,14 +821,25 @@ Vehicle::~Vehicle()
  */
 void VehicleEnteredDepotThisTick(Vehicle *v)
 {
-	/* Vehicle should stop in the depot if it was in 'stopping' state */
-	_vehicles_to_autoreplace[v] = !(v->vehstatus & VS_STOPPED);
+	/* Template Replacement Setup stuff */ // MYGUI
+	bool stayInDepot = v->current_order.GetDepotActionType();
+	TemplateReplacement *tr = GetTemplateReplacementByGroupID(v->group_id);
+	if ( tr ) {
+		if ( stayInDepot )	_vehicles_to_templatereplace[(Train*)v] = true;
+		else				_vehicles_to_templatereplace[(Train*)v] = false;
+	}
+	/* Moved the assignment for auto replacement here to prevent auto replacement
+	 * from happening if template replacement is also scheduled */
+	else
+		/* Vehicle should stop in the depot if it was in 'stopping' state */
+		_vehicles_to_autoreplace[v] = !(v->vehstatus & VS_STOPPED);
 
 	/* We ALWAYS set the stopped state. Even when the vehicle does not plan on
 	 * stopping in the depot, so we stop it to ensure that it will not reserve
 	 * the path out of the depot before we might autoreplace it to a different
 	 * engine. The new engine would not own the reserved path we store that we
 	 * stopped the vehicle, so autoreplace can start it again */
+
 	v->vehstatus |= VS_STOPPED;
 }
 
@@ -859,6 +880,7 @@ static void RunVehicleDayProc()
 void CallVehicleTicks()
 {
 	_vehicles_to_autoreplace.Clear();
+	_vehicles_to_templatereplace.Clear();
 
 	RunVehicleDayProc();
 
@@ -935,6 +957,7 @@ void CallVehicleTicks()
 		}
 	}
 
+	/* do Auto Replacement */
 	Backup<CompanyByte> cur_company(_current_company, FILE_LINE);
 	for (AutoreplaceMap::iterator it = _vehicles_to_autoreplace.Begin(); it != _vehicles_to_autoreplace.End(); it++) {
 		v = it->first;
@@ -979,8 +1002,28 @@ void CallVehicleTicks()
 		SetDParam(1, error_message);
 		AddVehicleAdviceNewsItem(message, v->index);
 	}
-
 	cur_company.Restore();
+
+	/* do Template Replacement */
+	Backup<CompanyByte> tmpl_cur_company(_current_company, FILE_LINE);
+	for (TemplateReplacementMap::iterator it = _vehicles_to_templatereplace.Begin(); it != _vehicles_to_templatereplace.End(); it++) {
+
+		Train *t = it->first;
+
+		tmpl_cur_company.Change(t->owner);
+
+		bool stayInDepot = it->second;
+
+		it->first->vehstatus |= VS_STOPPED;
+		REPLACEMENT_IN_PROGRESS = true;
+
+		CmdTemplateReplaceVehicle(t, stayInDepot, DC_EXEC);
+		/* Redraw main gui for changed statistics */
+		SetWindowClassesDirty(WC_TEMPLATEGUI_MAIN);
+
+		REPLACEMENT_IN_PROGRESS = false;
+	}
+	tmpl_cur_company.Restore();
 }
 
 /**
@@ -2479,8 +2522,6 @@ void Vehicle::ShowVisualEffect() const
 			this->cur_speed < 2) {
 		return;
 	}
-
-	uint max_speed = this->vcache.cached_max_speed;
 	if (this->type == VEH_TRAIN) {
 		const Train *t = Train::From(this);
 		/* For trains, do not show any smoke when:
@@ -2492,11 +2533,7 @@ void Vehicle::ShowVisualEffect() const
 				t->cur_speed >= t->Train::GetCurrentMaxSpeed())) {
 			return;
 		}
-
-		max_speed = min(max_speed, t->gcache.cached_max_track_speed);
-		max_speed = min(max_speed, this->current_order.max_speed);
 	}
-	if (this->type == VEH_ROAD || this->type == VEH_SHIP) max_speed = min(max_speed, this->current_order.max_speed * 2);
 
 	const Vehicle *v = this;
 
@@ -2542,7 +2579,7 @@ void Vehicle::ShowVisualEffect() const
 				 * third of its maximum speed spectrum. Steam emission finally normalises at very close to vehicle's maximum speed.
 				 * REGULATION:
 				 * - instead of 1, 4 / 2^smoke_amount (max. 2) is used to provide sufficient regulation to steam puffs' amount. */
-				if (GB(v->tick_counter, 0, ((4 >> _settings_game.vehicle.smoke_amount) + ((this->cur_speed * 3) / max_speed))) == 0) {
+				if (GB(v->tick_counter, 0, ((4 >> _settings_game.vehicle.smoke_amount) + ((this->cur_speed * 3) / this->vcache.cached_max_speed))) == 0) {
 					CreateEffectVehicleRel(v, x, y, 10, EV_STEAM_SMOKE);
 					sound = true;
 				}
@@ -2564,8 +2601,8 @@ void Vehicle::ShowVisualEffect() const
 				if (v->type == VEH_TRAIN) {
 					power_weight_effect = (32 >> (Train::From(this)->gcache.cached_power >> 10)) - (32 >> (Train::From(this)->gcache.cached_weight >> 9));
 				}
-				if (this->cur_speed < (max_speed >> (2 >> _settings_game.vehicle.smoke_amount)) &&
-						Chance16((64 - ((this->cur_speed << 5) / max_speed) + power_weight_effect), (512 >> _settings_game.vehicle.smoke_amount))) {
+				if (this->cur_speed < (this->vcache.cached_max_speed >> (2 >> _settings_game.vehicle.smoke_amount)) &&
+						Chance16((64 - ((this->cur_speed << 5) / this->vcache.cached_max_speed) + power_weight_effect), (512 >> _settings_game.vehicle.smoke_amount))) {
 					CreateEffectVehicleRel(v, x, y, 10, EV_DIESEL_SMOKE);
 					sound = true;
 				}
@@ -2580,7 +2617,7 @@ void Vehicle::ShowVisualEffect() const
 				 * REGULATION:
 				 * - in Chance16 the last value is 360 / 2^smoke_amount (max. sparks when 90 = smoke_amount of 2). */
 				if (GB(v->tick_counter, 0, 2) == 0 &&
-						Chance16((6 - ((this->cur_speed << 2) / max_speed)), (360 >> _settings_game.vehicle.smoke_amount))) {
+						Chance16((6 - ((this->cur_speed << 2) / this->vcache.cached_max_speed)), (360 >> _settings_game.vehicle.smoke_amount))) {
 					CreateEffectVehicleRel(v, x, y, 10, EV_ELECTRIC_SPARK);
 					sound = true;
 				}

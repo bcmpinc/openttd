@@ -104,6 +104,7 @@ struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
 	Money GetRunningCost() const;
 	int GetDisplayImageWidth(Point *offset = NULL) const;
 	bool IsInDepot() const { return this->track == TRACK_BIT_DEPOT; }
+	Money CalculateCurrentOverallValue() const;
 	bool Tick();
 	void OnNewDay();
 	uint Crash(bool flooded = false);
@@ -145,6 +146,13 @@ struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
 		if (v != NULL && v->IsRearDualheaded()) v = v->GetPrevVehicle();
 
 		return v;
+	}
+
+	// MYGUI
+	inline Train *GetLastUnit() {
+		Train *tmp = this;
+		while ( tmp->GetNextUnit() ) tmp = tmp->GetNextUnit();
+		return tmp;
 	}
 
 	/**
@@ -319,6 +327,16 @@ protected: // These functions should not be called outside acceleration code.
 		return false;
 	}
 };
+
+
+// TODO
+CommandCost CmdBuildRailVehicle(TileIndex, DoCommandFlag, const Engine *, uint16, Vehicle**);
+CommandCost CmdMoveRailVehicle(TileIndex, DoCommandFlag , uint32, uint32, const char *);
+CommandCost CmdMoveVirtualRailVehicle(TileIndex, DoCommandFlag, uint32, uint32, const char*);
+
+Train* CmdBuildVirtualRailWagon(const Engine*);
+Train* CmdBuildVirtualRailVehicle(EngineID);
+CommandCost CmdSellRailWagon(DoCommandFlag, Vehicle*, uint16, uint32);
 
 #define FOR_ALL_TRAINS(var) FOR_ALL_VEHICLES_OF_TYPE(Train, var)
 

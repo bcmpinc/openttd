@@ -18,6 +18,9 @@
 
 #include "table/strings.h"
 
+// MYGUI_NOEND
+#include <stdio.h>
+
 /**
  * Callback for building wagons.
  * @param result The result of the command.
@@ -55,7 +58,8 @@ void CcBuildWagon(const CommandCost &result, TileIndex tile, uint32 p1, uint32 p
  * @param selection Selected vehicle that is dragged.
  * @return The width of the highlight mark.
  */
-static int HighlightDragPosition(int px, int max_width, VehicleID selection)
+// MYGUI_NOEND previously static
+int HighlightDragPosition(int px, int max_width, VehicleID selection)
 {
 	bool rtl = _current_text_dir == TD_RTL;
 

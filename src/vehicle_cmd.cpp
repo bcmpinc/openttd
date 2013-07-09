@@ -425,6 +425,7 @@ static CommandCost RefitVehicle(Vehicle *v, bool only_this, uint8 num_vehicles, 
  * @param p2 various bitstuffed elements
  * - p2 = (bit 0-4)   - New cargo type to refit to.
  * - p2 = (bit 6)     - Automatic refitting.
+ * - p2 = (bit 5)	  - Is a virtual train (used by template replacement to allow refitting without stopped-in-depot checks)
  * - p2 = (bit 7)     - Refit only this vehicle. Used only for cloning vehicles.
  * - p2 = (bit 8-15)  - New cargo subtype to refit to. 0xFF means to try keeping the same subtype according to GetBestFittingSubType().
  * - p2 = (bit 16-23) - Number of vehicles to refit (not counting articulated parts). Zero means all vehicles.
@@ -447,12 +448,15 @@ CommandCost CmdRefitVehicle(TileIndex tile, DoCommandFlag flags, uint32 p1, uint
 	if (ret.Failed()) return ret;
 
 	bool auto_refit = HasBit(p2, 6);
+	bool is_virtual_train = HasBit(p2, 5);
 
 	/* Don't allow shadows and such to be refitted. */
 	if (v != front && (v->type == VEH_SHIP || v->type == VEH_AIRCRAFT)) return CMD_ERROR;
 	/* Allow auto-refitting only during loading and normal refitting only in a depot. */
-	if ((!auto_refit || !front->current_order.IsType(OT_LOADING)) && !front->IsStoppedInDepot()) return_cmd_error(STR_ERROR_TRAIN_MUST_BE_STOPPED_INSIDE_DEPOT + front->type);
-	if (front->vehstatus & VS_CRASHED) return_cmd_error(STR_ERROR_VEHICLE_IS_DESTROYED);
+	if ( ! is_virtual_train ) {
+		if ((!auto_refit || !front->current_order.IsType(OT_LOADING)) && !front->IsStoppedInDepot()) return_cmd_error(STR_ERROR_TRAIN_MUST_BE_STOPPED_INSIDE_DEPOT + front->type);
+		if (front->vehstatus & VS_CRASHED) return_cmd_error(STR_ERROR_VEHICLE_IS_DESTROYED);
+	}
 
 	/* Check cargo */
 	CargoID new_cid = GB(p2, 0, 5);
@@ -492,7 +496,11 @@ CommandCost CmdRefitVehicle(TileIndex tile, DoCommandFlag flags, uint32 p1, uint
 		}
 
 		InvalidateWindowData(WC_VEHICLE_DETAILS, front->index);
-		SetWindowDirty(WC_VEHICLE_DEPOT, front->tile);
+		/* virtual vehicles get their cargo changed by the TemplateCreateWindow, so set this dirty instead of a depot window */
+		//if ( HasBit(v->subtype, GVSF_VIRTUAL) ) SetWindowDirty(WC_CREATE_TEMPLATE, -1); // MYGUI
+		if ( HasBit(v->subtype, GVSF_VIRTUAL) ) SetWindowClassesDirty(WC_CREATE_TEMPLATE);
+		else SetWindowDirty(WC_VEHICLE_DEPOT, front->tile);
+
 		InvalidateWindowClassesData(GetWindowClassForVehicleType(v->type), 0);
 	} else {
 		/* Always invalidate the cache; querycost might have filled it. */

@@ -24,6 +24,7 @@ enum BuildVehicleWidgets {
 	WID_BV_BUILD,                     ///< Build panel.
 	WID_BV_BUILD_SEL,                 ///< Build button.
 	WID_BV_RENAME,                    ///< Rename button.
+	BUILD_VEHICLE_WIDGET_BUILD,		  /// TODO: own
 };
 
 #endif /* WIDGETS_BUILD_VEHICLE_WIDGET_H */

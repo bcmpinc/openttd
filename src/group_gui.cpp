@@ -30,6 +30,9 @@
 
 #include "table/sprites.h"
 
+// MYGUI_NOEND
+#include "aaa_template_gui_main.h"
+
 typedef GUIList<const Group*> GUIGroupList;
 
 static const NWidgetPart _nested_group_widgets[] = {
@@ -594,6 +597,7 @@ public:
 				this->vli.index = ALL_GROUP;
 
 				DoCommandP(0, group, 0, CMD_DELETE_GROUP | CMD_MSG(STR_ERROR_GROUP_CAN_T_DELETE));
+				InvalidateWindowData(WC_TEMPLATEGUI_MAIN, 0, 0, 0);
 				break;
 			}
 
@@ -674,6 +678,7 @@ public:
 	virtual void OnQueryTextFinished(char *str)
 	{
 		if (str != NULL) DoCommandP(0, this->group_rename, 0, CMD_RENAME_GROUP | CMD_MSG(STR_ERROR_GROUP_CAN_T_RENAME), NULL, str);
+		InvalidateWindowData(WC_TEMPLATEGUI_MAIN, 0, 0, 0);
 		this->group_rename = INVALID_GROUP;
 	}
 
@@ -694,6 +699,11 @@ public:
 				assert(this->vehicles.Length() != 0);
 
 				switch (index) {
+					case ADI_TEMPLATE_REPLACE: // TemplateReplace Window
+						if ( vli.vtype == VEH_TRAIN )
+							// TODO before we used vli.company in the main gui, maybe retrieve it here and pass it as param to the gui ?
+							ShowTemplateReplaceWindow(this->unitnumber_digits, this->resize.step_height);
+						break;
 					case ADI_REPLACE: // Replace window
 						ShowReplaceGroupVehicleWindow(this->vli.index, this->vli.vtype);
 						break;
