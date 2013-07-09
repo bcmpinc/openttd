@@ -1582,6 +1582,7 @@ static SettingEntry _settings_economy[] = {
 	SettingEntry("economy.feeder_payment_share"),
 	SettingEntry("economy.infrastructure_maintenance"),
 	SettingEntry("economy.transfer_payments"),	
+	SettingEntry("economy.daylength_factor"),
 	SettingEntry("difficulty.vehicle_costs"),
 	SettingEntry("difficulty.construction_cost"),
 	SettingEntry("difficulty.disasters"),
