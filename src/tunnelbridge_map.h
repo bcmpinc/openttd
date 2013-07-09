@@ -140,11 +140,16 @@ static inline TrackBits GetTunnelBridgeReservationTrackBits(TileIndex t)
  * Declare tunnel/bridge with signal simulation.
  * @param t the tunnel/bridge tile.
  */
-static inline void SetBitTunnelBridgeSignal(TileIndex t)
+template <bool Tgeneric>
+static inline void SetBitTunnelBridgeSignal(typename TileIndexT<Tgeneric>::T t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
 	SetBit(GetTile(t)->m5, 5);
 }
+/** @copydoc SetBitTunnelBridgeSignal(TileIndexT<Tgeneric>::T) */
+static inline void SetBitTunnelBridgeSignal(TileIndex t) { return SetBitTunnelBridgeSignal<false>(t); }
+/** @copydoc SetBitTunnelBridgeSignal(TileIndexT<Tgeneric>::T) */
+static inline void SetBitTunnelBridgeSignal(GenericTileIndex t) { return SetBitTunnelBridgeSignal<true>(t); }
 
 /**
  * Remove tunnel/bridge with signal simulation.
@@ -160,11 +165,16 @@ static inline void ClrBitTunnelBridgeSignal(TileIndex t)
  * Declare tunnel/bridge exit.
  * @param t the tunnel/bridge tile.
  */
-static inline void SetBitTunnelBridgeExit(TileIndex t)
+template <bool Tgeneric>
+static inline void SetBitTunnelBridgeExit(typename TileIndexT<Tgeneric>::T t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
 	SetBit(GetTile(t)->m5, 6);
 }
+/** @copydoc SetBitTunnelBridgeExit(TileIndexT<Tgeneric>::T) */
+static inline void SetBitTunnelBridgeExit(TileIndex t) { return SetBitTunnelBridgeExit<false>(t); }
+/** @copydoc SetBitTunnelBridgeExit(TileIndexT<Tgeneric>::T) */
+static inline void SetBitTunnelBridgeExit(GenericTileIndex t) { return SetBitTunnelBridgeExit<true>(t); }
 
 /**
  * Remove tunnel/bridge exit declaration.
@@ -182,10 +192,15 @@ static inline void ClrBitTunnelBridgeExit(TileIndex t)
  * @param t the tile that might be a tunnel/bridge.
  * @return true if and only if this tile is a tunnel/bridge with signal simulation.
  */
-static inline bool HasWormholeSignals(TileIndex t)
+template <bool Tgeneric>
+static inline bool HasWormholeSignals(typename TileIndexT<Tgeneric>::T t)
 {
 	return IsTileType(t, MP_TUNNELBRIDGE) && (HasBit(GetTile(t)->m5, 5) || HasBit(GetTile(t)->m5, 6)) ;
 }
+/** @copydoc HasWormholeSignals(TileIndexT<Tgeneric>::T) */
+static inline bool HasWormholeSignals(TileIndex t) { return HasWormholeSignals<false>(t); }
+/** @copydoc HasWormholeSignals(TileIndexT<Tgeneric>::T) */
+static inline bool HasWormholeSignals(GenericTileIndex t) { return HasWormholeSignals<true>(t); }
 
 /**
  * Is this a tunnel/bridge with sign on green?
@@ -211,11 +226,17 @@ static inline bool IsTunnelBridgeWithSignRed(TileIndex t)
  * @param t the tile that might be a tunnel/bridge.
  * @return true if and only if this tile is a tunnel/bridge entrance.
  */
-static inline bool IsTunnelBridgeEntrance(TileIndex t)
+template <bool Tgeneric>
+static inline bool IsTunnelBridgeEntrance(typename TileIndexT<Tgeneric>::T t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
 	return HasBit(GetTile(t)->m5, 5) ;
 }
+/** @copydoc IsTunnelBridgeEntrance(TileIndexT<Tgeneric>::T) */
+static inline bool IsTunnelBridgeEntrance(TileIndex t) { return IsTunnelBridgeEntrance<false>(t); }
+/** @copydoc IsTunnelBridgeEntrance(TileIndexT<Tgeneric>::T) */
+static inline bool IsTunnelBridgeEntrance(GenericTileIndex t) { return IsTunnelBridgeEntrance<true>(t); }
+
 
 /**
  * Is this a tunnel/bridge exit?

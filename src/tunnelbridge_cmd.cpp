@@ -2030,13 +2030,18 @@ static CommandCost TerraformTile_TunnelBridge(TileIndex tile, DoCommandFlag flag
 	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
 }
 
-static void CopyPastePlaceTunnel(GenericTileIndex tile, DiagDirection dir, uint mid_len, TransportType transport_type, uint rail_road_types)
+static void CopyPastePlaceTunnel(GenericTileIndex tile, DiagDirection dir, uint mid_len, TransportType transport_type, uint rail_road_types, int signals)
 {
 	GenericTileIndex end_tile = TILE_ADDXY(tile, TileIndexDiffCByDiagDir(dir).x * (mid_len + 1), TileIndexDiffCByDiagDir(dir).y * (mid_len + 1));
 	if (IsMainMapTile(tile)) {
 		_current_pasting->DoCommand(AsMainMapTile(tile), rail_road_types | (transport_type << 8), AsMainMapTile(end_tile), CMD_BUILD_TUNNEL | CMD_MSG(STR_ERROR_CAN_T_BUILD_TUNNEL_HERE));
 		if (_current_pasting->last_result.Failed() && _current_pasting->last_result.GetErrorMessage() == _current_pasting->err_message && _build_tunnel_endtile != 0) {
 			_current_pasting->err_tile = _build_tunnel_endtile;
+		} else if (signals) {
+			_current_pasting->DoCommand(AsMainMapTile(signals==1?tile:end_tile), 0, 0, CMD_BUILD_SIGNALS);
+			if (_current_pasting->last_result.Failed() && _current_pasting->last_result.GetErrorMessage() == _current_pasting->err_message) {
+				_current_pasting->err_tile = _build_tunnel_endtile;
+			}
 		}
 	} else {
 		if (transport_type == TRANSPORT_RAIL) {
@@ -2046,14 +2051,24 @@ static void CopyPastePlaceTunnel(GenericTileIndex tile, DiagDirection dir, uint 
 			MakeRoadTunnel(tile, OWNER_NONE, dir, (RoadTypes)rail_road_types);
 			MakeRoadTunnel(end_tile, OWNER_NONE, ReverseDiagDir(dir), (RoadTypes)rail_road_types);
 		}
+		if (signals==1) {
+			SetBitTunnelBridgeSignal(tile);
+			SetBitTunnelBridgeExit(end_tile);
+		} else if (signals==2) {
+			SetBitTunnelBridgeSignal(end_tile);
+			SetBitTunnelBridgeExit(tile);
+		} 
 	}
 }
 
-static void CopyPastePlaceBridge(GenericTileIndex tile, DiagDirection dir, uint mid_len, BridgeType bridgetype, TransportType transport_type, uint rail_road_types)
+static void CopyPastePlaceBridge(GenericTileIndex tile, DiagDirection dir, uint mid_len, BridgeType bridgetype, TransportType transport_type, uint rail_road_types, int signals)
 {
 	GenericTileIndex end_tile = TILE_ADDXY(tile, TileIndexDiffCByDiagDir(dir).x * (mid_len + 1), TileIndexDiffCByDiagDir(dir).y * (mid_len + 1));
 	if (IsMainMapTile(tile)) {
 		_current_pasting->DoCommand(AsMainMapTile(end_tile), AsMainMapTile(tile), bridgetype | (rail_road_types << 8) | (transport_type << 15), CMD_BUILD_BRIDGE | CMD_MSG(STR_ERROR_CAN_T_BUILD_BRIDGE_HERE));
+		if (_current_pasting->last_result.Succeeded() && signals) {
+			_current_pasting->DoCommand(AsMainMapTile(signals==1?tile:end_tile), 0, 0, CMD_BUILD_SIGNALS);
+		}
 	} else {
 		switch (transport_type) {
 			case TRANSPORT_RAIL:
@@ -2074,7 +2089,15 @@ static void CopyPastePlaceBridge(GenericTileIndex tile, DiagDirection dir, uint 
 			default:
 				NOT_REACHED();
 		}
-
+		
+		if (signals==1) {
+			SetBitTunnelBridgeSignal(tile);
+			SetBitTunnelBridgeExit(end_tile);
+		} else if (signals==2) {
+			SetBitTunnelBridgeSignal(end_tile);
+			SetBitTunnelBridgeExit(tile);
+		}
+		 
 		Axis axis = DiagDirToAxis(dir);
 		while (mid_len-- > 0) {
 			tile = TileAddByDiagDir(tile, dir);
@@ -2193,11 +2216,18 @@ void CopyPasteTile_TunnelBridge(GenericTileIndex src_tile, GenericTileIndex dst_
 		default: break;
 	}
 
+	int signals = 0;
+	if (HasWormholeSignals(src_tile)) {
+		signals = IsTunnelBridgeEntrance(src_tile)?1:2;
+		if (copy_paste.mode & CPM_MIRROR_SIGNALS) {
+			signals = 3-signals;
+		}
+	}
 	if (IsTunnel(src_tile)) {
-		CopyPastePlaceTunnel(dst_tile, dst_dir, mid_len, transport_type, rail_road_types);
+		CopyPastePlaceTunnel(dst_tile, dst_dir, mid_len, transport_type, rail_road_types, signals);
 	} else {
 		BridgeType bridge_type = (copy_paste.mode & CPM_UPGRADE_BRIDGES) ? FastestAvailableBridgeType(mid_len) : GetBridgeType(src_tile);
-		CopyPastePlaceBridge(dst_tile, dst_dir, mid_len, bridge_type, transport_type, rail_road_types);
+		CopyPastePlaceBridge(dst_tile, dst_dir, mid_len, bridge_type, transport_type, rail_road_types, signals);
 	}
 }
 
