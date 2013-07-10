@@ -39,6 +39,16 @@ struct LegendAndColour {
 	bool col_break;            ///< Perform a column break and go further at the next column.
 };
 
+/** Information on how to graw grid lines */
+struct SmallMapGridProps {
+	uint32 colour_flat;
+	uint32 colour_lowland;
+	uint32 colour_upland;
+	uint32 colour_water;
+
+	uint32 mask;
+};
+
 /** Class managing the smallmap window. */
 class SmallMapWindow : public Window {
 protected:
@@ -60,6 +70,13 @@ protected:
 		ZLC_ZOOM_IN,    ///< Zoom in.
 	};
 
+	/** Grid options. */
+	enum GridOption {
+		GO_SIZE,           ///< Grid size.
+		GO_LINE_CONTRAST,  ///< Grid line contrast.
+		GO_LINE_THICKNESS, ///< Grid line thickness.
+	};
+
 	static SmallMapType map_type; ///< Currently displayed legends.
 	static bool show_towns;       ///< Display town names in the smallmap.
 
@@ -67,6 +84,7 @@ protected:
 	static const uint INDUSTRY_MIN_NUMBER_OF_COLUMNS = 2; ///< Minimal number of columns in the #WID_SM_LEGEND widget for the #SMT_INDUSTRY legend.
 	static const uint FORCE_REFRESH_PERIOD = 0x1F; ///< map is redrawn after that many ticks
 	static const uint BLINK_PERIOD         = 0x0F; ///< highlight blinking interval
+	static const uint BASE_GRID_SIZE = 8; ///< Size (in tiles) of the densest smallmap grid (zoom x1).
 
 	uint min_number_of_columns;    ///< Minimal number of columns in legends.
 	uint min_number_of_fixed_rows; ///< Minimal number of rows in the legends for the fixed layouts only (all except #SMT_INDUSTRY).
@@ -76,6 +94,8 @@ protected:
 	int32 scroll_y;  ///< Vertical world coordinate of the base tile left of the top-left corner of the smallmap display.
 	int32 subscroll; ///< Number of pixels (0..3) between the right end of the base tile and the pixel at the top-left corner of the smallmap display.
 	int zoom;        ///< Zoom level. Bigger number means more zoom-out (further away).
+	uint grid_size;  ///< Current size (in tiles) of the grid.
+	SmallMapGridProps grid_props; ///< Appearance of the grid.
 
 	uint8 refresh;   ///< Refresh counter, zeroed every FORCE_REFRESH_PERIOD ticks.
 	LinkGraphOverlay *overlay;
@@ -150,9 +170,13 @@ protected:
 	Point PixelToTile(int px, int py, int *sub, bool add_sub = true) const;
 	Point ComputeScroll(int tx, int ty, int x, int y, int *sub);
 	void SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt);
+	void SetGridOption(GridOption option, int delta);
 	void SetOverlayCargoMask();
+	void RecalcGridProps();
 	void SetupWidgetData();
 	uint32 GetTileColours(const TileArea &ta) const;
+    uint32 GetTileGroundColours(TileIndex tile, TileType et, const SmallMapGridProps *grid) const;
+    uint32 GetTileForeColours(TileIndex tile, TileType et, uint32 ground_colours) const;
 
 	int GetPositionOnLegend(Point pt);
 
@@ -177,5 +201,15 @@ public:
 	virtual void OnScroll(Point delta);
 	virtual void OnMouseOver(Point pt, int widget);
 };
+
+static const uint8 DEF_SMALLMAP_GRID_SIZE = 4; ///< Default smallmap grid size
+static const uint8 MIN_SMALLMAP_GRID_SIZE = 1; ///< Lowest possible smallmap grid size
+static const uint8 MAX_SMALLMAP_GRID_SIZE = 8; ///< Highest possible smallmap grid size
+static const int8 DEF_SMALLMAP_GRIDLINE_CONTRAST =  0; ///< Default contrast of grid lines on smallmap
+static const int8 MIN_SMALLMAP_GRIDLINE_CONTRAST = -4; ///< Lowest possible contrast of grid lines on smallmap
+static const int8 MAX_SMALLMAP_GRIDLINE_CONTRAST = +4; ///< Highest possible contrast of grid lines on smallmap
+static const uint8 DEF_SMALLMAP_GRIDLINE_THICKNESS = 2; ///< Default thickness of grid lines on smallmap
+static const uint8 MIN_SMALLMAP_GRIDLINE_THICKNESS = 1; ///< Lowest possible thickness of grid lines on smallmap
+static const uint8 MAX_SMALLMAP_GRIDLINE_THICKNESS = 4; ///< Highest possible thickness of grid lines on smallmap
 
 #endif /* SMALLMAP_GUI_H */
