@@ -91,6 +91,7 @@ tgp.cpp
 tile_map.cpp
 tilearea.cpp
 townname.cpp
+triphistory_cmd.cpp
 #if WIN32
 #else
 	#if WINCE
@@ -228,6 +229,7 @@ livery.h
 map_func.h
 map_type.h
 mixer.h
+triphistory.h
 network/network.h
 network/network_admin.h
 network/network_base.h
@@ -276,6 +278,7 @@ music/null_m.h
 sound/null_s.h
 video/null_v.h
 object.h
+triphistory_gui.cpp
 object_base.h
 object_type.h
 openttd.h

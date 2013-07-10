@@ -372,6 +372,9 @@
     <ClCompile Include="..\src\townname.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\triphistory_cmd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\vehicle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -714,6 +717,9 @@
     <ClInclude Include="..\src\mixer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\triphistory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\network\network.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -858,6 +864,9 @@
     <ClInclude Include="..\src\object.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClCompile Include="..\src\triphistory_gui.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
     <ClInclude Include="..\src\object_base.h">
       <Filter>Header Files</Filter>
     </ClInclude>

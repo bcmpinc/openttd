@@ -39,6 +39,7 @@
 #include "subsidy_func.h"
 #include "station_base.h"
 #include "waypoint_base.h"
+#include "triphistory.h"
 #include "economy_base.h"
 #include "core/pool_func.hpp"
 #include "core/backup_type.hpp"
@@ -1166,6 +1167,8 @@ CargoPayment::~CargoPayment()
 				this->front->z_pos, -this->visual_profit);
 	}
 
+	this->front->trip_history.AddValue(this->route_profit, _date);
+	InvalidateWindowData(WC_VEHICLE_TRIP_HISTORY, this->front->index);
 	cur_company.Restore();
 }
 

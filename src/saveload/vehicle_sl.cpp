@@ -699,6 +699,27 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 
 		SLE_CONDNULL(10,                                                           2, 143), // old reserved space
 
+		// Trip History Arrays
+		SLE_CONDVAR(Vehicle, trip_history.t[0].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[1].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[2].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[3].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[4].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[5].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[6].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[7].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[8].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[9].profit,     SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[0].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[1].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[2].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[3].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[4].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[5].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[6].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[7].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[8].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
+		SLE_CONDVAR(Vehicle, trip_history.t[9].date,       SLE_INT64,     SL_TRIP, SL_MAX_VERSION),
 		     SLE_END()
 	};
 
