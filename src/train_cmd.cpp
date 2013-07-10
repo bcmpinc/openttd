@@ -3405,7 +3405,7 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 				if (IsLevelCrossingTile(gp.old_tile)) UpdateLevelCrossing(gp.old_tile);
 			}
 		}
-
+		
 		/* Do not check on every tick to save some computing time. */
 		if (v->IsFrontEngine() && v->tick_counter % _settings_game.pf.path_backoff_interval == 0) CheckNextTrainTile(v);
 	}
@@ -3755,7 +3755,9 @@ static bool TrainCheckIfLineEnds(Train *v, bool reverse)
 	return true;
 }
 
-
+/**
+ * Updates the train for one tick. Only called for the front engine of the train.
+ */
 static bool TrainLocoHandler(Train *v, bool mode)
 {
 	/* train has crashed? */
@@ -3846,6 +3848,7 @@ static bool TrainLocoHandler(Train *v, bool mode)
 		return true;
 	}
 
+	/* Get the (maximum) amount of distance that this train can move this tick. */
 	int j = v->UpdateSpeed();
 
 	/* we need to invalidate the widget if we are stopping from 'Stopping 0 km/h' to 'Stopped' */
@@ -3855,6 +3858,7 @@ static bool TrainLocoHandler(Train *v, bool mode)
 		SetWindowDirty(WC_VEHICLE_VIEW, v->index);
 	}
 
+	/* Determine distance to next map position */
 	int adv_spd = v->GetAdvanceDistance();
 	if (j < adv_spd) {
 		/* if the vehicle has speed 0, update the last_speed field. */

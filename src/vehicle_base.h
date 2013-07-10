@@ -177,10 +177,10 @@ public:
 	byte breakdowns_since_last_service; ///< Counter for the amount of breakdowns.
 	byte breakdown_chance;              ///< Current chance of breakdowns.
 
-	int32 x_pos;                        ///< x coordinate.
-	int32 y_pos;                        ///< y coordinate.
-	int32 z_pos;                        ///< z coordinate.
-	DirectionByte direction;            ///< facing
+	int32 x_pos;                        ///< x coordinate. In 1/16th of a tile.
+	int32 y_pos;                        ///< y coordinate. In 1/16th of a tile.
+	int32 z_pos;                        ///< z coordinate. In 1/16th of a tile.
+	DirectionByte direction;            ///< facing, least significant bit is 0 when moving in X or Y direction.
 
 	OwnerByte owner;                    ///< Which company owns the vehicle?
 	/**
