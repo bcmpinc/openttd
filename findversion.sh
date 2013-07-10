@@ -87,22 +87,16 @@ if [ -d "$ROOT_DIR/.svn" ] || [ -d "$ROOT_DIR/../.svn" ]; then
 elif [ -d "$ROOT_DIR/.git" ]; then
 	# We are a git checkout
 	# Refresh the index to make sure file stat info is in sync, then look for modifications
-	git update-index --refresh >/dev/null
-	if [ -n "`git diff-index HEAD`" ]; then
+	if git update-index --refresh >/dev/null; then
+		MODIFIED="0"
+	else
 		MODIFIED="2"
 	fi
-	HASH=`LC_ALL=C git rev-parse --verify HEAD 2>/dev/null`
-	REV="g`echo $HASH | cut -c1-8`"
-	BRANCH="`git symbolic-ref -q HEAD 2>/dev/null | sed 's@.*/@@;s@^master$@@'`"
+	REV=`LC_ALL=C git write-tree --missing-ok 2>/dev/null`
 	REV_NR=`LC_ALL=C git log --pretty=format:%s --grep="^(svn r[0-9]*)" -1 | sed "s@.*(svn r\([0-9]*\)).*@\1@"`
 	if [ -z "$REV_NR" ]; then
 		# No rev? Maybe it is a custom git-svn clone
 		REV_NR=`LC_ALL=C git log --pretty=format:%b --grep="git-svn-id:.*@[0-9]*" -1 | sed "s@.*\@\([0-9]*\).*@\1@"`
-	fi
-	TAG="`git name-rev --name-only --tags --no-undefined HEAD 2>/dev/null | sed 's@\^0$@@'`"
-	if [ -n "$TAG" ]; then
-		BRANCH=""
-		REV="$TAG"
 	fi
 elif [ -d "$ROOT_DIR/.hg" ]; then
 	# We are a hg checkout
