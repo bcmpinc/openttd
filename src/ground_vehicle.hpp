@@ -381,8 +381,11 @@ protected:
 		 * speed by explicit ordering of min and max. */
 		this->cur_speed = spd = max(min(this->cur_speed + ((int)spd >> 8), tempmax), min_speed);
 
+		/* Multiplies the speed by 0.75, such that 192 corresponds to 1/16th of the width of a
+		 * tile, and 256 to 1/16th of the diagonal. */
 		int scaled_spd = this->GetAdvanceSpeed(spd);
 
+		/* Add the fraction of traveled distance that has not yet been processed. */
 		scaled_spd += this->progress;
 		this->progress = 0; // set later in *Handler or *Controller
 		return scaled_spd;
