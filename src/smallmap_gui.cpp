@@ -271,14 +271,14 @@ assert_compile(lengthof(_green_map_heights) == MAX_TILE_HEIGHT + 1);
  * Colour Coding for Stuck Counter
  */
 static const uint32 _stuck_counter_colours[] = {
-	MKCOLOUR(0xD0D0D0D0),
-	MKCOLOUR(0xCECECECE),
-	MKCOLOUR(0xBFBFBFBF),
-	MKCOLOUR(0xBDBDBDBD),
-	MKCOLOUR(0xBABABABA),
-	MKCOLOUR(0xB8B8B8B8),
-	MKCOLOUR(0xB6B6B6B6),
-	MKCOLOUR(0xB4B4B4B4),
+	MKCOLOUR_XXXX(PC_VERY_LIGHT_YELLOW),
+	MKCOLOUR_XXXX(PC_LIGHT_YELLOW),
+	MKCOLOUR_XXXX(PC_YELLOW),
+	MKCOLOUR_XXXX(PC_ORANGE),
+	MKCOLOUR_XXXX(PC_RED),
+	MKCOLOUR_XXXX(PC_DARK_RED),
+	MKCOLOUR_XXXX(PC_VERY_DARK_RED),
+	MKCOLOUR_XXXX(PC_BLACK),
 };
 assert_compile(lengthof(_stuck_counter_colours) == 8);
 
@@ -519,8 +519,17 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
 		}
 	} else if (t == MP_RAILWAY) {
 		byte c = GetStuckCounter(tile);
-		if (c==0) return 0;
-		return _stuck_counter_colours[c/32];
+		if (c) {
+			return _stuck_counter_colours[c/32];
+		} else {
+			AndOr andor = {
+				MKCOLOUR_0XX0(PC_GREY),
+				_smallmap_contours_andor[t].mand
+			};
+
+			const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
+			return ApplyMask(cs->default_colour, &andor);
+		}
 	}
 
 	/* Ground colour */

@@ -554,7 +554,7 @@ static inline void IncreaseStuckCounter(TileIndex t)
 static inline void ReduceStuckCounter(TileIndex t)
 {
 	if (!IsTileType(t, MP_RAILWAY)) return;
-	_me[t].m7 -= _me[t].m7/4;
+	_me[t].m7-=(_me[t].m7+15)/16;
 }
 
 
