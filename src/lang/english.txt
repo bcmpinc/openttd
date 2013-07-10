@@ -678,6 +678,7 @@ STR_SMALLMAP_TYPE_ROUTEMAP                                      :Cargo Flow
 STR_SMALLMAP_TYPE_ROUTES                                        :Routes
 STR_SMALLMAP_TYPE_VEGETATION                                    :Vegetation
 STR_SMALLMAP_TYPE_OWNERS                                        :Owners
+STR_SMALLMAP_TOOLTIP_SHOW_GRID_ON_MAP                           :{BLACK}Show/hide grid lines
 STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP                  :{BLACK}Show land contours on map
 STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP                       :{BLACK}Show vehicles on map
 STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP                     :{BLACK}Show industries on map
@@ -1295,6 +1296,12 @@ STR_CONFIG_SETTING_SMALLMAP_LAND_COLOUR_HELPTEXT                :Colour of the t
 STR_CONFIG_SETTING_SMALLMAP_LAND_COLOUR_GREEN                   :Green
 STR_CONFIG_SETTING_SMALLMAP_LAND_COLOUR_DARK_GREEN              :Dark green
 STR_CONFIG_SETTING_SMALLMAP_LAND_COLOUR_VIOLET                  :Violet
+STR_CONFIG_SETTING_SMALLMAP_GRID_SIZE                           :Smallmap grid size: {STRING2}
+STR_CONFIG_SETTING_SMALLMAP_GRID_SIZE_HELPTEXT                  :Size of the grid in the smallmap
+STR_CONFIG_SETTING_SMALLMAP_GRIDLINE_CONTRAST                   :Smallmap grid line contrast: {STRING2}
+STR_CONFIG_SETTING_SMALLMAP_GRIDLINE_CONTRAST_HELPTEXT          :Contrast of grid lines in the smallmap
+STR_CONFIG_SETTING_SMALLMAP_GRIDLINE_THICKNESS                  :Smallmap grid line thickness: {STRING2}
+STR_CONFIG_SETTING_SMALLMAP_GRIDLINE_THICKNESS_HELPTEXT         :Thickness of grid lines in the smallmap
 STR_CONFIG_SETTING_REVERSE_SCROLLING                            :Reverse scroll direction: {STRING2}
 STR_CONFIG_SETTING_REVERSE_SCROLLING_HELPTEXT                   :Behaviour when scrolling the map with the right mouse button. When disabled, the mouse moves the camera. When enabled, the mouse moves the map
 STR_CONFIG_SETTING_SMOOTH_SCROLLING                             :Smooth viewport scrolling: {STRING2}
