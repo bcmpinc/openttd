@@ -2352,6 +2352,8 @@ static void DrawTile_Track(TileInfo *ti)
 
 		if (HasBit(_display_opt, DO_FULL_DETAIL)) DrawTrackDetails(ti, rti);
 
+		DrawOverlay(ti, MP_RAILWAY);
+
 		if (HasCatenaryDrawn(GetRailType(ti->tile))) DrawCatenary(ti);
 
 		if (HasSignals(ti->tile)) DrawSignals(ti->tile, rails, rti);
@@ -2426,6 +2428,8 @@ static void DrawTile_Track(TileInfo *ti)
 		}
 		int depot_sprite = GetCustomRailSprite(rti, ti->tile, RTSG_DEPOT);
 		relocation = depot_sprite != 0 ? depot_sprite - SPR_RAIL_DEPOT_SE_1 : rti->GetRailtypeSpriteOffset();
+
+		DrawOverlay(ti, MP_RAILWAY);
 
 		if (HasCatenaryDrawn(GetRailType(ti->tile))) DrawCatenary(ti);
 

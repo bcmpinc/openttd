@@ -248,6 +248,8 @@ static void DrawTile_Town(TileInfo *ti)
 
 	if (ti->tileh != SLOPE_FLAT) DrawFoundation(ti, FOUNDATION_LEVELED);
 
+	DrawOverlay(ti, MP_HOUSE);
+
 	DrawGroundSprite(dcts->ground.sprite, dcts->ground.pal);
 
 	/* If houses are invisible, do not draw the upper part */
