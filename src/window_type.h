@@ -219,6 +219,12 @@ enum WindowClass {
 	WC_VEHICLE_TIMETABLE,
 
 	/**
+	 * Vehicle trip history; %Window numbers:
+	 *   - #VehicleID = #VehicleTripHistoryWidgets
+	 */
+	WC_VEHICLE_TRIP_HISTORY,
+
+	/**
 	 * Company colour selection; %Window numbers:
 	 *   - #CompanyID = #SelectCompanyLiveryWidgets
 	 */
