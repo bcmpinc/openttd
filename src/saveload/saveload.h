@@ -93,6 +93,7 @@ enum SLRefType {
 #define SL_TIMESEP 190
 #define SL_DAYLENGTH 190
 #define SL_TRANSFER_PAYMENTS 191
+#define SL_TOWN_CARGO_FACTOR 191
 
 /** Flags of a chunk. */
 enum ChunkType {
