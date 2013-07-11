@@ -88,36 +88,6 @@ byte FreightWagonMult(CargoID cargo)
 	return _settings_game.vehicle.freight_trains;
 }
 
-/** Checks if lengths of all rail vehicles are valid. If not, shows an error message. */
-void CheckTrainsLengths()
-{
-	const Train *v;
-	bool first = true;
-
-	FOR_ALL_TRAINS(v) {
-		if (v->First() == v && !(v->vehstatus & VS_CRASHED)) {
-			for (const Train *u = v, *w = v->Next(); w != NULL; u = w, w = w->Next()) {
-				if (u->track != TRACK_BIT_DEPOT) {
-					if ((w->track != TRACK_BIT_DEPOT &&
-							max(abs(u->x_pos - w->x_pos), abs(u->y_pos - w->y_pos)) != u->CalcNextVehicleOffset()) ||
-							(w->track == TRACK_BIT_DEPOT && TicksToLeaveDepot(u) <= 0)) {
-						SetDParam(0, v->index);
-						SetDParam(1, v->owner);
-						ShowErrorMessage(STR_BROKEN_VEHICLE_LENGTH, INVALID_STRING_ID, WL_CRITICAL);
-
-						if (!_networking && first) {
-							first = false;
-							DoCommandP(0, PM_PAUSED_ERROR, 1, CMD_PAUSE);
-						}
-						/* Break so we warn only once for each train. */
-						break;
-					}
-				}
-			}
-		}
-	}
-}
-
 /**
  * Recalculates the cached stuff of a train. Should be called each time a vehicle is added
  * to/removed from the chain, and when the game is loaded.
@@ -1771,7 +1741,7 @@ static void AdvanceWagonsBeforeSwap(Train *v)
 		last = last->Previous();
 		first = first->Next();
 
-		int differential = base->CalcNextVehicleOffset() - last->CalcNextVehicleOffset();
+		int differential = (base->CalcNextVehicleOffset() - last->CalcNextVehicleOffset() + 4)/8;
 
 		/* do not update images now
 		 * negative differential will be handled in AdvanceWagonsAfterSwap() */
@@ -1831,7 +1801,7 @@ static void AdvanceWagonsAfterSwap(Train *v)
 		last = last->Previous();
 		first = first->Next();
 
-		int differential = last->CalcNextVehicleOffset() - base->CalcNextVehicleOffset();
+		int differential = (last->CalcNextVehicleOffset() - base->CalcNextVehicleOffset() + 4)/8;
 
 		/* do not update images now */
 		for (int i = 0; i < differential; i++) TrainController(first, (nomove ? last->Next() : NULL));
@@ -3139,9 +3109,21 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 	Train *first = v->First();
 	Train *prev;
 	bool direction_changed = false; // has direction of any part changed?
+	int partial_progress = 0; // Amount of distance that the previous wagon crossed the tile, in 1/8th.
 
 	/* For every vehicle after and including the given vehicle */
 	for (prev = v->Previous(); v != nomove; prev = v, v = v->Next()) {
+		int steps=1; // Amount of pixels that the wagon will move.
+		if (prev!=NULL && prev->track != TRACK_BIT_DEPOT) {
+			int distance = max(abs(prev->x_pos - v->x_pos), abs(prev->y_pos - v->y_pos))*8;
+			partial_progress&=7;
+			partial_progress+=distance - prev->CalcNextVehicleOffset();
+			steps = partial_progress/8;
+			if (steps>2) steps = 2; // Limit the wagon movement to avoid disconnecting the train.
+			if (steps<0) steps = 0;
+		}
+		while (steps--) {
+		
 		DiagDirection enterdir = DIAGDIR_BEGIN;
 		bool update_signals_crossing = false; // will we update signals or crossing state?
 
@@ -3274,7 +3256,11 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 						if (prev->track == TRACK_BIT_WORMHOLE) {
 							/* Vehicles entering tunnels enter the wormhole earlier than for bridges.
 							 * However, just choose the track into the wormhole. */
-							assert(IsTunnel(prev->tile));
+							assert(IsTunnel(prev->tile) || IsBridge(prev->tile));
+							chosen_track = bits;
+						} else if (prev->track == TRACK_BIT_DEPOT) {
+							/* The previous vehicle might be entering the depot too soon. */
+							assert(IsDepotTile(prev->tile));
 							chosen_track = bits;
 						} else {
 							chosen_track = prev->track;
@@ -3431,6 +3417,8 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 				if (IsLevelCrossingTile(gp.old_tile)) UpdateLevelCrossing(gp.old_tile);
 			}
 		}
+		
+		} // End non-indented while loop.
 		
 		/* Do not check on every tick to save some computing time. */
 		if (v->IsFrontEngine() && v->tick_counter % _settings_game.pf.path_backoff_interval == 0) CheckNextTrainTile(v);

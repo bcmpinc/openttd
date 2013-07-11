@@ -289,7 +289,6 @@ static void InitializeWindowsAndCaches()
 	 * Reset each town's noise_reached value to '0' before. */
 	UpdateAirportsNoise();
 
-	CheckTrainsLengths();
 	ShowNewGRFError();
 	ShowAIDebugWindowIfAIError();
 
@@ -2970,5 +2969,4 @@ void ReloadNewGRFData()
 	InvalidateWindowClassesData(WC_COMPANY_INFRASTRUCTURE);
 	/* redraw the whole screen */
 	MarkWholeScreenDirty();
-	CheckTrainsLengths();
 }

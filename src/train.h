@@ -59,8 +59,6 @@ DECLARE_ENUM_AS_BIT_SET(ConsistChangeFlags)
 
 byte FreightWagonMult(CargoID cargo);
 
-void CheckTrainsLengths();
-
 void FreeTrainTrackReservation(const Train *v, TileIndex origin = INVALID_TILE, Trackdir orig_td = INVALID_TRACKDIR);
 bool TryPathReserve(Train *v, bool mark_as_stuck = false, bool first_tile_okay = false);
 
@@ -85,7 +83,7 @@ struct TrainCache {
 /**
  * 'Train' is either a loco or a wagon.
  */
-struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
+struct Train : public GroundVehicle<Train, VEH_TRAIN> {
 	TrainCache tcache;
 
 	/* Link between the two ends of a multiheaded engine */
@@ -165,7 +163,7 @@ struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
 
 	/**
 	 * Calculate the offset from this vehicle's center to the following center taking the vehicle lengths into account.
-	 * @return Offset from center to center.
+	 * @return Offset from center to center multiplied by 8.
 	 */
 	int CalcNextVehicleOffset() const
 	{
@@ -173,7 +171,12 @@ struct Train FINAL : public GroundVehicle<Train, VEH_TRAIN> {
 		 * longer than the part after the center. This means we have to round up the
 		 * length of the next vehicle but may not round the length of the current
 		 * vehicle. */
-		return this->gcache.cached_veh_length / 2 + (this->Next() != NULL ? this->Next()->gcache.cached_veh_length + 1 : 0) / 2;
+		int distance = 0;
+		distance += this->gcache.cached_veh_length * ((this->direction & 1)?4:3);
+		if (this->Next()!=NULL) {
+			distance += this->Next()->gcache.cached_veh_length * ((this->Next()->direction & 1)?4:3);
+		}
+		return distance;
 	}
 
 protected: // These functions should not be called outside acceleration code.
