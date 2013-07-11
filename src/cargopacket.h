@@ -134,6 +134,11 @@ public:
 	{
 		return this->days_in_transit;
 	}
+	
+	/** 
+	 * Reset the number of days that cargo is in transit.
+	 */
+	inline void ResetTransitDays() { this->days_in_transit = 0; }
 
 	/**
 	 * Gets the type of the cargo's source. industry, town or head quarter.
