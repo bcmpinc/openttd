@@ -475,6 +475,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\clipboard.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\command.cpp"
 				>
 			</File>
@@ -911,6 +915,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\clipboard_func.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\clipboard_gui.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\clipboard_type.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\cmd_helper.h"
 				>
 			</File>
@@ -956,6 +972,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\console_type.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\copypaste_cmd.h"
 				>
 			</File>
 			<File
@@ -1727,6 +1747,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\tilearea_func.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\tilearea_type.h"
 				>
 			</File>
@@ -2023,6 +2047,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\clipboard_gui.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\company_gui.cpp"
 				>
 			</File>
@@ -2255,6 +2283,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\widgets\clipboard_widget.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\widgets\company_widget.h"
 				>
 			</File>
@@ -2468,6 +2500,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\clear_cmd.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\copypaste_cmd.cpp"
 				>
 			</File>
 			<File

@@ -1498,6 +1498,7 @@ static SettingsPage _settings_ui_page = {_settings_ui, lengthof(_settings_ui)};
 static SettingEntry _settings_construction_signals[] = {
 	SettingEntry("construction.train_signal_side"),
 	SettingEntry("gui.enable_signal_gui"),
+	SettingEntry("gui.simulated_wormhole_signals"),
 	SettingEntry("gui.drag_signals_fixed_distance"),
 	SettingEntry("gui.semaphore_build_before"),
 	SettingEntry("gui.default_signal_type"),
@@ -1685,6 +1686,8 @@ static SettingEntry _settings_vehicles[] = {
 	SettingEntry("vehicle.max_ships"),
 	SettingEntry("vehicle.plane_speed"),
 	SettingEntry("vehicle.plane_crashes"),
+	SettingEntry("order.timetable_automated"),
+	SettingEntry("order.timetable_separation"),
 	SettingEntry("vehicle.dynamic_engines"),
 	SettingEntry("vehicle.roadveh_acceleration_model"),
 	SettingEntry("vehicle.roadveh_slope_steepness"),

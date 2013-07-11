@@ -33,6 +33,7 @@ enum TransportType {
 	TRANSPORT_END,   ///< End of iterations.
 	INVALID_TRANSPORT = 0xff, ///< Sentinel for invalid transport types.
 };
+DECLARE_POSTFIX_INCREMENT(TransportType)
 /** Helper information for extract tool. */
 template <> struct EnumPropsT<TransportType> : MakeEnumPropsT<TransportType, byte, TRANSPORT_BEGIN, TRANSPORT_END, INVALID_TRANSPORT, 2> {};
 

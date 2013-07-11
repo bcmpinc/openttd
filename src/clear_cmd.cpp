@@ -398,4 +398,5 @@ extern const TileTypeProcs _tile_type_clear_procs = {
 	NULL,                     ///< vehicle_enter_tile_proc
 	GetFoundation_Clear,      ///< get_foundation_proc
 	TerraformTile_Clear,      ///< terraform_tile_proc
+	NULL,                     ///< copypaste_tile_proc
 };

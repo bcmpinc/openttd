@@ -119,6 +119,7 @@ struct GUISettings {
 	bool   timetable_in_ticks;               ///< whether to show the timetable in ticks rather than days
 	bool   quick_goto;                       ///< Allow quick access to 'goto button' in vehicle orders window
 	bool   auto_euro;                        ///< automatically switch to euro in 2002
+	byte   simulated_wormhole_signals;       ///< simulate signals in tunnel
 	byte   drag_signals_density;             ///< many signals density
 	bool   drag_signals_fixed_distance;      ///< keep fixed distance between signals when dragging
 	Year   semaphore_build_before;           ///< build semaphore signals automatically before this year
@@ -436,6 +437,8 @@ struct OrderSettings {
 	bool   gradual_loading;                  ///< load vehicles gradually
 	bool   selectgoods;                      ///< only send the goods to station if a train has been there
 	bool   no_servicing_if_no_breakdowns;    ///< don't send vehicles to depot when breakdowns are disabled
+	bool   timetable_automated;              ///< whether to automatically manage timetables
+	bool   timetable_separation;             ///< whether to perform automatic separation based on timetable
 	bool   serviceathelipad;                 ///< service helicopters at helipads automatically (no need to send to depot)
 };
 

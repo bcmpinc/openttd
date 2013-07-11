@@ -34,6 +34,22 @@ struct TileExtended {
 	byte m7; ///< Primarily used for newgrf support
 };
 
+/** Tile array. */
+struct Map {
+	uint size_x;      ///< Size of the map along the X
+	uint size_y;      ///< Size of the map along the Y
+	uint size;        ///< The number of tiles on the map
+	Tile *m;          ///< Tiles of the map
+	TileExtended *me; ///< Extended Tiles of the map
+};
+
+/** Main tile array. */
+struct MainMap : Map {
+	uint log_x;     ///< 2^log_x == size_x
+	uint log_y;     ///< 2^log_y == size_y
+	uint tile_mask; ///< size - 1 (to mask the mapsize)
+};
+
 /**
  * An offset value between to tiles.
  *

@@ -267,6 +267,21 @@ static const uint32 _green_map_heights[] = {
 };
 assert_compile(lengthof(_green_map_heights) == MAX_TILE_HEIGHT + 1);
 
+/**
+ * Colour Coding for Stuck Counter
+ */
+static const uint32 _stuck_counter_colours[] = {
+	MKCOLOUR_XXXX(PC_VERY_LIGHT_YELLOW),
+	MKCOLOUR_XXXX(PC_LIGHT_YELLOW),
+	MKCOLOUR_XXXX(PC_YELLOW),
+	MKCOLOUR_XXXX(PC_ORANGE),
+	MKCOLOUR_XXXX(PC_RED),
+	MKCOLOUR_XXXX(PC_DARK_RED),
+	MKCOLOUR_XXXX(PC_VERY_DARK_RED),
+	MKCOLOUR_XXXX(PC_BLACK),
+};
+assert_compile(lengthof(_stuck_counter_colours) == 8);
+
 /** Height map colours for the dark green colour scheme, ordered by height. */
 static const uint32 _dark_green_map_heights[] = {
 	MKCOLOUR_XXXX(0x60),
@@ -503,13 +518,18 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
 			default:              return MKCOLOUR_FFFF;
 		}
 	} else if (t == MP_RAILWAY) {
-		AndOr andor = {
-			MKCOLOUR_0XX0(GetRailTypeInfo(GetRailType(tile))->map_colour),
-			_smallmap_contours_andor[t].mand
-		};
+		byte c = GetStuckCounter(tile);
+		if (c) {
+			return _stuck_counter_colours[c/32];
+		} else {
+			AndOr andor = {
+				MKCOLOUR_0XX0(PC_GREY),
+				_smallmap_contours_andor[t].mand
+			};
 
-		const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-		return ApplyMask(cs->default_colour, &andor);
+			const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
+			return ApplyMask(cs->default_colour, &andor);
+		}
 	}
 
 	/* Ground colour */

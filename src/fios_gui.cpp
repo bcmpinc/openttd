@@ -307,6 +307,11 @@ public:
 				FioGetDirectory(o_dir.name, lengthof(o_dir.name), HEIGHTMAP_DIR);
 				break;
 
+			case SLD_SAVE_CLIPBOARD:
+			case SLD_LOAD_CLIPBOARD:
+				FioGetDirectory(o_dir.name, lengthof(o_dir.name), CLIPBOARD_DIR);
+				break;
+
 			default:
 				strecpy(o_dir.name, _personal_dir, lastof(o_dir.name));
 		}
