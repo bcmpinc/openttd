@@ -45,6 +45,7 @@
 #include "waypoint_base.h"
 #include "waypoint_func.h"
 #include "pbs.h"
+#include "overlay_cmd.h"
 #include "debug.h"
 #include "core/random_func.hpp"
 #include "company_base.h"
@@ -625,6 +626,7 @@ void UpdateStationAcceptance(Station *st, bool show_msg)
 
 	/* redraw the station view since acceptance changed */
 	SetWindowWidgetDirty(WC_STATION_VIEW, st->index, WID_SV_ACCEPT_RATING_LIST);
+	if (Overlays::Instance()->HasStation(st)) st->MarkAcceptanceTilesDirty();
 }
 
 static void UpdateStationSignCoord(BaseStation *st)
@@ -686,11 +688,16 @@ static CommandCost BuildStationPart(Station **st, DoCommandFlag flags, bool reus
 static void DeleteStationIfEmpty(BaseStation *st)
 {
 	if (!st->IsInUse()) {
+		if (Station::IsExpected(st)) Overlays::Instance()->RemoveStation((Station *)st);
 		st->delete_ctr = 0;
 		InvalidateWindowData(WC_STATION_LIST, st->owner, 0);
 	}
 	/* station remains but it probably lost some parts - station sign should stay in the station boundaries */
 	UpdateStationSignCoord(st);
+
+	if (Station::IsExpected(st)) {
+		MarkWholeScreenDirty();
+	}
 }
 
 CommandCost ClearTile_Station(TileIndex tile, DoCommandFlag flags);
@@ -1242,6 +1249,7 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 		st->AddFacility(FACIL_TRAIN, new_location.tile);
 
 		st->rect.BeforeAddRect(tile_org, w_org, h_org, StationRect::ADD_TRY);
+		st->catchment.BeforeAddRect(tile_org, w_org, h_org, CA_TRAIN);
 
 		if (statspec != NULL) {
 			/* Include this station spec's animation trigger bitmask
@@ -1489,6 +1497,7 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 			Track track = GetRailStationTrack(tile);
 			Owner owner = GetTileOwner(tile);
 			RailType rt = GetRailType(tile);
+			if (Station::IsExpected(st)) ((Station *)st)->catchment.AfterRemoveTile(tile, CA_TRAIN);
 			Train *v = NULL;
 
 			if (HasStationReservation(tile)) {
@@ -1509,6 +1518,7 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 			DoClearSquare(tile);
 			DeleteNewGRFInspectWindow(GSF_STATIONS, tile);
 			if (build_rail) MakeRailNormal(tile, owner, TrackToTrackBits(track), rt);
+			if (Station::IsExpected(st) && Overlays::Instance()->HasStation((Station *)st)) ((Station *)st)->MarkAcceptanceTilesDirty();
 			Company::Get(owner)->infrastructure.station--;
 			DirtyCompanyInfrastructureWindows(owner);
 
@@ -1581,6 +1591,7 @@ CommandCost CmdRemoveFromRailStation(TileIndex start, DoCommandFlag flags, uint3
 		Station *st = *stp;
 
 		if (st->train_station.tile == INVALID_TILE) SetWindowWidgetDirty(WC_STATION_VIEW, st->index, WID_SV_TRAINS);
+		if (Overlays::Instance()->HasStation(st)) st->MarkAcceptanceTilesDirty();
 		st->MarkTilesDirty(false);
 		st->RecomputeIndustriesNear();
 	}
@@ -1647,6 +1658,7 @@ CommandCost RemoveRailStation(T *st, DoCommandFlag flags)
 			/* read variables before the station tile is removed */
 			Track track = GetRailStationTrack(tile);
 			Owner owner = GetTileOwner(tile); // _current_company can be OWNER_WATER
+			if (Station::IsExpected(st)) ((Station *)st)->catchment.AfterRemoveTile(tile, CA_TRAIN);
 			Train *v = NULL;
 			if (HasStationReservation(tile)) {
 				v = GetTrainForReservation(tile, track);
@@ -1656,6 +1668,7 @@ CommandCost RemoveRailStation(T *st, DoCommandFlag flags)
 			Company::Get(owner)->infrastructure.station--;
 			DoClearSquare(tile);
 			DeleteNewGRFInspectWindow(GSF_STATIONS, tile);
+			if (Station::IsExpected(st) && Overlays::Instance()->HasStation((Station *)st)) ((Station *)st)->MarkAcceptanceTilesDirty();
 			AddTrackToSignalBuffer(tile, track, owner);
 			YapfNotifyTrackLayoutChange(tile, track);
 			if (v != NULL) TryPathReserve(v, true);
@@ -1853,6 +1866,7 @@ CommandCost CmdBuildRoadStop(TileIndex tile, DoCommandFlag flags, uint32 p1, uin
 			st->AddFacility((type) ? FACIL_TRUCK_STOP : FACIL_BUS_STOP, cur_tile);
 
 			st->rect.BeforeAddTile(cur_tile, StationRect::ADD_TRY);
+			st->catchment.BeforeAddTile(cur_tile, type ? CA_TRUCK : CA_BUS);
 
 			RoadStopType rs_type = type ? ROADSTOP_TRUCK : ROADSTOP_BUS;
 			if (is_drive_through) {
@@ -1981,6 +1995,7 @@ static CommandCost RemoveRoadStop(TileIndex tile, DoCommandFlag flags)
 			DoClearSquare(tile);
 		}
 
+		if (Overlays::Instance()->HasStation(st)) st->MarkAcceptanceTilesDirty();
 		SetWindowWidgetDirty(WC_STATION_VIEW, st->index, WID_SV_ROADVEHS);
 		delete cur_stop;
 
@@ -1994,6 +2009,7 @@ static CommandCost RemoveRoadStop(TileIndex tile, DoCommandFlag flags)
 		}
 
 		st->rect.AfterRemoveTile(st, tile);
+		st->catchment.AfterRemoveTile(tile, is_truck ? CA_TRUCK : CA_BUS);
 
 		st->UpdateVirtCoord();
 		st->RecomputeIndustriesNear();
@@ -2280,6 +2296,7 @@ CommandCost CmdBuildAirport(TileIndex tile, DoCommandFlag flags, uint32 p1, uint
 			MakeAirport(iter, st->owner, st->index, iter.GetStationGfx(), WATER_CLASS_INVALID);
 			SetStationTileRandomBits(iter, GB(Random(), 0, 4));
 			st->airport.Add(iter);
+			st->catchment.BeforeAddTile(iter, as->catchment);
 
 			if (AirportTileSpec::Get(GetTranslatedAirportTileID(iter.GetStationGfx()))->animation.status != ANIM_STATUS_NO_ANIMATION) AddAnimatedTile(iter);
 		}
@@ -2353,8 +2370,10 @@ static CommandCost RemoveAirport(TileIndex tile, DoCommandFlag flags)
 		cost.AddCost(_price[PR_CLEAR_STATION_AIRPORT]);
 
 		if (flags & DC_EXEC) {
+			const AirportSpec *as = st->airport.GetSpec();  
 			if (IsHangarTile(tile_cur)) OrderBackup::Reset(tile_cur, false);
 			DeleteAnimatedTile(tile_cur);
+			st->catchment.AfterRemoveTile(tile_cur, as->catchment); 
 			DoClearSquare(tile_cur);
 			DeleteNewGRFInspectWindow(GSF_AIRPORTTILES, tile_cur);
 		}
@@ -2530,6 +2549,7 @@ CommandCost CmdBuildDock(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 		st->AddFacility(FACIL_DOCK, tile);
 
 		st->rect.BeforeAddRect(dock_area.tile, dock_area.w, dock_area.h, StationRect::ADD_TRY);
+		st->catchment.BeforeAddRect(dock_area.tile, dock_area.w, dock_area.h, CA_DOCK);
 
 		/* If the water part of the dock is on a canal, update infrastructure counts.
 		 * This is needed as we've unconditionally cleared that tile before. */
@@ -2575,10 +2595,13 @@ static CommandCost RemoveDock(TileIndex tile, DoCommandFlag flags)
 	if (ret.Failed()) return ret;
 
 	if (flags & DC_EXEC) {
+		st->catchment.AfterRemoveTile(tile1, CA_DOCK);
+		st->catchment.AfterRemoveTile(tile2, CA_DOCK);
 		DoClearSquare(tile1);
 		MarkTileDirtyByTile(tile1);
 		MakeWaterKeepingClass(tile2, st->owner);
 
+		if (Overlays::Instance()->HasStation(st)) st->MarkAcceptanceTilesDirty();
 		st->rect.AfterRemoveTile(st, tile1);
 		st->rect.AfterRemoveTile(st, tile2);
 
@@ -2902,6 +2925,8 @@ draw_default_foundation:
 			}
 		}
 	}
+
+	DrawOverlay(ti, MP_STATION);
 
 	if (HasStationRail(ti->tile) && HasCatenaryDrawn(GetRailType(ti->tile))) DrawCatenary(ti);
 
@@ -3845,6 +3870,7 @@ void BuildOilRig(TileIndex tile)
 	st->build_date = _date;
 
 	st->rect.BeforeAddTile(tile, StationRect::ADD_FORCE);
+	st->catchment.BeforeAddTile(tile, st->GetCatchmentRadius());
 
 	st->UpdateVirtCoord();
 	UpdateStationAcceptance(st, false);
@@ -3855,6 +3881,7 @@ void DeleteOilRig(TileIndex tile)
 {
 	Station *st = Station::GetByTile(tile);
 
+	st->catchment.AfterRemoveTile(tile, st->GetCatchmentRadius());
 	MakeWaterKeepingClass(tile, OWNER_NONE);
 
 	st->dock_tile = INVALID_TILE;
@@ -3862,6 +3889,7 @@ void DeleteOilRig(TileIndex tile)
 	st->facilities &= ~(FACIL_AIRPORT | FACIL_DOCK);
 	st->airport.flags = 0;
 
+	if (Overlays::Instance()->HasStation(st)) st->MarkAcceptanceTilesDirty();
 	st->rect.AfterRemoveTile(st, tile);
 
 	st->UpdateVirtCoord();
