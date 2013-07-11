@@ -90,6 +90,8 @@ enum SLRefType {
 /** Highest possible savegame version. */
 #define SL_MAX_VERSION 255
 #define SL_TRIP 190
+#define SL_TIMESEP 190
+#define SL_DAYLENGTH 190
 #define SL_TRANSFER_PAYMENTS 191
 
 /** Flags of a chunk. */
@@ -546,9 +548,6 @@ void NORETURN SlError(StringID string, const char *extra_msg = NULL);
 void NORETURN SlErrorCorrupt(const char *msg);
 
 bool SaveloadCrashWithMissingNewGRFs();
-
-/* Hack to change savegame version in only one place. Rmv and correct if trunk. */
-const int TIMESEP_SV = 190;
 
 extern char _savegame_format[8];
 extern bool _do_autosave;
