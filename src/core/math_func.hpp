@@ -98,10 +98,12 @@ static inline T abs(const T a)
 }
 
 /**
- * Returns the sign of a value.
+ * Get the sign of a value.
  *
  * @param x The value
- * @return -1 if the x is negative, +1 if positive, 0 otherwise
+ * @return -1 if x compares less than 0, +1 if more, 0 otherwise
+ *
+ * @note the function returns 0 for any floating point zero (e.g. -0.0)
  */
 template <typename T>
 static inline int sgn(const T x)

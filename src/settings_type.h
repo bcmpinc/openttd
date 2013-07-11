@@ -86,6 +86,9 @@ struct GUISettings {
 	byte   hover_delay;                      ///< time required to activate a hover event, in seconds
 	bool   link_terraform_toolbar;           ///< display terraform toolbar when displaying rail, road, water and airport toolbars
 	uint8  smallmap_land_colour;             ///< colour used for land and heightmap at the smallmap
+	uint8  smallmap_grid_size;               ///< size of grid on the smallmap
+	int8   smallmap_gridline_contrast;       ///< contrast of grid lines on the smallmap
+	uint8  smallmap_gridline_thickness;      ///< thickness of grid lines on the smallmap
 	bool   reverse_scroll;                   ///< right-Click-Scrolling scrolls in the opposite direction
 	bool   smooth_scroll;                    ///< smooth scroll viewports
 	bool   measure_tooltip;                  ///< show a permanent tooltip when dragging tools

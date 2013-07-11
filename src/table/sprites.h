@@ -56,7 +56,7 @@ static const SpriteID SPR_LARGE_SMALL_WINDOW = 682;
 
 /** Extra graphic spritenumbers */
 static const SpriteID SPR_OPENTTD_BASE   = 4896;
-static const uint16 OPENTTD_SPRITE_COUNT = 197;
+static const uint16 OPENTTD_SPRITE_COUNT = 175;
  
 /* Halftile-selection sprites */
 static const SpriteID SPR_HALFTILE_SELECTION_FLAT = SPR_OPENTTD_BASE;
@@ -1091,6 +1091,7 @@ static const SpriteID SPR_IMG_COMPANY_FINANCE = 737;
 static const SpriteID SPR_IMG_COMPANY_GENERAL = 743;
 static const SpriteID SPR_IMG_GRAPHS          = 745;
 static const SpriteID SPR_IMG_COMPANY_LEAGUE  = 684;
+static const SpriteID SPR_IMG_GRID            = SPR_OPENTTD_BASE + 174;
 static const SpriteID SPR_IMG_SHOW_COUNTOURS  = 738;
 static const SpriteID SPR_IMG_SHOW_VEHICLES   = 739;
 static const SpriteID SPR_IMG_SHOW_ROUTES     = 740;

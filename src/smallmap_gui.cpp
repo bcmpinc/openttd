@@ -19,6 +19,7 @@
 #include "town.h"
 #include "tunnelbridge_map.h"
 #include "core/endian_func.hpp"
+#include "core/math_func.hpp"
 #include "vehicle_base.h"
 #include "sound_func.h"
 #include "window_func.h"
@@ -149,6 +150,8 @@ static LegendAndColour _legend_from_industries[NUM_INDUSTRYTYPES + 1];
 static uint _industry_to_list_pos[NUM_INDUSTRYTYPES];
 /** Show heightmap in industry and owner mode of smallmap window. */
 static bool _smallmap_show_heightmap = false;
+/** Show grid on the smallmap. */
+static bool _smallmap_show_grid = false;
 /** Highlight a specific industry type */
 static IndustryType _smallmap_industry_highlight = INVALID_INDUSTRYTYPE;
 /** State of highlight blinking */
@@ -383,6 +386,11 @@ static inline uint32 ApplyMask(uint32 colour, const AndOr *mask)
 	return (colour & mask->mand) | mask->mor;
 }
 
+static inline uint32 ApplyGridMask(uint32 colour, const SmallMapGridProps *grid, uint32 SmallMapGridProps:: *grid_colour)
+{
+	return (~grid->mask & colour) | (grid->mask & grid->*grid_colour);
+}
+
 
 /** Colour masks for "Contour" and "Routes" modes. */
 static const AndOr _smallmap_contours_andor[] = {
@@ -392,7 +400,7 @@ static const AndOr _smallmap_contours_andor[] = {
 	{MKCOLOUR_0XX0(PC_DARK_RED  ), MKCOLOUR_F00F}, // MP_HOUSE
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_TREES
 	{MKCOLOUR_XXXX(PC_LIGHT_BLUE), MKCOLOUR_0000}, // MP_STATION
-	{MKCOLOUR_XXXX(PC_WATER     ), MKCOLOUR_0000}, // MP_WATER
+	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_WATER
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_VOID
 	{MKCOLOUR_XXXX(PC_DARK_RED  ), MKCOLOUR_0000}, // MP_INDUSTRY
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_TUNNELBRIDGE
@@ -408,7 +416,7 @@ static const AndOr _smallmap_vehicles_andor[] = {
 	{MKCOLOUR_0XX0(PC_DARK_RED  ), MKCOLOUR_F00F}, // MP_HOUSE
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_TREES
 	{MKCOLOUR_0XX0(PC_BLACK     ), MKCOLOUR_F00F}, // MP_STATION
-	{MKCOLOUR_XXXX(PC_WATER     ), MKCOLOUR_0000}, // MP_WATER
+	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_WATER
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_VOID
 	{MKCOLOUR_XXXX(PC_DARK_RED  ), MKCOLOUR_0000}, // MP_INDUSTRY
 	{MKCOLOUR_0000               , MKCOLOUR_FFFF}, // MP_TUNNELBRIDGE
@@ -432,7 +440,6 @@ static const byte _tiletype_importance[] = {
 	0,
 };
 
-
 static inline TileType GetEffectiveTileType(TileIndex tile)
 {
 	TileType t = GetTileType(tile);
@@ -450,38 +457,127 @@ static inline TileType GetEffectiveTileType(TileIndex tile)
 }
 
 /**
- * Return the colour a tile would be displayed with in the small map in mode "Contour".
- * @param tile The tile of which we would like to get the colour.
+ * Return the ground colour to draw land in the smallmap in "flat" modes.
+ * @param tile The land tile of which we would like to get the ground colour.
  * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param grid If not NULL, given grid will be painted.
+ * @return The colour of ground for this land tile
+ */
+static inline uint32 GetSmallMapGroundColoursFlatLand(TileIndex tile, TileType t, const SmallMapGridProps *grid)
+{
+	uint32 ret = _heightmap_schemes[_settings_client.gui.smallmap_land_colour].default_colour;
+	if (grid == NULL) return ret;
+	return ApplyGridMask(ret, grid, &SmallMapGridProps::colour_flat);
+}
+
+/**
+ * Return the ground colour to draw land in the smallmap in heightmap modes.
+ * @param tile The land tile of which we would like to get the ground colour.
+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param grid If not NULL, given grid will be painted.
+ * @return The colour of ground for this land tile
+ */
+static inline uint32 GetSmallMapGroundColoursHeightmapLand(TileIndex tile, TileType t, const SmallMapGridProps *grid)
+{
+	uint h = TileHeight(tile);
+	uint32 ret = _heightmap_schemes[_settings_client.gui.smallmap_land_colour].height_colours[h];
+	if (grid == NULL) return ret;
+	return ApplyGridMask(ret, grid, h < MAX_TILE_HEIGHT / 2 ? &SmallMapGridProps::colour_lowland : &SmallMapGridProps::colour_upland);
+}
+
+/**
+ * Return the ground colour to draw water tiles in the smallmap.
+ * @param tile The water tile of which we would like to get the ground colour.
+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param grid If not NULL, given grid will be painted.
+ * @return The colour of ground for this water tile
+ */
+static inline uint32 GetSmallMapGroundColoursWater(TileIndex tile, TileType t, const SmallMapGridProps *grid)
+{
+	uint32 ret = MKCOLOUR_XXXX(PC_WATER);
+	if (grid == NULL) return ret;
+	return ApplyGridMask(ret, grid, &SmallMapGridProps::colour_water);
+}
+
+static const uint32 _vegetation_clear_bits[] = {
+	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< full grass
+	MKCOLOUR_XXXX(PC_ROUGH_LAND), ///< rough land
+	MKCOLOUR_XXXX(PC_GREY),       ///< rocks
+	MKCOLOUR_XXXX(PC_FIELDS),     ///< fields
+	MKCOLOUR_XXXX(PC_LIGHT_BLUE), ///< snow
+	MKCOLOUR_XXXX(PC_ORANGE),     ///< desert
+	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< unused
+	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< unused
+};
+
+/**
+ * Return the ground colour to draw land in the smallmap in vegetation mode.
+ * @param tile The land tile of which we would like to get the ground colour.
+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param grid If not NULL, given grid will be painted.
+ * @return The colour of ground for this land tile
+ */
+static inline uint32 GetSmallMapGroundColoursVegetationLand(TileIndex tile, TileType t, const SmallMapGridProps *grid)
+{
+	uint32 ret;
+	switch (t) {
+		case MP_CLEAR:
+			if (IsClearGround(tile, CLEAR_GRASS) && GetClearDensity(tile) < 3) {
+				ret = MKCOLOUR_XXXX(PC_BARE_LAND);
+			} else {
+				ret = _vegetation_clear_bits[GetClearGround(tile)];
+			}
+			break;
+
+		case MP_TREES:
+			if (GetTreeGround(tile) == TREE_GROUND_SNOW_DESERT || GetTreeGround(tile) == TREE_GROUND_ROUGH_SNOW) {
+				ret = (_settings_game.game_creation.landscape == LT_ARCTIC) ? _vegetation_clear_bits[CLEAR_SNOW] : _vegetation_clear_bits[CLEAR_DESERT];
+				break;
+			}
+			/* FALLTHROUGH */
+		default:
+			ret = _vegetation_clear_bits[CLEAR_GRASS];
+			break;
+	}
+
+	if (grid == NULL) return ret;
+	return ApplyGridMask(ret, grid, &SmallMapGridProps::colour_flat);
+}
+
+/**
+ * Return the colour a tile would be displayed with in the small map in mode "Contour".
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile in the small map in mode "Contour"
  */
-static inline uint32 GetSmallMapContoursPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapContoursPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
-	const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-	return ApplyMask(cs->height_colours[TileHeight(tile)], &_smallmap_contours_andor[t]);
+	return ApplyMask(ground_colours, &_smallmap_contours_andor[t]);
 }
 
 /**
  * Return the colour a tile would be displayed with in the small map in mode "Vehicles".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile in the small map in mode "Vehicles"
  */
-static inline uint32 GetSmallMapVehiclesPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapVehiclesPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
-	const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-	return ApplyMask(cs->default_colour, &_smallmap_vehicles_andor[t]);
+	return ApplyMask(ground_colours, &_smallmap_vehicles_andor[t]);
 }
 
 /**
  * Return the colour a tile would be displayed with in the small map in mode "Industries".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile in the small map in mode "Industries"
  */
-static inline uint32 GetSmallMapIndustriesPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapIndustriesPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
 	if (t == MP_INDUSTRY) {
 		/* If industry is allowed to be seen, use its colour on the map */
@@ -491,22 +587,22 @@ static inline uint32 GetSmallMapIndustriesPixels(TileIndex tile, TileType t)
 			return (type == _smallmap_industry_highlight ? PC_WHITE : GetIndustrySpec(Industry::GetByTile(tile)->type)->map_colour) * 0x01010101;
 		} else {
 			/* Otherwise, return the colour which will make it disappear */
-			t = (IsTileOnWater(tile) ? MP_WATER : MP_CLEAR);
+			return ground_colours;
 		}
 	}
 
-	const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-	return ApplyMask(_smallmap_show_heightmap ? cs->height_colours[TileHeight(tile)] : cs->default_colour, &_smallmap_vehicles_andor[t]);
+	return ApplyMask(ground_colours, &_smallmap_vehicles_andor[t]);
 }
 
 /**
  * Return the colour a tile would be displayed with in the small map in mode "Routes".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile  in the small map in mode "Routes"
  */
-static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
 	if (t == MP_STATION) {
 		switch (GetStationType(tile)) {
@@ -527,74 +623,52 @@ static inline uint32 GetSmallMapRoutesPixels(TileIndex tile, TileType t)
 				_smallmap_contours_andor[t].mand
 			};
 
-			const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-			return ApplyMask(cs->default_colour, &andor);
+		return ApplyMask(ground_colours, &andor);
 		}
 	}
 
 	/* Ground colour */
-	const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-	return ApplyMask(cs->default_colour, &_smallmap_contours_andor[t]);
+	return ApplyMask(ground_colours, &_smallmap_contours_andor[t]);
 }
 
 /**
  * Return the colour a tile would be displayed with in the small map in mode "link stats".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile in the small map in mode "link stats"
  */
-static inline uint32 GetSmallMapLinkStatsPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapLinkStatsPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
-	return _smallmap_show_heightmap ? GetSmallMapContoursPixels(tile, t) : GetSmallMapRoutesPixels(tile, t);
+	return _smallmap_show_heightmap ? GetSmallMapContoursPixels(tile, t, ground_colours) : GetSmallMapRoutesPixels(tile, t, ground_colours);
 }
 
-static const uint32 _vegetation_clear_bits[] = {
-	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< full grass
-	MKCOLOUR_XXXX(PC_ROUGH_LAND), ///< rough land
-	MKCOLOUR_XXXX(PC_GREY),       ///< rocks
-	MKCOLOUR_XXXX(PC_FIELDS),     ///< fields
-	MKCOLOUR_XXXX(PC_LIGHT_BLUE), ///< snow
-	MKCOLOUR_XXXX(PC_ORANGE),     ///< desert
-	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< unused
-	MKCOLOUR_XXXX(PC_GRASS_LAND), ///< unused
-};
+static const AndOr _tree_andor = { MKCOLOUR_0XX0(PC_TREES), MKCOLOUR_F00F };
 
 /**
  * Return the colour a tile would be displayed with in the smallmap in mode "Vegetation".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile  in the smallmap in mode "Vegetation"
  */
-static inline uint32 GetSmallMapVegetationPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapVegetationPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
-	switch (t) {
-		case MP_CLEAR:
-			return (IsClearGround(tile, CLEAR_GRASS) && GetClearDensity(tile) < 3) ? MKCOLOUR_XXXX(PC_BARE_LAND) : _vegetation_clear_bits[GetClearGround(tile)];
-
-		case MP_INDUSTRY:
-			return IsTileForestIndustry(tile) ? MKCOLOUR_XXXX(PC_GREEN) : MKCOLOUR_XXXX(PC_DARK_RED);
-
-		case MP_TREES:
-			if (GetTreeGround(tile) == TREE_GROUND_SNOW_DESERT || GetTreeGround(tile) == TREE_GROUND_ROUGH_SNOW) {
-				return (_settings_game.game_creation.landscape == LT_ARCTIC) ? MKCOLOUR_XYYX(PC_LIGHT_BLUE, PC_TREES) : MKCOLOUR_XYYX(PC_ORANGE, PC_TREES);
-			}
-			return MKCOLOUR_XYYX(PC_GRASS_LAND, PC_TREES);
-
-		default:
-			return ApplyMask(MKCOLOUR_XXXX(PC_GRASS_LAND), &_smallmap_vehicles_andor[t]);
-	}
+	if (t == MP_INDUSTRY) return IsTileForestIndustry(tile) ? MKCOLOUR_XXXX(PC_GREEN) : MKCOLOUR_XXXX(PC_DARK_RED);
+	return ApplyMask(ground_colours, (t == MP_TREES) ? &_tree_andor : &_smallmap_vehicles_andor[t]);
 }
 
 /**
  * Return the colour a tile would be displayed with in the small map in mode "Owner".
  *
- * @param tile The tile of which we would like to get the colour.
- * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Colours of the ground.
  * @return The colour of tile in the small map in mode "Owner"
  */
-static inline uint32 GetSmallMapOwnerPixels(TileIndex tile, TileType t)
+static inline uint32 GetSmallMapOwnerPixels(TileIndex tile, TileType t, uint32 ground_colours)
 {
 	Owner o;
 
@@ -609,9 +683,7 @@ static inline uint32 GetSmallMapOwnerPixels(TileIndex tile, TileType t)
 	}
 
 	if ((o < MAX_COMPANIES && !_legend_land_owners[_company_to_list_pos[o]].show_on_map) || o == OWNER_NONE || o == OWNER_WATER) {
-		if (t == MP_WATER) return MKCOLOUR_XXXX(PC_WATER);
-		const SmallMapColourScheme *cs = &_heightmap_schemes[_settings_client.gui.smallmap_land_colour];
-		return _smallmap_show_heightmap ? cs->height_colours[TileHeight(tile)] : cs->default_colour;
+		return ground_colours;
 	} else if (o == OWNER_TOWN) {
 		return MKCOLOUR_XXXX(PC_DARK_RED);
 	}
@@ -753,6 +825,8 @@ void SmallMapWindow::SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
 
 	if (new_index != cur_index) {
 		this->zoom = zoomlevels[new_index];
+		RecalcGridProps();
+
 		if (cur_index >= 0) {
 			Point new_tile = this->PixelToTile(zoom_pt->x, zoom_pt->y, &sub);
 			this->SetNewScroll(this->scroll_x + (tile.x - new_tile.x) * TILE_SIZE,
@@ -764,6 +838,88 @@ void SmallMapWindow::SetZoomLevel(ZoomLevelChange change, const Point *zoom_pt)
 		this->SetWidgetDisabledState(WID_SM_ZOOM_OUT, this->zoom == zoomlevels[MAX_ZOOM_INDEX]);
 		this->SetDirty();
 	}
+}
+
+/**
+ * Change appearance of the grid.
+ * @param option the setting to change
+ * @param delta amount of units to add to the given setting
+ */
+void SmallMapWindow::SetGridOption(GridOption option, int delta)
+{
+	if (!_smallmap_show_grid) {
+		_smallmap_show_grid = true;
+		this->SetWidgetLoweredState(WID_SM_TOGGLE_GRID, _smallmap_show_grid);
+		this->SetWidgetDirty(WID_SM_TOGGLE_GRID);
+		this->SetWidgetDirty(WID_SM_MAP);
+	}
+	switch (option) {
+		case GO_SIZE:
+			delta = Clamp(delta,
+					(int)MIN_SMALLMAP_GRID_SIZE - _settings_client.gui.smallmap_grid_size,
+					(int)MAX_SMALLMAP_GRID_SIZE - _settings_client.gui.smallmap_grid_size);
+			_settings_client.gui.smallmap_grid_size += delta;
+			break;
+
+		case GO_LINE_CONTRAST:
+			delta = Clamp(delta,
+					(int)MIN_SMALLMAP_GRIDLINE_CONTRAST - _settings_client.gui.smallmap_gridline_contrast,
+					(int)MAX_SMALLMAP_GRIDLINE_CONTRAST - _settings_client.gui.smallmap_gridline_contrast);
+			_settings_client.gui.smallmap_gridline_contrast += delta;
+			break;
+
+		case GO_LINE_THICKNESS:
+			delta = Clamp(delta,
+					(int)MIN_SMALLMAP_GRIDLINE_THICKNESS - _settings_client.gui.smallmap_gridline_thickness,
+					(int)MAX_SMALLMAP_GRIDLINE_THICKNESS - _settings_client.gui.smallmap_gridline_thickness);
+			_settings_client.gui.smallmap_gridline_thickness += delta;
+			break;
+
+		default: NOT_REACHED();
+	}
+	if (delta != 0) {
+		this->RecalcGridProps();
+		this->SetWidgetDirty(WID_SM_MAP);
+	}
+}
+
+/** Find out how the grid should be drawn with respect to current grid-related settings. */
+void SmallMapWindow::RecalcGridProps()
+{
+    /* Recalculate size of the grid. */
+    uint grid_zoom = this->zoom;
+    /* Round down to the nearrest power of 2. It's to keep lines in the same place when switching zoom levels. */
+    while (!HasAtMostOneBit(grid_zoom)) grid_zoom = KillFirstBit(grid_zoom);
+	this->grid_size = BASE_GRID_SIZE * _settings_client.gui.smallmap_grid_size * grid_zoom;
+
+	/* Values below were determined empirically trying to make a uniform appearance. */
+	static const uint BRIGHTNESS_FLAT_LAND = 8;
+	static const uint BRIGHTNESS_LOWLAND   = 10;
+	static const uint BRIGHTNESS_UPLAND    = 3;
+	static const uint BRIGHTNESS_WATER     = 6;
+	static const uint CONTRAST_DIVISOR_FLAT_LAND = 2;
+	static const uint CONTRAST_DIVISOR_LOWLAND   = 1;
+	static const uint CONTRAST_DIVISOR_UPLAND    = 1;
+	static const uint CONTRAST_DIVISOR_WATER     = 3;
+
+	int brightness = BRIGHTNESS_FLAT_LAND + RoundDivSU(_settings_client.gui.smallmap_gridline_contrast, CONTRAST_DIVISOR_FLAT_LAND);
+	brightness = Clamp(brightness, 0, MAX_TILE_HEIGHT);
+	this->grid_props.colour_flat = _heightmap_schemes[_settings_client.gui.smallmap_land_colour].height_colours[brightness];
+
+	brightness = BRIGHTNESS_UPLAND - RoundDivSU(_settings_client.gui.smallmap_gridline_contrast, CONTRAST_DIVISOR_LOWLAND);
+	brightness = Clamp(brightness, 0, MAX_TILE_HEIGHT);
+	this->grid_props.colour_upland = _heightmap_schemes[_settings_client.gui.smallmap_land_colour].height_colours[brightness];
+
+	brightness = BRIGHTNESS_LOWLAND + RoundDivSU(_settings_client.gui.smallmap_gridline_contrast, CONTRAST_DIVISOR_UPLAND);
+	brightness = Clamp(brightness, 0, MAX_TILE_HEIGHT);
+	this->grid_props.colour_lowland = _heightmap_schemes[_settings_client.gui.smallmap_land_colour].height_colours[brightness];
+
+	brightness = BRIGHTNESS_WATER + RoundDivSU(_settings_client.gui.smallmap_gridline_contrast, CONTRAST_DIVISOR_WATER);
+	brightness = Clamp(brightness, 0, lengthof(_colour_gradient[COLOUR_LIGHT_BLUE]) - 1);
+	this->grid_props.colour_water = MKCOLOUR_XXXX(_colour_gradient[COLOUR_LIGHT_BLUE][brightness]);
+	
+	/* Line thickness. Calculate bitmask to extract certain number of pixels (bytes). */
+	this->grid_props.mask = MKCOLOUR(0xFFFFFFFFu >> (8 * (4 - _settings_client.gui.smallmap_gridline_thickness)));
 }
 
 /**
@@ -786,28 +942,69 @@ inline uint32 SmallMapWindow::GetTileColours(const TileArea &ta) const
 		}
 	}
 
-	switch (this->map_type) {
-		case SMT_CONTOUR:
-			return GetSmallMapContoursPixels(tile, et);
+	const SmallMapGridProps *grid = NULL;
+	if (_smallmap_show_grid) {
+		/* Does the area intersect with the grid? */
+		if (TileY(ta.tile) % this->grid_size + ta.h >= this->grid_size ||
+				(TileX(ta.tile) % this->grid_size + ta.w >= this->grid_size)) {
+			grid = &this->grid_props;
+		}
+	}
 
+	uint32 ground_colours = this->GetTileGroundColours(tile, et, grid);
+	return this->GetTileForeColours(tile, et, ground_colours);
+}
+
+/**
+ * Get the colour to draw ground of a given tile.
+ * @param tile The tile of which we would like to get the colour.
+ * @param t    Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param grid If not NULL, given grid will be painted.
+ * @return Colours to display ground of this tile.
+ */
+uint32 SmallMapWindow::GetTileGroundColours(TileIndex tile, TileType et, const SmallMapGridProps *grid) const
+{
+	if (et == MP_WATER) return GetSmallMapGroundColoursWater(tile, et, grid);
+
+	switch (this->map_type) {
 		case SMT_VEHICLES:
-			return GetSmallMapVehiclesPixels(tile, et);
+		case SMT_ROUTES:
+			break;
 
 		case SMT_INDUSTRY:
-			return GetSmallMapIndustriesPixels(tile, et);
-
 		case SMT_LINKSTATS:
-			return GetSmallMapLinkStatsPixels(tile, et);
-
-		case SMT_ROUTES:
-			return GetSmallMapRoutesPixels(tile, et);
+		case SMT_OWNER:
+			if (!_smallmap_show_heightmap) break;
+			/* FALLTHROUGH */
+		case SMT_CONTOUR:
+			return GetSmallMapGroundColoursHeightmapLand(tile, et, grid);
 
 		case SMT_VEGETATION:
-			return GetSmallMapVegetationPixels(tile, et);
+			return GetSmallMapGroundColoursVegetationLand(tile, et, grid);
 
-		case SMT_OWNER:
-			return GetSmallMapOwnerPixels(tile, et);
+		default: NOT_REACHED();
+	}
 
+	return GetSmallMapGroundColoursFlatLand(tile, et, grid);
+}
+
+/**
+ * Get the colour to draw fore of a given tile and combine it with a given ground colours.
+ * @param tile           The tile of which we would like to get the colour.
+ * @param t              Effective tile type of the tile (see #GetEffectiveTileType).
+ * @param ground_colours Tile ground colours.
+ * @return Colours to display this tile.
+ */
+uint32 SmallMapWindow::GetTileForeColours(TileIndex tile, TileType et, uint32 ground_colours) const
+{
+	switch (this->map_type) {
+		case SMT_CONTOUR:    return GetSmallMapContoursPixels(tile, et, ground_colours);
+		case SMT_VEHICLES:   return GetSmallMapVehiclesPixels(tile, et, ground_colours);
+		case SMT_INDUSTRY:   return GetSmallMapIndustriesPixels(tile, et, ground_colours);
+		case SMT_LINKSTATS:  return GetSmallMapLinkStatsPixels(tile, et, ground_colours);
+		case SMT_ROUTES:     return GetSmallMapRoutesPixels(tile, et, ground_colours);
+		case SMT_VEGETATION: return GetSmallMapVegetationPixels(tile, et, ground_colours);
+		case SMT_OWNER:      return GetSmallMapOwnerPixels(tile, et, ground_colours);
 		default: NOT_REACHED();
 	}
 }
@@ -1075,11 +1272,13 @@ SmallMapWindow::SmallMapWindow(WindowDesc *desc, int window_number) : Window(des
 	BuildLandLegend();
 	this->SetWidgetLoweredState(WID_SM_SHOW_HEIGHT, _smallmap_show_heightmap);
 
+	this->SetWidgetLoweredState(WID_SM_TOGGLE_GRID, _smallmap_show_grid);
 	this->SetWidgetLoweredState(WID_SM_TOGGLETOWNNAME, this->show_towns);
 
 	this->SetupWidgetData();
 
 	this->SetZoomLevel(ZLC_INITIALIZE, NULL);
+	this->RecalcGridProps();
 	this->SmallMapCenterOnCurrentPos();
 	this->SetOverlayCargoMask();
 }
@@ -1401,6 +1600,14 @@ int SmallMapWindow::GetPositionOnLegend(Point pt)
 			break;
 		}
 
+		case WID_SM_TOGGLE_GRID: // Toggle grid
+			_smallmap_show_grid = !_smallmap_show_grid;
+			this->SetWidgetLoweredState(WID_SM_TOGGLE_GRID, _smallmap_show_grid);
+
+			this->SetDirty();
+			if (_settings_client.sound.click_beep) SndPlayFx(SND_15_BEEP);
+			break;
+
 		case WID_SM_ZOOM_IN:
 		case WID_SM_ZOOM_OUT: {
 			const NWidgetBase *wid = this->GetWidget<NWidgetBase>(WID_SM_MAP);
@@ -1496,12 +1703,17 @@ int SmallMapWindow::GetPositionOnLegend(Point pt)
  * @param data Information about the changed data.
  * - data = 0: Displayed industries at the industry chain window have changed.
  * - data = 1: Companies have changed.
+ * - data = 2: Grid-related settings changed.
  * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
  */
 /* virtual */ void SmallMapWindow::OnInvalidateData(int data, bool gui_scope)
 {
 	if (!gui_scope) return;
 	switch (data) {
+		case 2:
+			this->RecalcGridProps();
+			break;
+
 		case 1:
 			/* The owner legend has already been rebuilt. */
 			this->ReInit();
@@ -1537,8 +1749,17 @@ int SmallMapWindow::GetPositionOnLegend(Point pt)
 		int cursor_x = _cursor.pos.x - this->left - wid->pos_x;
 		int cursor_y = _cursor.pos.y - this->top  - wid->pos_y;
 		if (IsInsideMM(cursor_x, 0, wid->current_x) && IsInsideMM(cursor_y, 0, wid->current_y)) {
-			Point pt = {cursor_x, cursor_y};
-			this->SetZoomLevel((wheel < 0) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT, &pt);
+			if (_ctrl_pressed && _shift_pressed) {
+				this->SetGridOption(GO_LINE_THICKNESS, -sgn(wheel));
+			} else if (_ctrl_pressed) {
+				this->SetGridOption(GO_SIZE, sgn(wheel));
+			} else if (_shift_pressed) {
+				this->SetGridOption(GO_LINE_CONTRAST, -sgn(wheel));
+			} else {
+				ZoomLevelChange change = (wheel < 0) ? ZLC_ZOOM_IN : ZLC_ZOOM_OUT;
+				Point pt = {cursor_x, cursor_y};
+				this->SetZoomLevel(change, &pt);
+			}
 		}
 	}
 }
@@ -1725,6 +1946,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
 			NWidget(NWID_VERTICAL),
 				/* Top button row. */
 				NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
+					NWidget(WWT_IMGBTN, COLOUR_BROWN, WID_SM_TOGGLE_GRID),
+							SetDataTip(SPR_IMG_GRID, STR_SMALLMAP_TOOLTIP_SHOW_GRID_ON_MAP), SetFill(1, 1),
 					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, WID_SM_ZOOM_IN),
 							SetDataTip(SPR_IMG_ZOOMIN, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_IN), SetFill(1, 1),
 					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, WID_SM_CENTERMAP),
@@ -1740,6 +1963,8 @@ static const NWidgetPart _nested_smallmap_bar[] = {
 				EndContainer(),
 				/* Bottom button row. */
 				NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
+					NWidget(NWID_SPACER),
+							SetFill(1, 1),
 					NWidget(WWT_PUSHIMGBTN, COLOUR_BROWN, WID_SM_ZOOM_OUT),
 							SetDataTip(SPR_IMG_ZOOMOUT, STR_TOOLBAR_TOOLTIP_ZOOM_THE_VIEW_OUT), SetFill(1, 1),
 					NWidget(WWT_IMGBTN, COLOUR_BROWN, WID_SM_TOGGLETOWNNAME),
