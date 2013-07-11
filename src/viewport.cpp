@@ -1031,7 +1031,7 @@ static void DrawPastePreviewSelection(const TileInfo *ti, bool is_redsq)
 
 	/* draw tracks */
 	Track t;
-	FOR_EACH_SET_TRACK(t, tile_preview.highlight_track_bits) DrawAutorailSelection(ti, t);
+	FOR_EACH_SET_TRACK(t, tile_preview.highlight_track_bits) DrawAutorailSelection(ti, (HighLightStyle)(t & HT_DIR_MASK));
 
 	/* draw height point */
 	PaletteID pal;
@@ -3417,6 +3417,7 @@ void DrawOverlay(const TileInfo *ti, TileType tt)
 }
 
 static LineSnapPoint LineSnapPointAtRailTrackEndpoint(TileIndex tile, DiagDirection exit_dir, bool bidirectional)
+{
 	LineSnapPoint ret;
 	ret.x = (TILE_SIZE / 2) * (uint)(2 * TileX(tile) + TileIndexDiffCByDiagDir(exit_dir).x + 1);
 	ret.y = (TILE_SIZE / 2) * (uint)(2 * TileY(tile) + TileIndexDiffCByDiagDir(exit_dir).y + 1);
