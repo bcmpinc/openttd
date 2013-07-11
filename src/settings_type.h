@@ -490,6 +490,7 @@ struct EconomySettings {
 	bool   allow_town_level_crossings;       ///< towns are allowed to build level crossings
 	bool   infrastructure_maintenance;       ///< enable monthly maintenance fee for owner infrastructure
 	bool   transfer_payments;                ///< get paid upon transferring cargo
+	uint8  daylength_factor;
 };
 
 struct LinkGraphSettings {
