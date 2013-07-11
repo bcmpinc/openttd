@@ -16,6 +16,7 @@
 #include "track_type.h"
 #include "command_type.h"
 #include "order_base.h"
+#include "triphistory.h"
 #include "cargopacket.h"
 #include "texteff.hpp"
 #include "engine_type.h"
@@ -156,6 +157,8 @@ public:
 	Money profit_this_year;             ///< Profit this year << 8, low 8 bits are fract
 	Money profit_last_year;             ///< Profit last year << 8, low 8 bits are fract
 	Money value;                        ///< Value of the vehicle
+
+	TripHistory trip_history;           ///< Trip History Info
 
 	CargoPayment *cargo_payment;        ///< The cargo payment we're currently in
 

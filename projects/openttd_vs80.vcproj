@@ -799,6 +799,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\triphistory_cmd.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\vehicle.cpp"
 				>
 			</File>
@@ -1275,6 +1279,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\..\src\triphistory.h"
+				>
+			</File>
+			<File
 				RelativePath=".\..\src\network\network.h"
 				>
 			</File>
@@ -1464,6 +1472,10 @@
 			</File>
 			<File
 				RelativePath=".\..\src\object.h"
+				>
+			</File>
+			<File
+				RelativePath=".\..\src\triphistory_gui.cpp"
 				>
 			</File>
 			<File
