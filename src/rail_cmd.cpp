@@ -2811,7 +2811,7 @@ static const int8 _deltacoord_leaveoffset[8] = {
 int TicksToLeaveDepot(const Train *v)
 {
 	DiagDirection dir = GetRailDepotDirection(v->tile);
-	int length = v->CalcNextVehicleOffset();
+	int length = v->CalcNextVehicleOffset()/8;
 
 	switch (dir) {
 		case DIAGDIR_NE: return  ((int)(v->x_pos & 0x0F) - ((_fractcoords_enter[dir] & 0x0F) - (length + 1)));
@@ -2839,7 +2839,7 @@ static VehicleEnterTileStatus VehicleEnter_Track(Vehicle *u, TileIndex tile, int
 	DiagDirection dir = GetRailDepotDirection(tile);
 
 	/* Calculate the point where the following wagon should be activated. */
-	int length = v->CalcNextVehicleOffset();
+	int length = (v->CalcNextVehicleOffset()+4)/8;
 
 	byte fract_coord_leave =
 		((_fractcoords_enter[dir] & 0x0F) + // x
