@@ -255,7 +255,7 @@
  *  187   25899
  *  188   26169
  */
-extern const uint16 SAVEGAME_VERSION = SL_ATC_SPEED; ///< Current savegame version of OpenTTD.
+extern const uint16 SAVEGAME_VERSION = 192; ///< Current savegame version of OpenTTD.
 
 SavegameType _savegame_type; ///< type of savegame we are loading
 
