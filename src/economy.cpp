@@ -1181,12 +1181,24 @@ void CargoPayment::PayFinalDelivery(const CargoPacket *cp, uint count)
 		this->owner = Company::Get(this->front->owner);
 	}
 
-	/* Handle end of route payment */
-	Money profit = DeliverGoods(count, this->ct, this->current_station, cp->SourceStationXY(), cp->DaysInTransit(), this->owner, cp->SourceSubsidyType(), cp->SourceSubsidyID());
-	this->route_profit += profit;
+	if (_settings_game.economy.transfer_payments) {
+		/* Handle end of route payment */
+		//Required to actually deliver the goods:
+		DeliverGoods(count, this->ct, this->current_station, cp->SourceStationXY(), cp->DaysInTransit(), this->owner, cp->SourceSubsidyType(), cp->SourceSubsidyID()); 
+		//Allows the actual profits for only the last part of the trip to be calculated and, consequently, paid:
+		Money profit = GetTransportedGoodsIncome(count,DistanceManhattan(cp->LoadedAtXY(), Station::Get(this->current_station)->xy),cp->DaysInTransit(),this->ct);  
 
-	/* The vehicle's profit is whatever route profit there is minus feeder shares. */
-	this->visual_profit += profit - cp->FeederShare(count);
+		/* The vehicle's profit is whatever route profit there is minus feeder shares. */
+		this->visual_profit += profit;
+		this->route_profit += profit;
+	} else {
+		 /* Handle end of route payment */
+		 Money profit = DeliverGoods(count, this->ct, this->current_station, cp->SourceStationXY(), cp->DaysInTransit(), this->owner, cp->SourceSubsidyType(), cp->SourceSubsidyID());
+		 this->route_profit += profit;
+   
+		 /* The vehicle's profit is whatever route profit there is minus feeder shares. */
+		 this->visual_profit += profit - cp->FeederShare(count);
+	}
 }
 
 /**
@@ -1195,7 +1207,7 @@ void CargoPayment::PayFinalDelivery(const CargoPacket *cp, uint count)
  * @param count The number of packets to pay for.
  * @return The amount of money paid for the transfer.
  */
-Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
+Money CargoPayment::PayTransfer(CargoPacket *cp, uint count)
 {
 	Money profit = GetTransportedGoodsIncome(
 			count,
@@ -1203,9 +1215,15 @@ Money CargoPayment::PayTransfer(const CargoPacket *cp, uint count)
 			DistanceManhattan(cp->LoadedAtXY(), Station::Get(this->current_station)->xy),
 			cp->DaysInTransit(),
 			this->ct);
-
-	profit = profit * _settings_game.economy.feeder_payment_share / 100;
-
+	
+	if (_settings_game.economy.transfer_payments) {
+		//Reset the amount of days this package has been in transit, important for the next leg
+		cp->ResetTransitDays();
+		this->route_profit += profit;
+	} else {
+		profit = profit * _settings_game.economy.feeder_payment_share / 100;
+	}
+	
 	this->visual_transfer += profit; // accumulate transfer profits for whole vehicle
 	return profit; // account for the (virtual) profit already made for the cargo packet
 }
