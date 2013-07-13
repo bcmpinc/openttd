@@ -90,12 +90,12 @@ enum SLRefType {
 /** Highest possible savegame version. */
 #define SL_MAX_VERSION UINT16_MAX
 #define SL_ATC_SPEED 192
-#define SL_TRIP 190
-#define SL_WORMHOLE_SIGNALS 190
 #define SL_TIMESEP 190
 #define SL_DAYLENGTH 190
 #define SL_TRANSFER_PAYMENTS 191
+#define SL_TRIP 191
 #define SL_TOWN_CARGO_FACTOR 191
+#define SL_WORMHOLE_SIGNALS 192
 
 /** Flags of a chunk. */
 enum ChunkType {
