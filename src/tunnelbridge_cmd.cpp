@@ -1147,7 +1147,7 @@ static void DrawBrigeSignalOnMiddelPart(const TileInfo *ti, TileIndex bridge_sta
 	uint bridge_section = GetTunnelBridgeLength(ti->tile, bridge_start_tile) + 1;
 
 	while (bridge_signal_position <= bridge_section) {
-		bridge_signal_position += _settings_client.gui.simulated_wormhole_signals;
+		bridge_signal_position += _settings_game.construction.simulated_wormhole_signals;
 		if (bridge_signal_position == bridge_section) {
 			bool side = (_settings_game.vehicle.road_side != 0) && _settings_game.construction.train_signal_side;
 
