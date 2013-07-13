@@ -6,10 +6,10 @@
 # See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
 
 #
-# Awk script to automatically generate a single comment line
-# for a translated desktop shortcut. If it does not exist there
+# Awk script to automatically generate a comment lines for
+# a translated desktop shortcut. If it does not exist there
 # is no output.
 #
 
 /##isocode/ { lang = $2; next }
-/STR_DESKTOP_SHORTCUT_COMMENT/ { sub("^[^:]*:", "", $0); print "Comment[" lang "]=" $0; next}
+/STR_DESKTOP_SHORTCUT_COMMENT/ { sub("^[^:]*:", "", $0); print "Comment[" lang "]=" $0; sub("_.*", "", lang); print "Comment[" lang "]=" $0; next}

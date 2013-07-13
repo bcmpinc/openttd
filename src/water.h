@@ -12,10 +12,8 @@
 #ifndef WATER_H
 #define WATER_H
 
-#include "tile_type.h"
-#include "company_type.h"
-#include "slope_type.h"
 #include "water_map.h"
+#include "economy_func.h"
 
 /**
  * Describes the behaviour of a tile during flooding.
@@ -42,5 +40,17 @@ void DrawShoreTile(Slope tileh);
 void MakeWaterKeepingClass(TileIndex tile, Owner o);
 
 bool RiverModifyDesertZone(TileIndex tile, void *data);
+
+bool IsWateredTile(TileIndex tile, Direction from);
+
+/**
+ * Calculates the maintenance cost of a number of canal tiles.
+ * @param num Number of canal tiles.
+ * @return Total cost.
+ */
+static inline Money CanalMaintenanceCost(uint32 num)
+{
+	return (_price[PR_INFRASTRUCTURE_WATER] * num * (1 + IntSqrt(num))) >> 6; // 6 bits scaling.
+}
 
 #endif /* WATER_H */

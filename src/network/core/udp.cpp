@@ -101,7 +101,7 @@ void NetworkUDPSocketHandler::SendPacket(Packet *p, NetworkAddress *recv, bool a
 #endif
 
 		/* Send the buffer */
-		int res = sendto(s->second, (const char*)p->buffer, p->size, 0, (struct sockaddr *)send.GetAddress(), send.GetAddressLength());
+		int res = sendto(s->second, (const char*)p->buffer, p->size, 0, (const struct sockaddr *)send.GetAddress(), send.GetAddressLength());
 		DEBUG(net, 7, "[udp] sendto(%s)", send.GetAddressAsString());
 
 		/* Check for any errors, but ignore it otherwise */
@@ -117,18 +117,21 @@ void NetworkUDPSocketHandler::SendPacket(Packet *p, NetworkAddress *recv, bool a
 void NetworkUDPSocketHandler::ReceivePackets()
 {
 	for (SocketList::iterator s = this->sockets.Begin(); s != this->sockets.End(); s++) {
-		struct sockaddr_storage client_addr;
-		memset(&client_addr, 0, sizeof(client_addr));
+		for (int i = 0; i < 1000; i++) { // Do not infinitely loop when DoSing with UDP
+			struct sockaddr_storage client_addr;
+			memset(&client_addr, 0, sizeof(client_addr));
 
-		Packet p(this);
-		socklen_t client_len = sizeof(client_addr);
+			Packet p(this);
+			socklen_t client_len = sizeof(client_addr);
 
-		/* Try to receive anything */
-		SetNonBlocking(s->second); // Some OSes seem to lose the non-blocking status of the socket
-		int nbytes = recvfrom(s->second, (char*)p.buffer, SEND_MTU, 0, (struct sockaddr *)&client_addr, &client_len);
+			/* Try to receive anything */
+			SetNonBlocking(s->second); // Some OSes seem to lose the non-blocking status of the socket
+			int nbytes = recvfrom(s->second, (char*)p.buffer, SEND_MTU, 0, (struct sockaddr *)&client_addr, &client_len);
 
-		/* We got some bytes for the base header of the packet. */
-		if (nbytes > 2) {
+			/* Did we get the bytes for the base header of the packet? */
+			if (nbytes <= 0) break;    // No data, i.e. no packet
+			if (nbytes <= 2) continue; // Invalid data; try next packet
+
 			NetworkAddress address(client_addr, client_len);
 			p.PrepareToRead();
 
@@ -136,7 +139,7 @@ void NetworkUDPSocketHandler::ReceivePackets()
 			 * Otherwise it will be marked as corrupted later on. */
 			if (nbytes != p.size) {
 				DEBUG(net, 1, "received a packet with mismatching size from %s", address.GetAddressAsString());
-				return;
+				continue;
 			}
 
 			/* Handle the packet */
@@ -278,12 +281,6 @@ void NetworkUDPSocketHandler::ReceiveNetworkGameInfo(Packet *p, NetworkGameInfo 
 			if (info->map_set     >= NETWORK_NUM_LANDSCAPES) info->map_set     = 0;
 	}
 }
-
-/**
- * Defines a simple (switch) case for each network packet
- * @param type the packet type to create the case for
- */
-#define UDP_COMMAND(type) case type: this->NetworkPacketReceive_ ## type ## _command(p, client_addr); break;
 
 /**
  * Handle an incoming packets by sending it to the correct function.

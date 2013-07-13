@@ -27,14 +27,14 @@ enum PacketUDPType {
 	PACKET_UDP_CLIENT_DETAIL_INFO,   ///< Queries a game server about details of the game, such as companies
 	PACKET_UDP_SERVER_DETAIL_INFO,   ///< Reply of the game server about details of the game, such as companies
 	PACKET_UDP_SERVER_REGISTER,      ///< Packet to register itself to the master server
-	PACKET_UDP_MASTER_ACK_REGISTER,  ///< Packet indicating registration has succedeed
+	PACKET_UDP_MASTER_ACK_REGISTER,  ///< Packet indicating registration has succeeded
 	PACKET_UDP_CLIENT_GET_LIST,      ///< Request for serverlist from master server
 	PACKET_UDP_MASTER_RESPONSE_LIST, ///< Response from master server with server ip's + port's
 	PACKET_UDP_SERVER_UNREGISTER,    ///< Request to be removed from the server-list
 	PACKET_UDP_CLIENT_GET_NEWGRFS,   ///< Requests the name for a list of GRFs (GRF_ID and MD5)
 	PACKET_UDP_SERVER_NEWGRFS,       ///< Sends the list of NewGRF's requested.
 	PACKET_UDP_MASTER_SESSION_KEY,   ///< Sends a fresh session key to the client
-	PACKET_UDP_END                   ///< Must ALWAYS be on the end of this list!! (period)
+	PACKET_UDP_END,                  ///< Must ALWAYS be on the end of this list!! (period)
 };
 
 /** The types of server lists we can get */
@@ -43,7 +43,7 @@ enum ServerListType {
 	SLT_IPv6 = 1,   ///< Get the IPv6 addresses
 	SLT_AUTODETECT, ///< Autodetect the type based on the connection
 
-	SLT_END = SLT_AUTODETECT ///< End of 'arrays' marker
+	SLT_END = SLT_AUTODETECT, ///< End of 'arrays' marker
 };
 
 /** Base socket handler for all UDP sockets */
@@ -73,7 +73,7 @@ protected:
 	 *   all      1       the version of this packet's structure
 	 *
 	 *   4+       1       number of GRFs attached (n)
-	 *   4+       n * 20  unique identifier for GRF files. Constists of:
+	 *   4+       n * 20  unique identifier for GRF files. Consists of:
 	 *                     - one 4 byte variable with the GRF ID
 	 *                     - 16 bytes (sent sequentially) for the MD5 checksum
 	 *                       of the GRF

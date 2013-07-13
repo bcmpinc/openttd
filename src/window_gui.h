@@ -18,12 +18,7 @@
 #include "tile_type.h"
 #include "widget_type.h"
 #include "core/smallvec_type.hpp"
-
-/** State of handling an event. */
-enum EventState {
-	ES_HANDLED,     ///< The passed event is handled.
-	ES_NOT_HANDLED, ///< The passed event is not handled.
-};
+#include "core/smallmap_type.hpp"
 
 /**
  * Flags to describe the look of the frame
@@ -51,9 +46,16 @@ enum WidgetDrawDistances {
 	WD_INSET_RIGHT = 2,         ///< Right offset of string.
 	WD_INSET_TOP   = 1,         ///< Top offset of string.
 
-	WD_VSCROLLBAR_WIDTH  = 12,  ///< Width of a vertical scrollbar.
+	WD_SCROLLBAR_LEFT   = 2,    ///< Left offset of scrollbar.
+	WD_SCROLLBAR_RIGHT  = 2,    ///< Right offset of scrollbar.
+	WD_SCROLLBAR_TOP    = 2,    ///< Top offset of scrollbar.
+	WD_SCROLLBAR_BOTTOM = 2,    ///< Bottom offset of scrollbar.
 
-	WD_HSCROLLBAR_HEIGHT = 12,  ///< Height of a horizontal scrollbar.
+	/* Size of the pure frame bevel without any padding. */
+	WD_BEVEL_LEFT       = 1,    ///< Width of left bevel border.
+	WD_BEVEL_RIGHT      = 1,    ///< Width of right bevel border.
+	WD_BEVEL_TOP        = 1,    ///< Height of top bevel border.
+	WD_BEVEL_BOTTOM     = 1,    ///< Height of bottom bevel border.
 
 	/* FrameRect widgets, all text buttons, panel, editbox */
 	WD_FRAMERECT_LEFT   = 2,    ///< Offset at left to draw the frame rectangular area
@@ -97,6 +99,13 @@ enum WidgetDrawDistances {
 	WD_DEBUGBOX_RIGHT  = 2,     ///< Right offset of debug sprite.
 	WD_DEBUGBOX_TOP    = 3,     ///< Top offset of debug sprite.
 	WD_DEBUGBOX_BOTTOM = 3,     ///< Bottom offset of debug sprite.
+
+	/* WWT_DEFSIZEBOX */
+	WD_DEFSIZEBOX_WIDTH  = 12,  ///< Width of a standard defsize box widget.
+	WD_DEFSIZEBOX_LEFT   = 2,   ///< Left offset of defsize sprite.
+	WD_DEFSIZEBOX_RIGHT  = 2,   ///< Right offset of defsize sprite.
+	WD_DEFSIZEBOX_TOP    = 3,   ///< Top offset of defsize sprite.
+	WD_DEFSIZEBOX_BOTTOM = 3,   ///< Bottom offset of defsize sprite.
 
 	/* WWT_RESIZEBOX */
 	WD_RESIZEBOX_WIDTH  = 12,   ///< Width of a resize box widget.
@@ -152,25 +161,46 @@ enum WindowPosition {
 
 Point GetToolbarAlignedWindowPosition(int window_width);
 
+struct HotkeyList;
+
 /**
  * High level window description
  */
 struct WindowDesc : ZeroedMemoryAllocator {
 
-	WindowDesc(WindowPosition default_pos, int16 def_width, int16 def_height,
+	WindowDesc(WindowPosition default_pos, const char *ini_key, int16 def_width, int16 def_height,
 			WindowClass window_class, WindowClass parent_class, uint32 flags,
-			const NWidgetPart *nwid_parts, int16 nwid_length);
+			const NWidgetPart *nwid_parts, int16 nwid_length, HotkeyList *hotkeys = NULL);
 
 	~WindowDesc();
 
-	WindowPosition default_pos;    ///< Prefered position of the window. @see WindowPosition()
-	int16 default_width;           ///< Prefered initial width of the window.
-	int16 default_height;          ///< Prefered initial height of the window.
+	WindowPosition default_pos;    ///< Preferred position of the window. @see WindowPosition()
+	int16 default_width;           ///< Preferred initial width of the window.
+	int16 default_height;          ///< Preferred initial height of the window.
 	WindowClass cls;               ///< Class of the window, @see WindowClass.
 	WindowClass parent_cls;        ///< Class of the parent window. @see WindowClass
-	uint32 flags;                  ///< Flags. @see WindowDefaultFlags
+	const char *ini_key;           ///< Key to store window defaults in openttd.cfg. \c NULL if nothing shall be stored.
+	uint32 flags;                  ///< Flags. @see WindowDefaultFlag
 	const NWidgetPart *nwid_parts; ///< Nested widget parts describing the window.
 	int16 nwid_length;             ///< Length of the #nwid_parts array.
+	HotkeyList *hotkeys;           ///< Hotkeys for the window.
+
+	bool pref_sticky;              ///< Preferred stickyness.
+	int16 pref_width;              ///< User-preferred width of the window. Zero if unset.
+	int16 pref_height;             ///< User-preferred height of the window. Zero if unset.
+
+	int16 GetDefaultWidth() const { return this->pref_width != 0 ? this->pref_width : this->default_width; }
+	int16 GetDefaultHeight() const { return this->pref_height != 0 ? this->pref_height : this->default_height; }
+
+	static void LoadFromConfig();
+	static void SaveToConfig();
+
+private:
+	/**
+	 * Dummy private copy constructor to prevent compilers from
+	 * copying the structure, which fails due to _window_descs.
+	 */
+	WindowDesc(const WindowDesc &other);
 };
 
 /**
@@ -178,9 +208,8 @@ struct WindowDesc : ZeroedMemoryAllocator {
  */
 enum WindowDefaultFlag {
 	WDF_CONSTRUCTION    =   1 << 0, ///< This window is used for construction; close it whenever changing company.
-	WDF_UNCLICK_BUTTONS =   1 << 1, ///< Unclick buttons when the window event times out
-	WDF_MODAL           =   1 << 2, ///< The window is a modal child of some other window, meaning the parent is 'inactive'
-	WDF_NO_FOCUS        =   1 << 3, ///< This window won't get focus/make any other window lose focus when click
+	WDF_MODAL           =   1 << 1, ///< The window is a modal child of some other window, meaning the parent is 'inactive'
+	WDF_NO_FOCUS        =   1 << 2, ///< This window won't get focus/make any other window lose focus when click
 };
 
 /**
@@ -199,6 +228,27 @@ enum SortButtonState {
 };
 
 /**
+ * Window flags.
+ */
+enum WindowFlags {
+	WF_TIMEOUT           = 1 <<  0, ///< Window timeout counter.
+
+	WF_DRAGGING          = 1 <<  3, ///< Window is being dragged.
+	WF_SIZING_RIGHT      = 1 <<  4, ///< Window is being resized towards the right.
+	WF_SIZING_LEFT       = 1 <<  5, ///< Window is being resized towards the left.
+	WF_SIZING            = WF_SIZING_RIGHT | WF_SIZING_LEFT, ///< Window is being resized.
+	WF_STICKY            = 1 <<  6, ///< Window is made sticky by user
+	WF_DISABLE_VP_SCROLL = 1 <<  7, ///< Window does not do autoscroll, @see HandleAutoscroll().
+	WF_WHITE_BORDER      = 1 <<  8, ///< Window white border counter bit mask.
+	WF_HIGHLIGHTED       = 1 <<  9, ///< Window has a widget that has a highlight.
+	WF_CENTERED          = 1 << 10, ///< Window is centered and shall stay centered after ReInit.
+};
+DECLARE_ENUM_AS_BIT_SET(WindowFlags)
+
+static const int TIMEOUT_DURATION = 7; ///< The initial timeout value for WF_TIMEOUT.
+static const int WHITE_BORDER_DURATION = 3; ///< The initial timeout value for WF_WHITE_BORDER.
+
+/**
  * Data structure for a window viewport.
  * A viewport is either following a vehicle (its id in then in #follow_vehicle), or it aims to display a specific
  * location #dest_scrollpos_x, #dest_scrollpos_y (#follow_vehicle is then #INVALID_VEHICLE).
@@ -213,19 +263,21 @@ struct ViewportData : ViewPort {
 	int32 dest_scrollpos_y;   ///< Current destination y coordinate to display (virtual screen coordinate of topleft corner of the viewport).
 };
 
+struct QueryString;
+
 /**
  * Data structure for an opened window
  */
 struct Window : ZeroedMemoryAllocator {
 protected:
-	void InitializeData(const WindowDesc *desc, WindowNumber window_number);
+	void InitializeData(WindowNumber window_number);
 	void InitializePositionSize(int x, int y, int min_width, int min_height);
 	void FindWindowPlacementAndResize(int def_width, int def_height);
 
 	SmallVector<int, 4> scheduled_invalidation_data;  ///< Data of scheduled OnInvalidateData() calls.
 
 public:
-	Window();
+	Window(WindowDesc *desc);
 
 	virtual ~Window();
 
@@ -235,7 +287,7 @@ public:
 	 * to destruct them all at the same time too, which is kinda hard.
 	 * @param size the amount of space not to allocate
 	 */
-	FORCEINLINE void *operator new[](size_t size)
+	inline void *operator new[](size_t size)
 	{
 		NOT_REACHED();
 	}
@@ -245,13 +297,17 @@ public:
 	 * Don't free the window directly; it corrupts the linked list when iterating
 	 * @param ptr the pointer not to free
 	 */
-	FORCEINLINE void operator delete(void *ptr)
+	inline void operator delete(void *ptr)
 	{
 	}
 
-	uint16 flags4;              ///< Window flags, @see WindowFlags
+	WindowDesc *window_desc;    ///< Window description
+	WindowFlags flags;          ///< Window flags
 	WindowClass window_class;   ///< Window class
 	WindowNumber window_number; ///< Window number within the window class
+
+	uint8 timeout_timer;      ///< Timer value of the WF_TIMEOUT for flags.
+	uint8 white_border_timer; ///< Timer value of the WF_WHITE_BORDER for flags.
 
 	int left;   ///< x position of left edge of the window
 	int top;    ///< y position of top edge of the window
@@ -263,15 +319,15 @@ public:
 	Owner owner;        ///< The owner of the content shown in this window. Company colour is acquired from this variable.
 
 	ViewportData *viewport;          ///< Pointer to viewport data, if present.
-	uint32 desc_flags;               ///< Window/widgets default flags setting. @see WindowDefaultFlag
 	const NWidgetCore *nested_focus; ///< Currently focused nested widget, or \c NULL if no nested widget has focus.
+	SmallMap<int, QueryString*> querystrings; ///< QueryString associated to WWT_EDITBOX widgets.
 	NWidgetBase *nested_root;        ///< Root of the nested tree.
 	NWidgetBase **nested_array;      ///< Array of pointers into the tree. Do not access directly, use #Window::GetWidget() instead.
 	uint nested_array_size;          ///< Size of the nested array.
 	NWidgetStacked *shade_select;    ///< Selection widget (#NWID_SELECTION) to use for shading the window. If \c NULL, window cannot shade.
 	Dimension unshaded_size;         ///< Last known unshaded size (only valid while shaded).
 
-	int scrolling_scrollbar;         ///< Widgetindex of just being dragged scrollbar. -1 of none is active.
+	int scrolling_scrollbar;         ///< Widgetindex of just being dragged scrollbar. -1 if none is active.
 
 	Window *parent;                  ///< Parent window.
 	Window *z_front;                 ///< The window in front of us in z-order.
@@ -285,9 +341,34 @@ public:
 	const Scrollbar *GetScrollbar(uint widnum) const;
 	Scrollbar *GetScrollbar(uint widnum);
 
-	void InitNested(const WindowDesc *desc, WindowNumber number = 0);
-	void CreateNestedTree(const WindowDesc *desc, bool fill_nested = true);
-	void FinishInitNested(const WindowDesc *desc, WindowNumber window_number = 0);
+	const QueryString *GetQueryString(uint widnum) const;
+	QueryString *GetQueryString(uint widnum);
+
+	void InitNested(WindowNumber number = 0);
+	void CreateNestedTree(bool fill_nested = true);
+	void FinishInitNested(WindowNumber window_number = 0);
+
+	/**
+	 * Set the timeout flag of the window and initiate the timer.
+	 */
+	inline void SetTimeout()
+	{
+		this->flags |= WF_TIMEOUT;
+		this->timeout_timer = TIMEOUT_DURATION;
+	}
+
+	/**
+	 * Set the timeout flag of the window and initiate the timer.
+	 */
+	inline void SetWhiteBorder()
+	{
+		this->flags |= WF_WHITE_BORDER;
+		this->white_border_timer = WHITE_BORDER_DURATION;
+	}
+
+	void DisableAllWidgetHighlight();
+	void SetWidgetHighlight(byte widget_index, TextColour highlighted_colour);
+	bool IsWidgetHighlighted(byte widget_index) const;
 
 	/**
 	 * Sets the enabled/disabled status of a widget.
@@ -404,7 +485,9 @@ public:
 	}
 
 	void UnfocusFocusedWidget();
-	bool SetFocusedWidget(byte widget_index);
+	bool SetFocusedWidget(int widget_index);
+
+	EventState HandleEditBoxKey(int wid, uint16 key, uint16 keycode);
 
 	void HandleButtonClick(byte widget);
 	int GetRowFromWidget(int clickpos, int widget, int padding, int line_height = -1) const;
@@ -431,31 +514,9 @@ public:
 
 	void SetShaded(bool make_shaded);
 
-	/**
-	 * Mark this window's data as invalid (in need of re-computing)
-	 * @param data The data to invalidate with
-	 * @param gui_scope Whether the funtion is called from GUI scope.
-	 */
-	void InvalidateData(int data = 0, bool gui_scope = true)
-	{
-		this->SetDirty();
-		if (!gui_scope) {
-			/* Schedule GUI-scope invalidation for next redraw. */
-			*this->scheduled_invalidation_data.Append() = data;
-		}
-		this->OnInvalidateData(data, gui_scope);
-	}
-
-	/**
-	 * Process all scheduled invalidations.
-	 */
-	void ProcessScheduledInvalidations()
-	{
-		for (int *data = this->scheduled_invalidation_data.Begin(); this->window_class != WC_INVALID && data != this->scheduled_invalidation_data.End(); data++) {
-			this->OnInvalidateData(*data, true);
-		}
-		this->scheduled_invalidation_data.Clear();
-	}
+	void InvalidateData(int data = 0, bool gui_scope = true);
+	void ProcessScheduledInvalidations();
+	void ProcessHighlightedInvalidations();
 
 	/*** Event handling ***/
 
@@ -465,15 +526,16 @@ public:
 	 */
 	virtual void OnInit() { }
 
+	virtual void ApplyDefaults();
+
 	/**
 	 * Compute the initial position of the window.
-	 * @param *desc         The pointer to the WindowDesc of the window to create.
 	 * @param sm_width      Smallest width of the window.
 	 * @param sm_height     Smallest height of the window.
 	 * @param window_number The window number of the new window.
 	 * @return Initial position of the top-left corner of the window.
 	 */
-	virtual Point OnInitialPosition(const WindowDesc *desc, int16 sm_width, int16 sm_height, int window_number);
+	virtual Point OnInitialPosition(int16 sm_width, int16 sm_height, int window_number);
 
 	/**
 	 * The window must be repainted.
@@ -532,6 +594,8 @@ public:
 	 *         window should receive the event.
 	 */
 	virtual EventState OnKeyPress(uint16 key, uint16 keycode) { return ES_NOT_HANDLED; }
+
+	virtual EventState OnHotkey(int hotkey);
 
 	/**
 	 * The state of the control key has changed
@@ -634,6 +698,14 @@ public:
 	 */
 	virtual void OnDropdownSelect(int widget, int index) {}
 
+	virtual void OnDropdownClose(Point pt, int widget, int index, bool instant_close);
+
+	/**
+	 * The text in an editbox has been edited.
+	 * @param widget The widget of the editbox.
+	 */
+	virtual void OnEditboxChanged(int widget) {}
+
 	/**
 	 * The query window opened from this window has closed.
 	 * @param str the new value of the string, NULL if the window
@@ -660,8 +732,9 @@ public:
 	/**
 	 * The user clicked on a vehicle while HT_VEHICLE has been set.
 	 * @param v clicked vehicle. It is guaranteed to be v->IsPrimaryVehicle() == true
+	 * @return True if the click is handled, false if it is ignored.
 	 */
-	virtual void OnVehicleSelect(const struct Vehicle *v) {}
+	virtual bool OnVehicleSelect(const struct Vehicle *v) { return false; }
 
 	/**
 	 * The user cancelled a tile highlight mode that has been set.
@@ -757,33 +830,12 @@ inline const NWID *Window::GetWidget(uint widnum) const
 class PickerWindowBase : public Window {
 
 public:
-	PickerWindowBase(Window *parent) : Window()
+	PickerWindowBase(WindowDesc *desc, Window *parent) : Window(desc)
 	{
 		this->parent = parent;
 	}
 
 	virtual ~PickerWindowBase();
-};
-
-/**
- * Window flags
- */
-enum WindowFlags {
-	WF_TIMEOUT_TRIGGER   = 1,       ///< When the timeout should start triggering
-	WF_TIMEOUT_BEGIN     = 7,       ///< The initial value for the timeout
-	WF_TIMEOUT_MASK      = 7,       ///< Window timeout counter bit mask (3 bits)
-	WF_DRAGGING          = 1 <<  3, ///< Window is being dragged
-	WF_SIZING_RIGHT      = 1 <<  4, ///< Window is being resized towards the right.
-	WF_SIZING_LEFT       = 1 <<  5, ///< Window is being resized towards the left.
-	WF_SIZING            = WF_SIZING_RIGHT | WF_SIZING_LEFT, ///< Window is being resized.
-	WF_STICKY            = 1 <<  6, ///< Window is made sticky by user
-
-	WF_DISABLE_VP_SCROLL = 1 <<  7, ///< Window does not do autoscroll, @see HandleAutoscroll()
-
-	WF_WHITE_BORDER_ONE  = 1 <<  8,
-	WF_WHITE_BORDER_MASK = 1 <<  9 | WF_WHITE_BORDER_ONE,
-
-	WF_CENTERED          = 1 << 10, ///< Window is centered and shall stay centered after ReInit
 };
 
 Window *BringWindowToFrontById(WindowClass cls, WindowNumber number);
@@ -796,7 +848,7 @@ Window *FindWindowFromPt(int x, int y);
  * @return see Window pointer of the newly created window
  */
 template <typename Wcls>
-Wcls *AllocateWindowDescFront(const WindowDesc *desc, int window_number)
+Wcls *AllocateWindowDescFront(WindowDesc *desc, int window_number)
 {
 	if (BringWindowToFrontById(desc->cls, window_number)) return NULL;
 	return new Wcls(desc, window_number);

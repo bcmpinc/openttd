@@ -13,11 +13,12 @@
 #define SQUIRREL_HELPER_HPP
 
 #include "squirrel.hpp"
-#include "../core/math_func.hpp"
 #include "../core/smallvec_type.hpp"
 #include "../economy_type.h"
 #include "../string_func.h"
 #include "squirrel_helper_type.hpp"
+
+template <class CL, ScriptType ST> const char *GetClassName();
 
 /**
  * The Squirrel convert routines
@@ -90,6 +91,7 @@ namespace SQConvert {
 	template <> inline int Return<char *>      (HSQUIRRELVM vm, char *res)       { if (res == NULL) sq_pushnull(vm); else { sq_pushstring(vm, OTTD2SQ(res), -1); free(res); } return 1; }
 	template <> inline int Return<const char *>(HSQUIRRELVM vm, const char *res) { if (res == NULL) sq_pushnull(vm); else { sq_pushstring(vm, OTTD2SQ(res), -1); } return 1; }
 	template <> inline int Return<void *>      (HSQUIRRELVM vm, void *res)       { sq_pushuserpointer(vm, res); return 1; }
+	template <> inline int Return<HSQOBJECT>   (HSQUIRRELVM vm, HSQOBJECT res)   { sq_pushobject(vm, res); return 1; }
 
 	/**
 	 * To get a param from squirrel, we call this function. It converts to the right format.
@@ -106,7 +108,9 @@ namespace SQConvert {
 	template <> inline void       *GetParam(ForceType<void *>      , HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr) { SQUserPointer tmp; sq_getuserpointer(vm, index, &tmp); return tmp; }
 	template <> inline const char *GetParam(ForceType<const char *>, HSQUIRRELVM vm, int index, SQAutoFreePointers *ptr)
 	{
+		/* Convert what-ever there is as parameter to a string */
 		sq_tostring(vm, index);
+
 		const SQChar *tmp;
 		sq_getstring(vm, -1, &tmp);
 		char *tmp_str = strdup(SQ2OTTD(tmp));
@@ -218,7 +222,6 @@ namespace SQConvert {
 			Tretval ret = (*func)(
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr)
 			);
-			sq_pop(vm, 1);
 			return Return(vm, ret);
 		}
 	};
@@ -234,7 +237,6 @@ namespace SQConvert {
 			(*func)(
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr)
 			);
-			sq_pop(vm, 1);
 			return 0;
 		}
 	};
@@ -250,7 +252,6 @@ namespace SQConvert {
 			Tretval ret = (instance->*func)(
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr)
 			);
-			sq_pop(vm, 1);
 			return Return(vm, ret);
 		}
 	};
@@ -266,7 +267,6 @@ namespace SQConvert {
 			(instance->*func)(
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr)
 			);
-			sq_pop(vm, 1);
 			return 0;
 		}
 
@@ -293,7 +293,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr),
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr)
 			);
-			sq_pop(vm, 2);
 			return Return(vm, ret);
 		}
 	};
@@ -310,7 +309,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr),
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr)
 			);
-			sq_pop(vm, 2);
 			return 0;
 		}
 	};
@@ -327,7 +325,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr),
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr)
 			);
-			sq_pop(vm, 2);
 			return Return(vm, ret);
 		}
 	};
@@ -344,7 +341,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ1>(), vm, 2, &ptr),
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr)
 			);
-			sq_pop(vm, 2);
 			return 0;
 		}
 
@@ -373,7 +369,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr),
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr)
 			);
-			sq_pop(vm, 3);
 			return Return(vm, ret);
 		}
 	};
@@ -391,7 +386,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr),
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr)
 			);
-			sq_pop(vm, 3);
 			return 0;
 		}
 	};
@@ -409,7 +403,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr),
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr)
 			);
-			sq_pop(vm, 3);
 			return Return(vm, ret);
 		}
 	};
@@ -427,7 +420,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ2>(), vm, 3, &ptr),
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr)
 			);
-			sq_pop(vm, 3);
 			return 0;
 		}
 
@@ -458,7 +450,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr),
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr)
 			);
-			sq_pop(vm, 4);
 			return Return(vm, ret);
 		}
 	};
@@ -477,7 +468,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr),
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr)
 			);
-			sq_pop(vm, 4);
 			return 0;
 		}
 	};
@@ -496,7 +486,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr),
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr)
 			);
-			sq_pop(vm, 4);
 			return Return(vm, ret);
 		}
 	};
@@ -515,7 +504,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ3>(), vm, 4, &ptr),
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr)
 			);
-			sq_pop(vm, 4);
 			return 0;
 		}
 
@@ -548,7 +536,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr),
 				GetParam(ForceType<Targ5>(), vm, 6, &ptr)
 			);
-			sq_pop(vm, 5);
 			return Return(vm, ret);
 		}
 	};
@@ -568,7 +555,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr),
 				GetParam(ForceType<Targ5>(), vm, 6, &ptr)
 			);
-			sq_pop(vm, 5);
 			return 0;
 		}
 	};
@@ -588,7 +574,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr),
 				GetParam(ForceType<Targ5>(), vm, 6, &ptr)
 			);
-			sq_pop(vm, 5);
 			return Return(vm, ret);
 		}
 	};
@@ -608,7 +593,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ4>(), vm, 5, &ptr),
 				GetParam(ForceType<Targ5>(), vm, 6, &ptr)
 			);
-			sq_pop(vm, 5);
 			return 0;
 		}
 
@@ -647,7 +631,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ9>(), vm, 10, &ptr),
 				GetParam(ForceType<Targ10>(), vm, 11, &ptr)
 			);
-			sq_pop(vm, 10);
 			return Return(vm, ret);
 		}
 	};
@@ -672,7 +655,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ9>(), vm, 10, &ptr),
 				GetParam(ForceType<Targ10>(), vm, 11, &ptr)
 			);
-			sq_pop(vm, 10);
 			return 0;
 		}
 	};
@@ -697,7 +679,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ9>(), vm, 10, &ptr),
 				GetParam(ForceType<Targ10>(), vm, 11, &ptr)
 			);
-			sq_pop(vm, 10);
 			return Return(vm, ret);
 		}
 	};
@@ -722,7 +703,6 @@ namespace SQConvert {
 				GetParam(ForceType<Targ9>(), vm, 10, &ptr),
 				GetParam(ForceType<Targ10>(), vm, 11, &ptr)
 			);
-			sq_pop(vm, 10);
 			return 0;
 		}
 
@@ -752,7 +732,7 @@ namespace SQConvert {
 	 *  In here the function_proc is recovered, and the SQCall is called that
 	 *  can handle this exact amount of params.
 	 */
-	template <typename Tcls, typename Tmethod>
+	template <typename Tcls, typename Tmethod, ScriptType Ttype>
 	inline SQInteger DefSQNonStaticCallback(HSQUIRRELVM vm)
 	{
 		/* Find the amount of params we got */
@@ -766,7 +746,8 @@ namespace SQConvert {
 
 		/* Protect against calls to a non-static method in a static way */
 		sq_pushroottable(vm);
-		sq_pushstring(vm, OTTD2SQ(Tcls::GetClassName()), -1);
+		const char *className = GetClassName<Tcls, Ttype>();
+		sq_pushstring(vm, OTTD2SQ(className), -1);
 		sq_get(vm, -2);
 		sq_pushobject(vm, instance);
 		if (sq_instanceof(vm) != SQTrue) return sq_throwerror(vm, _SC("class method is non-static"));
@@ -784,7 +765,6 @@ namespace SQConvert {
 			/* Delegate it to a template that can handle this specific function */
 			return HelperT<Tmethod>::SQCall((Tcls *)real_instance, *(Tmethod *)ptr, vm);
 		} catch (SQInteger e) {
-			sq_pop(vm, nparam);
 			return e;
 		}
 	}
@@ -794,7 +774,7 @@ namespace SQConvert {
 	 *  In here the function_proc is recovered, and the SQCall is called that
 	 *  can handle this exact amount of params.
 	 */
-	template <typename Tcls, typename Tmethod>
+	template <typename Tcls, typename Tmethod, ScriptType Ttype>
 	inline SQInteger DefSQAdvancedNonStaticCallback(HSQUIRRELVM vm)
 	{
 		/* Find the amount of params we got */
@@ -808,7 +788,8 @@ namespace SQConvert {
 
 		/* Protect against calls to a non-static method in a static way */
 		sq_pushroottable(vm);
-		sq_pushstring(vm, OTTD2SQ(Tcls::GetClassName()), -1);
+		const char *className = GetClassName<Tcls, Ttype>();
+		sq_pushstring(vm, OTTD2SQ(className), -1);
 		sq_get(vm, -2);
 		sq_pushobject(vm, instance);
 		if (sq_instanceof(vm) != SQTrue) return sq_throwerror(vm, _SC("class method is non-static"));
@@ -845,9 +826,30 @@ namespace SQConvert {
 			/* Delegate it to a template that can handle this specific function */
 			return HelperT<Tmethod>::SQCall((Tcls *)NULL, *(Tmethod *)ptr, vm);
 		} catch (SQInteger e) {
-			sq_pop(vm, nparam);
 			return e;
 		}
+	}
+
+
+	/**
+	 * A general template for all static advanced method callbacks from Squirrel.
+	 *  In here the function_proc is recovered, and the SQCall is called that
+	 *  can handle this exact amount of params.
+	 */
+	template <typename Tcls, typename Tmethod>
+	inline SQInteger DefSQAdvancedStaticCallback(HSQUIRRELVM vm)
+	{
+		/* Find the amount of params we got */
+		int nparam = sq_gettop(vm);
+		SQUserPointer ptr = NULL;
+
+		/* Get the real function pointer */
+		sq_getuserdata(vm, nparam, &ptr, 0);
+		/* Remove the userdata from the stack */
+		sq_pop(vm, 1);
+
+		/* Call the function, which its only param is always the VM */
+		return (SQInteger)(*(*(Tmethod *)ptr))(vm);
 	}
 
 	/**
@@ -870,9 +872,6 @@ namespace SQConvert {
 	template <typename Tcls, typename Tmethod, int Tnparam>
 	inline SQInteger DefSQConstructorCallback(HSQUIRRELVM vm)
 	{
-		/* Find the amount of params we got */
-		int nparam = sq_gettop(vm);
-
 		try {
 			/* Create the real instance */
 			Tcls *instance = HelperT<Tmethod>::SQConstruct((Tcls *)NULL, (Tmethod)NULL, vm);
@@ -881,7 +880,28 @@ namespace SQConvert {
 			instance->AddRef();
 			return 0;
 		} catch (SQInteger e) {
-			sq_pop(vm, nparam);
+			return e;
+		}
+	}
+
+	/**
+	 * A general template to handle creating of an instance with a complex
+	 *  constructor.
+	 */
+	template <typename Tcls>
+	inline SQInteger DefSQAdvancedConstructorCallback(HSQUIRRELVM vm)
+	{
+		try {
+			/* Find the amount of params we got */
+			int nparam = sq_gettop(vm);
+
+			/* Create the real instance */
+			Tcls *instance = new Tcls(vm);
+			sq_setinstanceup(vm, -nparam, instance);
+			sq_setreleasehook(vm, -nparam, DefSQDestructorCallback<Tcls>);
+			instance->AddRef();
+			return 0;
+		} catch (SQInteger e) {
 			return e;
 		}
 	}

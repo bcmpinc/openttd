@@ -11,6 +11,7 @@
 
 #include "../stdafx.h"
 #include "../zoom_func.h"
+#include "../settings_type.h"
 #include "../core/math_func.hpp"
 #include "8bpp_optimized.hpp"
 
@@ -116,8 +117,20 @@ Sprite *Blitter_8bppOptimized::Encode(SpriteLoader::Sprite *sprite, AllocatorPro
 	/* Make memory for all zoom-levels */
 	uint memory = sizeof(SpriteData);
 
-	for (ZoomLevel i = ZOOM_LVL_BEGIN; i < ZOOM_LVL_END; i++) {
-		memory += UnScaleByZoom(sprite->height, i) * UnScaleByZoom(sprite->width, i);
+	ZoomLevel zoom_min;
+	ZoomLevel zoom_max;
+
+	if (sprite->type == ST_FONT) {
+		zoom_min = ZOOM_LVL_NORMAL;
+		zoom_max = ZOOM_LVL_NORMAL;
+	} else {
+		zoom_min = _settings_client.gui.zoom_min;
+		zoom_max = _settings_client.gui.zoom_max;
+		if (zoom_max == zoom_min) zoom_max = ZOOM_LVL_MAX;
+	}
+
+	for (ZoomLevel i = zoom_min; i <= zoom_max; i++) {
+		memory += sprite[i].width * sprite[i].height;
 	}
 
 	/* We have no idea how much memory we really need, so just guess something */
@@ -128,18 +141,18 @@ Sprite *Blitter_8bppOptimized::Encode(SpriteLoader::Sprite *sprite, AllocatorPro
 	 * and the memory usage is quite low. */
 	static ReusableBuffer<byte> temp_buffer;
 	SpriteData *temp_dst = (SpriteData *)temp_buffer.Allocate(memory);
+	memset(temp_dst, 0, sizeof(*temp_dst));
 	byte *dst = temp_dst->data;
 
 	/* Make the sprites per zoom-level */
-	for (ZoomLevel i = ZOOM_LVL_BEGIN; i < ZOOM_LVL_END; i++) {
+	for (ZoomLevel i = zoom_min; i <= zoom_max; i++) {
 		/* Store the index table */
 		uint offset = dst - temp_dst->data;
 		temp_dst->offset[i] = offset;
 
 		/* cache values, because compiler can't cache it */
-		int scaled_height = UnScaleByZoom(sprite->height, i);
-		int scaled_width  = UnScaleByZoom(sprite->width,  i);
-		int scaled_1      =   ScaleByZoom(1,              i);
+		int scaled_height = sprite[i].height;
+		int scaled_width  = sprite[i].width;
 
 		for (int y = 0; y < scaled_height; y++) {
 			uint trans = 0;
@@ -148,18 +161,10 @@ Sprite *Blitter_8bppOptimized::Encode(SpriteLoader::Sprite *sprite, AllocatorPro
 			byte *count_dst = NULL;
 
 			/* Store the scaled image */
-			const SpriteLoader::CommonPixel *src = &sprite->data[ScaleByZoom(y, i) * sprite->width];
-			const SpriteLoader::CommonPixel *src_end = &src[sprite->width];
+			const SpriteLoader::CommonPixel *src = &sprite[i].data[y * sprite[i].width];
 
 			for (int x = 0; x < scaled_width; x++) {
-				uint colour = 0;
-
-				/* Get the colour keeping in mind the zoom-level */
-				for (int j = 0; j < scaled_1; j++) {
-					if (src->m != 0) colour = src->m;
-					/* Because of the scaling it might happen we read outside the buffer. Avoid that. */
-					if (++src == src_end) break;
-				}
+				uint colour = src++->m;
 
 				if (last_colour == 0 || colour == 0 || pixels == 255) {
 					if (count_dst != NULL) {
@@ -169,7 +174,7 @@ Sprite *Blitter_8bppOptimized::Encode(SpriteLoader::Sprite *sprite, AllocatorPro
 						count_dst = NULL;
 					}
 					/* As long as we find transparency bytes, keep counting */
-					if (colour == 0) {
+					if (colour == 0 && trans != 255) {
 						last_colour = 0;
 						trans++;
 						continue;
@@ -183,9 +188,13 @@ Sprite *Blitter_8bppOptimized::Encode(SpriteLoader::Sprite *sprite, AllocatorPro
 					dst++;
 				}
 				last_colour = colour;
-				pixels++;
-				*dst = colour;
-				dst++;
+				if (colour == 0) {
+					trans++;
+				} else {
+					pixels++;
+					*dst = colour;
+					dst++;
+				}
 			}
 
 			if (count_dst != NULL) *count_dst = pixels;

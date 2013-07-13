@@ -13,6 +13,9 @@
 #include "../company_func.h"
 #include "../company_manager_face.h"
 #include "../fios.h"
+#include "../tunnelbridge_map.h"
+#include "../tunnelbridge.h"
+#include "../station_base.h"
 
 #include "saveload.h"
 
@@ -86,17 +89,161 @@ CompanyManagerFace ConvertFromOldCompanyManagerFace(uint32 face)
 	return cmf;
 }
 
+/** Rebuilding of company statistics after loading a savegame. */
+void AfterLoadCompanyStats()
+{
+	/* Reset infrastructure statistics to zero. */
+	Company *c;
+	FOR_ALL_COMPANIES(c) MemSetT(&c->infrastructure, 0);
+
+	/* Collect airport count. */
+	Station *st;
+	FOR_ALL_STATIONS(st) {
+		if ((st->facilities & FACIL_AIRPORT) && Company::IsValidID(st->owner)) {
+			Company::Get(st->owner)->infrastructure.airport++;
+		}
+	}
+
+	for (TileIndex tile = 0; tile < MapSize(); tile++) {
+		switch (GetTileType(tile)) {
+			case MP_RAILWAY:
+				c = Company::GetIfValid(GetTileOwner(tile));
+				if (c != NULL) {
+					uint pieces = 1;
+					if (IsPlainRail(tile)) {
+						TrackBits bits = GetTrackBits(tile);
+						pieces = CountBits(bits);
+						if (TracksOverlap(bits)) pieces *= pieces;
+					}
+					c->infrastructure.rail[GetRailType(tile)] += pieces;
+
+					if (HasSignals(tile)) c->infrastructure.signal += CountBits(GetPresentSignals(tile));
+				}
+				break;
+
+			case MP_ROAD: {
+				if (IsLevelCrossing(tile)) {
+					c = Company::GetIfValid(GetTileOwner(tile));
+					if (c != NULL) c->infrastructure.rail[GetRailType(tile)] += LEVELCROSSING_TRACKBIT_FACTOR;
+				}
+
+				/* Iterate all present road types as each can have a different owner. */
+				RoadType rt;
+				FOR_EACH_SET_ROADTYPE(rt, GetRoadTypes(tile)) {
+					c = Company::GetIfValid(IsRoadDepot(tile) ? GetTileOwner(tile) : GetRoadOwner(tile, rt));
+					/* A level crossings and depots have two road bits. */
+					if (c != NULL) c->infrastructure.road[rt] += IsNormalRoad(tile) ? CountBits(GetRoadBits(tile, rt)) : 2;
+				}
+				break;
+			}
+
+			case MP_STATION:
+				c = Company::GetIfValid(GetTileOwner(tile));
+				if (c != NULL && GetStationType(tile) != STATION_AIRPORT && !IsBuoy(tile)) c->infrastructure.station++;
+
+				switch (GetStationType(tile)) {
+					case STATION_RAIL:
+					case STATION_WAYPOINT:
+						if (c != NULL && !IsStationTileBlocked(tile)) c->infrastructure.rail[GetRailType(tile)]++;
+						break;
+
+					case STATION_BUS:
+					case STATION_TRUCK: {
+						/* Iterate all present road types as each can have a different owner. */
+						RoadType rt;
+						FOR_EACH_SET_ROADTYPE(rt, GetRoadTypes(tile)) {
+							c = Company::GetIfValid(GetRoadOwner(tile, rt));
+							if (c != NULL) c->infrastructure.road[rt] += 2; // A road stop has two road bits.
+						}
+						break;
+					}
+
+					case STATION_DOCK:
+					case STATION_BUOY:
+						if (GetWaterClass(tile) == WATER_CLASS_CANAL) {
+							if (c != NULL) c->infrastructure.water++;
+						}
+						break;
+
+					default:
+						break;
+				}
+				break;
+
+			case MP_WATER:
+				if (IsShipDepot(tile) || IsLock(tile)) {
+					c = Company::GetIfValid(GetTileOwner(tile));
+					if (c != NULL) {
+						if (IsShipDepot(tile)) c->infrastructure.water += LOCK_DEPOT_TILE_FACTOR;
+						if (IsLock(tile) && GetLockPart(tile) == LOCK_PART_MIDDLE) {
+							/* The middle tile specifies the owner of the lock. */
+							c->infrastructure.water += 3 * LOCK_DEPOT_TILE_FACTOR; // the middle tile specifies the owner of the
+							break; // do not count the middle tile as canal
+						}
+					}
+				}
+				/* FALL THROUGH */
+
+			case MP_OBJECT:
+				if (GetWaterClass(tile) == WATER_CLASS_CANAL) {
+					c = Company::GetIfValid(GetTileOwner(tile));
+					if (c != NULL) c->infrastructure.water++;
+				}
+				break;
+
+			case MP_TUNNELBRIDGE: {
+				/* Only count the tunnel/bridge if we're on the northern end tile. */
+				TileIndex other_end = GetOtherTunnelBridgeEnd(tile);
+				if (tile < other_end) {
+					/* Count each tunnel/bridge TUNNELBRIDGE_TRACKBIT_FACTOR times to simulate
+					 * the higher structural maintenance needs, and don't forget the end tiles. */
+					uint len = (GetTunnelBridgeLength(tile, other_end) + 2) * TUNNELBRIDGE_TRACKBIT_FACTOR;
+
+					switch (GetTunnelBridgeTransportType(tile)) {
+						case TRANSPORT_RAIL:
+							c = Company::GetIfValid(GetTileOwner(tile));
+							if (c != NULL) c->infrastructure.rail[GetRailType(tile)] += len;
+							break;
+
+						case TRANSPORT_ROAD: {
+							/* Iterate all present road types as each can have a different owner. */
+							RoadType rt;
+							FOR_EACH_SET_ROADTYPE(rt, GetRoadTypes(tile)) {
+								c = Company::GetIfValid(GetRoadOwner(tile, rt));
+								if (c != NULL) c->infrastructure.road[rt] += len * 2; // A full diagonal road has two road bits.
+							}
+							break;
+						}
+
+						case TRANSPORT_WATER:
+							c = Company::GetIfValid(GetTileOwner(tile));
+							if (c != NULL) c->infrastructure.water += len;
+							break;
+
+						default:
+							break;
+					}
+				}
+				break;
+			}
+
+			default:
+				break;
+		}
+	}
+}
+
 
 
 /* Save/load of companies */
 static const SaveLoad _company_desc[] = {
 	    SLE_VAR(CompanyProperties, name_2,          SLE_UINT32),
 	    SLE_VAR(CompanyProperties, name_1,          SLE_STRINGID),
-	SLE_CONDSTR(CompanyProperties, name,            SLE_STR, 0,                       84, SL_MAX_VERSION),
+	SLE_CONDSTR(CompanyProperties, name,            SLE_STR | SLF_ALLOW_CONTROL, 0, 84, SL_MAX_VERSION),
 
 	    SLE_VAR(CompanyProperties, president_name_1, SLE_UINT16),
 	    SLE_VAR(CompanyProperties, president_name_2, SLE_UINT32),
-	SLE_CONDSTR(CompanyProperties, president_name,  SLE_STR, 0,                       84, SL_MAX_VERSION),
+	SLE_CONDSTR(CompanyProperties, president_name,  SLE_STR | SLF_ALLOW_CONTROL, 0, 84, SL_MAX_VERSION),
 
 	    SLE_VAR(CompanyProperties, face,            SLE_UINT32),
 
@@ -112,8 +259,8 @@ static const SaveLoad _company_desc[] = {
 	SLE_CONDVAR(CompanyProperties, avail_railtypes,       SLE_UINT8,                   0, 57),
 	    SLE_VAR(CompanyProperties, block_preview,         SLE_UINT8),
 
-	SLE_CONDVAR(CompanyProperties, cargo_types,           SLE_FILE_U16 | SLE_VAR_U32,  0, 93),
-	SLE_CONDVAR(CompanyProperties, cargo_types,           SLE_UINT32,                 94, SL_MAX_VERSION),
+	SLE_CONDNULL(2,  0,  93), ///< cargo_types
+	SLE_CONDNULL(4, 94, 169), ///< cargo_types
 	SLE_CONDVAR(CompanyProperties, location_of_HQ,        SLE_FILE_U16 | SLE_VAR_U32,  0,  5),
 	SLE_CONDVAR(CompanyProperties, location_of_HQ,        SLE_UINT32,                  6, SL_MAX_VERSION),
 	SLE_CONDVAR(CompanyProperties, last_build_coordinate, SLE_FILE_U16 | SLE_VAR_U32,  0,  5),
@@ -125,7 +272,7 @@ static const SaveLoad _company_desc[] = {
 
 	    SLE_VAR(CompanyProperties, num_valid_stat_ent,    SLE_UINT8),
 
-	    SLE_VAR(CompanyProperties, quarters_of_bankruptcy,SLE_UINT8),
+	    SLE_VAR(CompanyProperties, months_of_bankruptcy,  SLE_UINT8),
 	SLE_CONDVAR(CompanyProperties, bankrupt_asked,        SLE_FILE_U8  | SLE_VAR_U16,  0, 103),
 	SLE_CONDVAR(CompanyProperties, bankrupt_asked,        SLE_UINT16,                104, SL_MAX_VERSION),
 	    SLE_VAR(CompanyProperties, bankrupt_timeout,      SLE_INT16),
@@ -142,6 +289,7 @@ static const SaveLoad _company_desc[] = {
 
 	SLE_CONDVAR(CompanyProperties, terraform_limit,       SLE_UINT32,                156, SL_MAX_VERSION),
 	SLE_CONDVAR(CompanyProperties, clear_limit,           SLE_UINT32,                156, SL_MAX_VERSION),
+	SLE_CONDVAR(CompanyProperties, tree_limit,            SLE_UINT32,                175, SL_MAX_VERSION),
 
 	SLE_END()
 };
@@ -198,7 +346,8 @@ static const SaveLoad _company_economy_desc[] = {
 	SLE_CONDVAR(CompanyEconomyEntry, company_value,       SLE_FILE_I32 | SLE_VAR_I64, 0, 1),
 	SLE_CONDVAR(CompanyEconomyEntry, company_value,       SLE_INT64,                  2, SL_MAX_VERSION),
 
-	    SLE_VAR(CompanyEconomyEntry, delivered_cargo,     SLE_INT32),
+	SLE_CONDVAR(CompanyEconomyEntry, delivered_cargo[NUM_CARGO - 1], SLE_INT32,       0, 169),
+	SLE_CONDARR(CompanyEconomyEntry, delivered_cargo,     SLE_UINT32, NUM_CARGO,    170, SL_MAX_VERSION),
 	    SLE_VAR(CompanyEconomyEntry, performance_history, SLE_INT32),
 
 	SLE_END()

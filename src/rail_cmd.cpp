@@ -21,7 +21,6 @@
 #include "autoslope.h"
 #include "water.h"
 #include "tunnelbridge_map.h"
-#include "window_func.h"
 #include "vehicle_func.h"
 #include "sound_func.h"
 #include "tunnelbridge.h"
@@ -31,6 +30,9 @@
 #include "company_base.h"
 #include "core/backup_type.hpp"
 #include "date_func.h"
+#include "strings_func.h"
+#include "company_gui.h"
+#include "object_map.h"
 
 #include "table/strings.h"
 #include "table/railtypes.h"
@@ -42,6 +44,18 @@ typedef SmallVector<Train *, 16> TrainList;
 RailtypeInfo _railtypes[RAILTYPE_END];
 
 assert_compile(sizeof(_original_railtypes) <= sizeof(_railtypes));
+
+/** Enum holding the signal offset in the sprite sheet according to the side it is representing. */
+enum SignalOffsets {
+	SIGNAL_TO_SOUTHWEST,
+	SIGNAL_TO_NORTHEAST,
+	SIGNAL_TO_SOUTHEAST,
+	SIGNAL_TO_NORTHWEST,
+	SIGNAL_TO_EAST,
+	SIGNAL_TO_WEST,
+	SIGNAL_TO_SOUTH,
+	SIGNAL_TO_NORTH,
+};
 
 /**
  * Reset all rail type information to its default values.
@@ -73,6 +87,24 @@ void ResolveRailTypeGUISprites(RailtypeInfo *rti)
 		rti->cursor.tunnel    = cursors_base + 14;
 		rti->cursor.convert   = cursors_base + 15;
 	}
+
+	/* Array of default GUI signal sprite numbers. */
+	const SpriteID _signal_lookup[2][SIGTYPE_END] = {
+		{SPR_IMG_SIGNAL_ELECTRIC_NORM,  SPR_IMG_SIGNAL_ELECTRIC_ENTRY, SPR_IMG_SIGNAL_ELECTRIC_EXIT,
+		 SPR_IMG_SIGNAL_ELECTRIC_COMBO, SPR_IMG_SIGNAL_ELECTRIC_PBS,   SPR_IMG_SIGNAL_ELECTRIC_PBS_OWAY},
+
+		{SPR_IMG_SIGNAL_SEMAPHORE_NORM,  SPR_IMG_SIGNAL_SEMAPHORE_ENTRY, SPR_IMG_SIGNAL_SEMAPHORE_EXIT,
+		 SPR_IMG_SIGNAL_SEMAPHORE_COMBO, SPR_IMG_SIGNAL_SEMAPHORE_PBS,   SPR_IMG_SIGNAL_SEMAPHORE_PBS_OWAY},
+	};
+
+	for (SignalType type = SIGTYPE_NORMAL; type < SIGTYPE_END; type = (SignalType)(type + 1)) {
+		for (SignalVariant var = SIG_ELECTRIC; var <= SIG_SEMAPHORE; var = (SignalVariant)(var + 1)) {
+			SpriteID red   = GetCustomSignalSprite(rti, INVALID_TILE, type, var, SIGNAL_STATE_RED, true);
+			SpriteID green = GetCustomSignalSprite(rti, INVALID_TILE, type, var, SIGNAL_STATE_GREEN, true);
+			rti->gui_sprites.signals[type][var][0] = (red != 0)   ? red + SIGNAL_TO_SOUTH   : _signal_lookup[var][type];
+			rti->gui_sprites.signals[type][var][1] = (green != 0) ? green + SIGNAL_TO_SOUTH : _signal_lookup[var][type] + 1;
+		}
+	}
 }
 
 /**
@@ -98,6 +130,9 @@ RailType AllocateRailType(RailTypeLabel label)
 			/* Set up new rail type */
 			memcpy(rti, &_railtypes[RAILTYPE_RAIL], sizeof(*rti));
 			rti->label = label;
+			/* Clear alternate label list. Can't use Reset() here as that would free
+			 * the data pointer of RAILTYPE_RAIL and not our new rail type. */
+			new (&rti->alternate_labels) RailTypeLabelList;
 
 			/* Make us compatible with ourself. */
 			rti->powered_railtypes    = (RailTypes)(1 << rt);
@@ -381,7 +416,7 @@ CommandCost CmdBuildSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 
 	if (!ValParamRailtype(railtype) || !ValParamTrackOrientation(track)) return CMD_ERROR;
 
-	Slope tileh = GetTileSlope(tile, NULL);
+	Slope tileh = GetTileSlope(tile);
 	TrackBits trackbit = TrackToTrackBits(track);
 
 	switch (GetTileType(tile)) {
@@ -416,7 +451,17 @@ CommandCost CmdBuildSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 
 			if (flags & DC_EXEC) {
 				SetRailGroundType(tile, RAIL_GROUND_BARREN);
-				SetTrackBits(tile, GetTrackBits(tile) | trackbit);
+				TrackBits bits = GetTrackBits(tile);
+				SetTrackBits(tile, bits | trackbit);
+				/* Subtract old infrastructure count. */
+				uint pieces = CountBits(bits);
+				if (TracksOverlap(bits)) pieces *= pieces;
+				Company::Get(GetTileOwner(tile))->infrastructure.rail[GetRailType(tile)] -= pieces;
+				/* Add new infrastructure count. */
+				pieces = CountBits(bits | trackbit);
+				if (TracksOverlap(bits | trackbit)) pieces *= pieces;
+				Company::Get(GetTileOwner(tile))->infrastructure.rail[GetRailType(tile)] += pieces;
+				DirtyCompanyInfrastructureWindows(GetTileOwner(tile));
 			}
 			break;
 		}
@@ -442,7 +487,15 @@ CommandCost CmdBuildSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 					default: break;
 					case ROADTYPES_TRAM:
 						/* Tram crossings must always have road. */
-						if (flags & DC_EXEC) SetRoadOwner(tile, ROADTYPE_ROAD, _current_company);
+						if (flags & DC_EXEC) {
+							SetRoadOwner(tile, ROADTYPE_ROAD, _current_company);
+							Company *c = Company::GetIfValid(_current_company);
+							if (c != NULL) {
+								/* A full diagonal tile has two road bits. */
+								c->infrastructure.road[ROADTYPE_ROAD] += 2;
+								DirtyCompanyInfrastructureWindows(c->index);
+							}
+						}
 						roadtypes |= ROADTYPES_ROAD;
 						break;
 
@@ -458,6 +511,8 @@ CommandCost CmdBuildSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 					if (flags & DC_EXEC) {
 						MakeRoadCrossing(tile, GetRoadOwner(tile, ROADTYPE_ROAD), GetRoadOwner(tile, ROADTYPE_TRAM), _current_company, (track == TRACK_X ? AXIS_Y : AXIS_X), railtype, roadtypes, GetTownIndex(tile));
 						UpdateLevelCrossing(tile, false);
+						Company::Get(_current_company)->infrastructure.rail[railtype] += LEVELCROSSING_TRACKBIT_FACTOR;
+						DirtyCompanyInfrastructureWindows(_current_company);
 					}
 					break;
 				}
@@ -489,6 +544,8 @@ CommandCost CmdBuildSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 			if (flags & DC_EXEC) {
 				MakeRailNormal(tile, _current_company, trackbit, railtype);
 				if (water_ground) SetRailGroundType(tile, RAIL_GROUND_WATER);
+				Company::Get(_current_company)->infrastructure.rail[railtype]++;
+				DirtyCompanyInfrastructureWindows(_current_company);
 			}
 			break;
 		}
@@ -552,6 +609,8 @@ CommandCost CmdRemoveSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 					if (v != NULL) FreeTrainTrackReservation(v);
 				}
 				owner = GetTileOwner(tile);
+				Company::Get(owner)->infrastructure.rail[GetRailType(tile)] -= LEVELCROSSING_TRACKBIT_FACTOR;
+				DirtyCompanyInfrastructureWindows(owner);
 				MakeRoadNormal(tile, GetCrossingRoadBits(tile), GetRoadTypes(tile), GetTownIndex(tile), GetRoadOwner(tile, ROADTYPE_ROAD), GetRoadOwner(tile, ROADTYPE_TRAM));
 				DeleteNewGRFInspectWindow(GSF_RAILTYPES, tile);
 			}
@@ -587,10 +646,22 @@ CommandCost CmdRemoveSingleRail(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 					v = GetTrainForReservation(tile, track);
 					if (v != NULL) FreeTrainTrackReservation(v);
 				}
+
 				owner = GetTileOwner(tile);
+
+				/* Subtract old infrastructure count. */
+				uint pieces = CountBits(present);
+				if (TracksOverlap(present)) pieces *= pieces;
+				Company::Get(owner)->infrastructure.rail[GetRailType(tile)] -= pieces;
+				/* Add new infrastructure count. */
 				present ^= trackbit;
+				pieces = CountBits(present);
+				if (TracksOverlap(present)) pieces *= pieces;
+				Company::Get(owner)->infrastructure.rail[GetRailType(tile)] += pieces;
+				DirtyCompanyInfrastructureWindows(owner);
+
 				if (present == 0) {
-					Slope tileh = GetTileSlope(tile, NULL);
+					Slope tileh = GetTileSlope(tile);
 					/* If there is flat water on the lower halftile, convert the tile to shore so the water remains */
 					if (GetRailGroundType(tile) == RAIL_GROUND_WATER && IsSlopeWithOneCornerRaised(tileh)) {
 						MakeShore(tile);
@@ -649,7 +720,7 @@ bool FloodHalftile(TileIndex t)
 	bool flooded = false;
 	if (GetRailGroundType(t) == RAIL_GROUND_WATER) return flooded;
 
-	Slope tileh = GetTileSlope(t, NULL);
+	Slope tileh = GetTileSlope(t);
 	TrackBits rail_bits = GetTrackBits(t);
 
 	if (IsSlopeWithOneCornerRaised(tileh)) {
@@ -772,7 +843,7 @@ static CommandCost CmdRailTrackHelper(TileIndex tile, DoCommandFlag flags, uint3
 	CommandCost ret = ValidateAutoDrag(&trackdir, tile, end_tile);
 	if (ret.Failed()) return ret;
 
-	if (flags & DC_EXEC) SndPlayTileFx(SND_20_SPLAT_2, tile);
+	if ((flags & DC_EXEC) && _settings_client.sound.confirm) SndPlayTileFx(SND_20_SPLAT_2, tile);
 
 	bool had_success = false;
 	CommandCost last_error = CMD_ERROR;
@@ -853,7 +924,7 @@ CommandCost CmdRemoveRailroadTrack(TileIndex tile, DoCommandFlag flags, uint32 p
  * @return the cost of this operation or an error
  *
  * @todo When checking for the tile slope,
- * distingush between "Flat land required" and "land sloped in wrong direction"
+ * distinguish between "Flat land required" and "land sloped in wrong direction"
  */
 CommandCost CmdBuildTrainDepot(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
 {
@@ -861,7 +932,7 @@ CommandCost CmdBuildTrainDepot(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 	RailType railtype = Extract<RailType, 0, 4>(p1);
 	if (!ValParamRailtype(railtype)) return CMD_ERROR;
 
-	Slope tileh = GetTileSlope(tile, NULL);
+	Slope tileh = GetTileSlope(tile);
 
 	DiagDirection dir = Extract<DiagDirection, 0, 2>(p2);
 
@@ -874,7 +945,6 @@ CommandCost CmdBuildTrainDepot(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 
 	if (tileh != SLOPE_FLAT && (
 				!_settings_game.construction.build_on_slopes ||
-				IsSteepSlope(tileh) ||
 				!CanBuildDepotByTileh(dir, tileh)
 			)) {
 		return_cmd_error(STR_ERROR_FLAT_LAND_REQUIRED);
@@ -894,6 +964,9 @@ CommandCost CmdBuildTrainDepot(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 		MakeRailDepot(tile, _current_company, d->index, dir, railtype);
 		MarkTileDirtyByTile(tile);
 		MakeDefaultName(d);
+
+		Company::Get(_current_company)->infrastructure.rail[railtype]++;
+		DirtyCompanyInfrastructureWindows(_current_company);
 
 		AddSideToSignalBuffer(tile, INVALID_DIAGDIR, _current_company);
 		YapfNotifyTrackLayoutChange(tile, DiagDirToDiagTrack(dir));
@@ -944,24 +1017,14 @@ CommandCost CmdBuildSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1,
 			!HasTrack(tile, track)) {
 		return_cmd_error(STR_ERROR_THERE_IS_NO_RAILROAD_TRACK);
 	}
-	CommandCost ret = EnsureNoTrainOnTrack(tile, track);
-	if (ret.Failed()) return ret;
-
 	/* Protect against invalid signal copying */
 	if (p2 != 0 && (p2 & SignalOnTrack(track)) == 0) return CMD_ERROR;
 
-	ret = CheckTileOwnership(tile);
+	CommandCost ret = CheckTileOwnership(tile);
 	if (ret.Failed()) return ret;
 
-	{
-		/* See if this is a valid track combination for signals, (ie, no overlap) */
-		TrackBits trackbits = GetTrackBits(tile);
-		if (KillFirstBit(trackbits) != TRACK_BIT_NONE && // More than one track present
-				trackbits != TRACK_BIT_HORZ &&
-				trackbits != TRACK_BIT_VERT) {
-			return_cmd_error(STR_ERROR_NO_SUITABLE_RAILROAD_TRACK);
-		}
-	}
+	/* See if this is a valid track combination for signals (no overlap) */
+	if (TracksOverlap(GetTrackBits(tile))) return_cmd_error(STR_ERROR_NO_SUITABLE_RAILROAD_TRACK);
 
 	/* In case we don't want to change an existing signal, return without error. */
 	if (HasBit(p1, 17) && HasSignalOnTrack(tile, track)) return CommandCost();
@@ -1013,6 +1076,9 @@ CommandCost CmdBuildSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1,
 			SetSignalVariant(tile, track, sigvar);
 		}
 
+		/* Subtract old signal infrastructure count. */
+		Company::Get(GetTileOwner(tile))->infrastructure.signal -= CountBits(GetPresentSignals(tile));
+
 		if (p2 == 0) {
 			if (!HasSignalOnTrack(tile, track)) {
 				/* build new signals */
@@ -1024,7 +1090,7 @@ CommandCost CmdBuildSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1,
 				if (convert_signal) {
 					/* convert signal button pressed */
 					if (ctrl_pressed) {
-						/* toggle the pressent signal variant: SIG_ELECTRIC <-> SIG_SEMAPHORE */
+						/* toggle the present signal variant: SIG_ELECTRIC <-> SIG_SEMAPHORE */
 						SetSignalVariant(tile, track, (GetSignalVariant(tile, track) == SIG_ELECTRIC) ? SIG_SEMAPHORE : SIG_ELECTRIC);
 						/* Query current signal type so the check for PBS signals below works. */
 						sigtype = GetSignalType(tile, track);
@@ -1062,10 +1128,14 @@ CommandCost CmdBuildSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1,
 			SetSignalType(tile, track, sigtype);
 		}
 
+		/* Add new signal infrastructure count. */
+		Company::Get(GetTileOwner(tile))->infrastructure.signal += CountBits(GetPresentSignals(tile));
+		DirtyCompanyInfrastructureWindows(GetTileOwner(tile));
+
 		if (IsPbsSignal(sigtype)) {
-			/* PBS signals should show red unless they are on a reservation. */
+			/* PBS signals should show red unless they are on reserved tiles without a train. */
 			uint mask = GetPresentSignals(tile) & SignalOnTrack(track);
-			SetSignalStates(tile, (GetSignalStates(tile) & ~mask) | ((HasBit(GetRailReservationTrackBits(tile), track) ? UINT_MAX : 0) & mask));
+			SetSignalStates(tile, (GetSignalStates(tile) & ~mask) | ((HasBit(GetRailReservationTrackBits(tile), track) && EnsureNoVehicleOnGround(tile).Succeeded() ? UINT_MAX : 0) & mask));
 		}
 		MarkTileDirtyByTile(tile);
 		AddTrackToSignalBuffer(tile, track, _current_company);
@@ -1149,6 +1219,7 @@ static bool CheckSignalAutoFill(TileIndex &tile, Trackdir &trackdir, int &signal
  * - p2 = (bit  5)    - 0 = build, 1 = remove signals
  * - p2 = (bit  6)    - 0 = selected stretch, 1 = auto fill
  * - p2 = (bit  7- 9) - default signal type
+ * - p2 = (bit 10)    - 0 = keep fixed distance, 1 = minimise gaps between signals
  * - p2 = (bit 24-31) - user defined signals_density
  * @param text unused
  * @return the cost of this operation or an error
@@ -1163,6 +1234,7 @@ static CommandCost CmdSignalTrackHelper(TileIndex tile, DoCommandFlag flags, uin
 	bool semaphores = HasBit(p2, 4);
 	bool remove = HasBit(p2, 5);
 	bool autofill = HasBit(p2, 6);
+	bool minimise_gaps = HasBit(p2, 10);
 	byte signal_density = GB(p2, 24, 8);
 
 	if (p1 >= MapSize() || !ValParamTrackOrientation(track)) return CMD_ERROR;
@@ -1209,7 +1281,11 @@ static CommandCost CmdSignalTrackHelper(TileIndex tile, DoCommandFlag flags, uin
 	if (signals & SignalAgainstTrackdir(trackdir)) SetBit(signal_dir, 1);
 
 	/* signal_ctr         - amount of tiles already processed
+	 * last_used_ctr      - amount of tiles before previously placed signal
 	 * signals_density    - setting to put signal on every Nth tile (double space on |, -- tracks)
+	 * last_suitable_ctr  - amount of tiles before last possible signal place
+	 * last_suitable_tile - last tile where it is possible to place a signal
+	 * last_suitable_trackdir - trackdir of the last tile
 	 **********
 	 * trackdir   - trackdir to build with autorail
 	 * semaphores - semaphores or signals
@@ -1217,11 +1293,15 @@ static CommandCost CmdSignalTrackHelper(TileIndex tile, DoCommandFlag flags, uin
 	 *              and convert all others to semaphore/signal
 	 * remove     - 1 remove signals, 0 build signals */
 	int signal_ctr = 0;
+	int last_used_ctr = INT_MIN; // initially INT_MIN to force building/removing at the first tile
+	int last_suitable_ctr = 0;
+	TileIndex last_suitable_tile = INVALID_TILE;
+	Trackdir last_suitable_trackdir = INVALID_TRACKDIR;
 	CommandCost last_error = CMD_ERROR;
 	bool had_success = false;
 	for (;;) {
 		/* only build/remove signals with the specified density */
-		if ((remove && autofill) || signal_ctr % signal_density == 0) {
+		if (remove || minimise_gaps || signal_ctr % signal_density == 0) {
 			uint32 p1 = GB(TrackdirToTrack(trackdir), 0, 3);
 			SB(p1, 3, 1, mode);
 			SB(p1, 4, 1, semaphores);
@@ -1233,17 +1313,42 @@ static CommandCost CmdSignalTrackHelper(TileIndex tile, DoCommandFlag flags, uin
 			if (HasBit(signal_dir, 0)) signals |= SignalAlongTrackdir(trackdir);
 			if (HasBit(signal_dir, 1)) signals |= SignalAgainstTrackdir(trackdir);
 
-			CommandCost ret = DoCommand(tile, p1, signals, flags, remove ? CMD_REMOVE_SIGNALS : CMD_BUILD_SIGNALS);
+			/* Test tiles in between for suitability as well if minimising gaps. */
+			bool test_only = !remove && minimise_gaps && signal_ctr < (last_used_ctr + signal_density);
+			CommandCost ret = DoCommand(tile, p1, signals, test_only ? flags & ~DC_EXEC : flags, remove ? CMD_REMOVE_SIGNALS : CMD_BUILD_SIGNALS);
 
-			/* Be user-friendly and try placing signals as much as possible */
 			if (ret.Succeeded()) {
-				had_success = true;
-				total_cost.AddCost(ret);
-			} else {
-				/* The "No railway" error is the least important one. */
-				if (ret.GetErrorMessage() != STR_ERROR_THERE_IS_NO_RAILROAD_TRACK ||
-						last_error.GetErrorMessage() == INVALID_STRING_ID) {
-					last_error = ret;
+				/* Remember last track piece where we can place a signal. */
+				last_suitable_ctr = signal_ctr;
+				last_suitable_tile = tile;
+				last_suitable_trackdir = trackdir;
+			} else if (!test_only && last_suitable_tile != INVALID_TILE) {
+				/* If a signal can't be placed, place it at the last possible position. */
+				SB(p1, 0, 3, TrackdirToTrack(last_suitable_trackdir));
+				ClrBit(p1, 17);
+
+				/* Pick the correct orientation for the track direction. */
+				signals = 0;
+				if (HasBit(signal_dir, 0)) signals |= SignalAlongTrackdir(last_suitable_trackdir);
+				if (HasBit(signal_dir, 1)) signals |= SignalAgainstTrackdir(last_suitable_trackdir);
+
+				ret = DoCommand(last_suitable_tile, p1, signals, flags, remove ? CMD_REMOVE_SIGNALS : CMD_BUILD_SIGNALS);
+			}
+
+			/* Collect cost. */
+			if (!test_only) {
+				/* Be user-friendly and try placing signals as much as possible */
+				if (ret.Succeeded()) {
+					had_success = true;
+					total_cost.AddCost(ret);
+					last_used_ctr = last_suitable_ctr;
+					last_suitable_tile = INVALID_TILE;
+				} else {
+					/* The "No railway" error is the least important one. */
+					if (ret.GetErrorMessage() != STR_ERROR_THERE_IS_NO_RAILROAD_TRACK ||
+							last_error.GetErrorMessage() == INVALID_STRING_ID) {
+						last_error = ret;
+					}
 				}
 			}
 		}
@@ -1316,8 +1421,6 @@ CommandCost CmdRemoveSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1
 	if (!HasSignalOnTrack(tile, track)) {
 		return_cmd_error(STR_ERROR_THERE_ARE_NO_SIGNALS);
 	}
-	CommandCost ret = EnsureNoTrainOnTrack(tile, track);
-	if (ret.Failed()) return ret;
 
 	/* Only water can remove signals from anyone */
 	if (_current_company != OWNER_WATER) {
@@ -1343,7 +1446,10 @@ CommandCost CmdRemoveSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1
 				}
 			}
 		}
+		Company::Get(GetTileOwner(tile))->infrastructure.signal -= CountBits(GetPresentSignals(tile));
 		SetPresentSignals(tile, GetPresentSignals(tile) & ~SignalOnTrack(track));
+		Company::Get(GetTileOwner(tile))->infrastructure.signal += CountBits(GetPresentSignals(tile));
+		DirtyCompanyInfrastructureWindows(GetTileOwner(tile));
 
 		/* removed last signal from tile? */
 		if (GetPresentSignals(tile) == 0) {
@@ -1402,7 +1508,9 @@ static Vehicle *UpdateTrainPowerProc(Vehicle *v, void *data)
  * @param tile end tile of rail conversion drag
  * @param flags operation to perform
  * @param p1 start tile of drag
- * @param p2 new railtype to convert to
+ * @param p2 various bitstuffed elements:
+ * - p2 = (bit  0- 3) new railtype to convert to.
+ * - p2 = (bit  4)    build diagonally or not.
  * @param text unused
  * @return the cost of this operation or an error
  */
@@ -1418,7 +1526,8 @@ CommandCost CmdConvertRail(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 	CommandCost cost(EXPENSES_CONSTRUCTION);
 	CommandCost error = CommandCost(STR_ERROR_NO_SUITABLE_RAILROAD_TRACK); // by default, there is no track to convert.
 	TileArea ta(tile, p1);
-	TILE_AREA_LOOP(tile, ta) {
+	TileIterator *iter = HasBit(p2, 4) ? (TileIterator *)new DiagonalTileIterator(tile, p1) : new OrthogonalTileIterator(ta);
+	for (; (tile = *iter) != INVALID_TILE; ++(*iter)) {
 		TileType tt = GetTileType(tile);
 
 		/* Check if there is any track on tile */
@@ -1478,6 +1587,20 @@ CommandCost CmdConvertRail(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 					}
 				}
 
+				/* Update the company infrastructure counters. */
+				if (!IsRailStationTile(tile) || !IsStationTileBlocked(tile)) {
+					Company *c = Company::Get(GetTileOwner(tile));
+					uint num_pieces = IsLevelCrossingTile(tile) ? LEVELCROSSING_TRACKBIT_FACTOR : 1;
+					if (IsPlainRailTile(tile)) {
+						TrackBits bits = GetTrackBits(tile);
+						num_pieces = CountBits(bits);
+						if (TracksOverlap(bits)) num_pieces *= num_pieces;
+					}
+					c->infrastructure.rail[type] -= num_pieces;
+					c->infrastructure.rail[totype] += num_pieces;
+					DirtyCompanyInfrastructureWindows(c->index);
+				}
+
 				SetRailType(tile, totype);
 				MarkTileDirtyByTile(tile);
 				/* update power of train on this tile */
@@ -1521,7 +1644,7 @@ CommandCost CmdConvertRail(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 				if (endtile < tile && TileX(endtile) >= TileX(ta.tile) && TileX(endtile) < TileX(ta.tile) + ta.w &&
 						TileY(endtile) >= TileY(ta.tile) && TileY(endtile) < TileY(ta.tile) + ta.h) continue;
 
-				/* When not coverting rail <-> el. rail, any vehicle cannot be in tunnel/bridge */
+				/* When not converting rail <-> el. rail, any vehicle cannot be in tunnel/bridge */
 				if (!IsCompatibleRail(GetRailType(tile), totype)) {
 					CommandCost ret = TunnelBridgeIsFree(tile, endtile);
 					if (ret.Failed()) {
@@ -1540,6 +1663,14 @@ CommandCost CmdConvertRail(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 							*vehicles_affected.Append() = v;
 						}
 					}
+
+					/* Update the company infrastructure counters. */
+					uint num_pieces = (GetTunnelBridgeLength(tile, endtile) + 2) * TUNNELBRIDGE_TRACKBIT_FACTOR;
+					Company *c = Company::Get(GetTileOwner(tile));
+					c->infrastructure.rail[GetRailType(tile)] -= num_pieces;
+					c->infrastructure.rail[totype] += num_pieces;
+					DirtyCompanyInfrastructureWindows(c->index);
+
 					SetRailType(tile, totype);
 					SetRailType(endtile, totype);
 
@@ -1581,10 +1712,11 @@ CommandCost CmdConvertRail(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 	if (flags & DC_EXEC) {
 		/* Railtype changed, update trains as when entering different track */
 		for (Train **v = affected_trains.Begin(); v != affected_trains.End(); v++) {
-			(*v)->RailtypeChanged();
+			(*v)->ConsistChanged(true);
 		}
 	}
 
+	delete iter;
 	return (cost.GetCost() == 0) ? error : cost;
 }
 
@@ -1608,6 +1740,9 @@ static CommandCost RemoveTrainDepot(TileIndex tile, DoCommandFlag flags)
 			v = GetTrainForReservation(tile, DiagDirToDiagTrack(dir));
 			if (v != NULL) FreeTrainTrackReservation(v);
 		}
+
+		Company::Get(owner)->infrastructure.rail[GetRailType(tile)]--;
+		DirtyCompanyInfrastructureWindows(owner);
 
 		delete Depot::GetByTile(tile);
 		DoClearSquare(tile);
@@ -1638,7 +1773,7 @@ static CommandCost ClearTile_Track(TileIndex tile, DoCommandFlag flags)
 	switch (GetRailTileType(tile)) {
 		case RAIL_TILE_SIGNALS:
 		case RAIL_TILE_NORMAL: {
-			Slope tileh = GetTileSlope(tile, NULL);
+			Slope tileh = GetTileSlope(tile);
 			/* Is there flat water on the lower halftile that gets cleared expensively? */
 			bool water_ground = (GetRailGroundType(tile) == RAIL_GROUND_WATER && IsSlopeWithOneCornerRaised(tileh));
 
@@ -1650,8 +1785,9 @@ static CommandCost ClearTile_Track(TileIndex tile, DoCommandFlag flags)
 				cost.AddCost(ret);
 			}
 
-			/* when bankrupting, don't make water dirty, there could be a ship on lower halftile */
-			if (water_ground && !(flags & DC_BANKRUPT)) {
+			/* When bankrupting, don't make water dirty, there could be a ship on lower halftile.
+			 * Same holds for non-companies clearing the tile, e.g. disasters. */
+			if (water_ground && !(flags & DC_BANKRUPT) && Company::IsValidID(_current_company)) {
 				CommandCost ret = EnsureNoVehicleOnGround(tile);
 				if (ret.Failed()) return ret;
 
@@ -1684,12 +1820,17 @@ static uint GetSaveSlopeZ(uint x, uint y, Track track)
 		case TRACK_RIGHT: x &= ~0xF; y |=  0xF; break;
 		default: break;
 	}
-	return GetSlopeZ(x, y);
+	return GetSlopePixelZ(x, y);
 }
 
-static void DrawSingleSignal(TileIndex tile, Track track, byte condition, uint image, uint pos)
+static void DrawSingleSignal(TileIndex tile, const RailtypeInfo *rti, Track track, SignalState condition, SignalOffsets image, uint pos)
 {
-	bool side = (_settings_game.vehicle.road_side != 0) && _settings_game.construction.signal_side;
+	bool side;
+	switch (_settings_game.construction.train_signal_side) {
+		case 0:  side = false;                                 break; // left
+		case 2:  side = true;                                  break; // right
+		default: side = _settings_game.vehicle.road_side != 0; break; // driving side
+	}
 	static const Point SignalPositions[2][12] = {
 		{ // Signals on the left side
 		/*  LEFT      LEFT      RIGHT     RIGHT     UPPER     UPPER */
@@ -1707,17 +1848,16 @@ static void DrawSingleSignal(TileIndex tile, Track track, byte condition, uint i
 	uint x = TileX(tile) * TILE_SIZE + SignalPositions[side][pos].x;
 	uint y = TileY(tile) * TILE_SIZE + SignalPositions[side][pos].y;
 
-	SpriteID sprite;
-
 	SignalType type       = GetSignalType(tile, track);
 	SignalVariant variant = GetSignalVariant(tile, track);
 
-	if (type == SIGTYPE_NORMAL && variant == SIG_ELECTRIC) {
-		/* Normal electric signals are picked from original sprites. */
-		sprite = SPR_ORIGINAL_SIGNALS_BASE + image + condition;
+	SpriteID sprite = GetCustomSignalSprite(rti, tile, type, variant, condition);
+	if (sprite != 0) {
+		sprite += image;
 	} else {
-		/* All other signals are picked from add on sprites. */
-		sprite = SPR_SIGNALS_BASE + (type - 1) * 16 + variant * 64 + image + condition + (type > SIGTYPE_LAST_NOPBS ? 64 : 0);
+		/* Normal electric signals are stored in a different sprite block than all other signals. */
+		sprite = (type == SIGTYPE_NORMAL && variant == SIG_ELECTRIC) ? SPR_ORIGINAL_SIGNALS_BASE : SPR_SIGNALS_BASE - 16;
+		sprite += type * 16 + variant * 64 + image * 2 + condition + (type > SIGTYPE_LAST_NOPBS ? 64 : 0);
 	}
 
 	AddSortableSpriteToDraw(sprite, PAL_NONE, x, y, 1, 1, BB_HEIGHT_UNDER_BRIDGE, GetSaveSlopeZ(x, y, track));
@@ -1729,7 +1869,7 @@ static uint32 _drawtile_track_palette;
 static void DrawTrackFence_NW(const TileInfo *ti, SpriteID base_image)
 {
 	RailFenceOffset rfo = RFO_FLAT_X;
-	if (ti->tileh != SLOPE_FLAT) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SW : RFO_SLOPE_NE;
+	if (ti->tileh & SLOPE_NW) rfo = (ti->tileh & SLOPE_W) ? RFO_SLOPE_SW : RFO_SLOPE_NE;
 	AddSortableSpriteToDraw(base_image + rfo, _drawtile_track_palette,
 		ti->x, ti->y + 1, 16, 1, 4, ti->z);
 }
@@ -1737,7 +1877,7 @@ static void DrawTrackFence_NW(const TileInfo *ti, SpriteID base_image)
 static void DrawTrackFence_SE(const TileInfo *ti, SpriteID base_image)
 {
 	RailFenceOffset rfo = RFO_FLAT_X;
-	if (ti->tileh != SLOPE_FLAT) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SW : RFO_SLOPE_NE;
+	if (ti->tileh & SLOPE_SE) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SW : RFO_SLOPE_NE;
 	AddSortableSpriteToDraw(base_image + rfo, _drawtile_track_palette,
 		ti->x, ti->y + TILE_SIZE - 1, 16, 1, 4, ti->z);
 }
@@ -1751,7 +1891,7 @@ static void DrawTrackFence_NW_SE(const TileInfo *ti, SpriteID base_image)
 static void DrawTrackFence_NE(const TileInfo *ti, SpriteID base_image)
 {
 	RailFenceOffset rfo = RFO_FLAT_Y;
-	if (ti->tileh != SLOPE_FLAT) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SE : RFO_SLOPE_NW;
+	if (ti->tileh & SLOPE_NE) rfo = (ti->tileh & SLOPE_E) ? RFO_SLOPE_SE : RFO_SLOPE_NW;
 	AddSortableSpriteToDraw(base_image + rfo, _drawtile_track_palette,
 		ti->x + 1, ti->y, 1, 16, 4, ti->z);
 }
@@ -1759,7 +1899,7 @@ static void DrawTrackFence_NE(const TileInfo *ti, SpriteID base_image)
 static void DrawTrackFence_SW(const TileInfo *ti, SpriteID base_image)
 {
 	RailFenceOffset rfo = RFO_FLAT_Y;
-	if (ti->tileh != SLOPE_FLAT) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SE : RFO_SLOPE_NW;
+	if (ti->tileh & SLOPE_SW) rfo = (ti->tileh & SLOPE_S) ? RFO_SLOPE_SE : RFO_SLOPE_NW;
 	AddSortableSpriteToDraw(base_image + rfo, _drawtile_track_palette,
 		ti->x + TILE_SIZE - 1, ti->y, 1, 16, 4, ti->z);
 }
@@ -1775,7 +1915,7 @@ static void DrawTrackFence_NE_SW(const TileInfo *ti, SpriteID base_image)
  */
 static void DrawTrackFence_NS_1(const TileInfo *ti, SpriteID base_image)
 {
-	uint z = ti->z + GetSlopeZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_W);
+	int z = ti->z + GetSlopePixelZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_W);
 	AddSortableSpriteToDraw(base_image + RFO_FLAT_VERT, _drawtile_track_palette,
 		ti->x + TILE_SIZE / 2, ti->y + TILE_SIZE / 2, 1, 1, 4, z);
 }
@@ -1785,7 +1925,7 @@ static void DrawTrackFence_NS_1(const TileInfo *ti, SpriteID base_image)
  */
 static void DrawTrackFence_NS_2(const TileInfo *ti, SpriteID base_image)
 {
-	uint z = ti->z + GetSlopeZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_E);
+	int z = ti->z + GetSlopePixelZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_E);
 	AddSortableSpriteToDraw(base_image + RFO_FLAT_VERT, _drawtile_track_palette,
 		ti->x + TILE_SIZE / 2, ti->y + TILE_SIZE / 2, 1, 1, 4, z);
 }
@@ -1795,7 +1935,7 @@ static void DrawTrackFence_NS_2(const TileInfo *ti, SpriteID base_image)
  */
 static void DrawTrackFence_WE_1(const TileInfo *ti, SpriteID base_image)
 {
-	uint z = ti->z + GetSlopeZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_N);
+	int z = ti->z + GetSlopePixelZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_N);
 	AddSortableSpriteToDraw(base_image + RFO_FLAT_HORZ, _drawtile_track_palette,
 		ti->x + TILE_SIZE / 2, ti->y + TILE_SIZE / 2, 1, 1, 4, z);
 }
@@ -1805,7 +1945,7 @@ static void DrawTrackFence_WE_1(const TileInfo *ti, SpriteID base_image)
  */
 static void DrawTrackFence_WE_2(const TileInfo *ti, SpriteID base_image)
 {
-	uint z = ti->z + GetSlopeZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_S);
+	int z = ti->z + GetSlopePixelZInCorner(RemoveHalftileSlope(ti->tileh), CORNER_S);
 	AddSortableSpriteToDraw(base_image + RFO_FLAT_HORZ, _drawtile_track_palette,
 		ti->x + TILE_SIZE / 2, ti->y + TILE_SIZE / 2, 1, 1, 4, z);
 }
@@ -2161,27 +2301,9 @@ static void DrawTrackBits(TileInfo *ti, TrackBits track)
 	}
 }
 
-/**
- * Enums holding the offsets from base signal sprite,
- * according to the side it is representing.
- * The addtion of 2 per enum is necessary in order to "jump" over the
- * green state sprite, all signal sprites being in pair,
- * starting with the off-red state
- */
-enum SignalOffsets {
-	SIGNAL_TO_SOUTHWEST =  0,
-	SIGNAL_TO_NORTHEAST =  2,
-	SIGNAL_TO_SOUTHEAST =  4,
-	SIGNAL_TO_NORTHWEST =  6,
-	SIGNAL_TO_EAST      =  8,
-	SIGNAL_TO_WEST      = 10,
-	SIGNAL_TO_SOUTH     = 12,
-	SIGNAL_TO_NORTH     = 14,
-};
-
-static void DrawSignals(TileIndex tile, TrackBits rails)
+static void DrawSignals(TileIndex tile, TrackBits rails, const RailtypeInfo *rti)
 {
-#define MAYBE_DRAW_SIGNAL(x, y, z, t) if (IsSignalPresent(tile, x)) DrawSingleSignal(tile, t, GetSingleSignalState(tile, x), y, z)
+#define MAYBE_DRAW_SIGNAL(x, y, z, t) if (IsSignalPresent(tile, x)) DrawSingleSignal(tile, rti, t, GetSingleSignalState(tile, x), y, z)
 
 	if (!(rails & TRACK_BIT_Y)) {
 		if (!(rails & TRACK_BIT_X)) {
@@ -2226,7 +2348,7 @@ static void DrawTile_Track(TileInfo *ti)
 
 		if (HasCatenaryDrawn(GetRailType(ti->tile))) DrawCatenary(ti);
 
-		if (HasSignals(ti->tile)) DrawSignals(ti->tile, rails);
+		if (HasSignals(ti->tile)) DrawSignals(ti->tile, rails, rti);
 	} else {
 		/* draw depot */
 		const DrawTileSprites *dts;
@@ -2336,17 +2458,17 @@ void DrawTrainDepotSprite(int x, int y, int dir, RailType railtype)
 	DrawRailTileSeqInGUI(x, y, dts, offset, 0, palette);
 }
 
-static uint GetSlopeZ_Track(TileIndex tile, uint x, uint y)
+static int GetSlopePixelZ_Track(TileIndex tile, uint x, uint y)
 {
-	uint z;
-	Slope tileh = GetTileSlope(tile, &z);
-
-	if (tileh == SLOPE_FLAT) return z;
 	if (IsPlainRail(tile)) {
-		z += ApplyFoundationToSlope(GetRailFoundation(tileh, GetTrackBits(tile)), &tileh);
-		return z + GetPartialZ(x & 0xF, y & 0xF, tileh);
+		int z;
+		Slope tileh = GetTilePixelSlope(tile, &z);
+		if (tileh == SLOPE_FLAT) return z;
+
+		z += ApplyPixelFoundationToSlope(GetRailFoundation(tileh, GetTrackBits(tile)), &tileh);
+		return z + GetPartialPixelZ(x & 0xF, y & 0xF, tileh);
 	} else {
-		return z + TILE_HEIGHT;
+		return GetTileMaxPixelZ(tile);
 	}
 }
 
@@ -2367,7 +2489,7 @@ static void TileLoop_Track(TileIndex tile)
 
 	switch (_settings_game.game_creation.landscape) {
 		case LT_ARCTIC: {
-			uint z;
+			int z;
 			Slope slope = GetTileSlope(tile, &z);
 			bool half = false;
 
@@ -2380,31 +2502,31 @@ static void TileLoop_Track(TileIndex tile)
 				switch (f) {
 					case FOUNDATION_NONE:
 						/* no foundation - is the track on the upper side of three corners raised tile? */
-						if (IsSlopeWithThreeCornersRaised(slope)) z += TILE_HEIGHT;
+						if (IsSlopeWithThreeCornersRaised(slope)) z++;
 						break;
 
 					case FOUNDATION_INCLINED_X:
 					case FOUNDATION_INCLINED_Y:
 						/* sloped track - is it on a steep slope? */
-						if (IsSteepSlope(slope)) z += TILE_HEIGHT;
+						if (IsSteepSlope(slope)) z++;
 						break;
 
 					case FOUNDATION_STEEP_LOWER:
 						/* only lower part of steep slope */
-						z += TILE_HEIGHT;
+						z++;
 						break;
 
 					default:
 						/* if it is a steep slope, then there is a track on higher part */
-						if (IsSteepSlope(slope)) z += TILE_HEIGHT;
-						z += TILE_HEIGHT;
+						if (IsSteepSlope(slope)) z++;
+						z++;
 						break;
 				}
 
 				half = IsInsideMM(f, FOUNDATION_STEEP_BOTH, FOUNDATION_HALFTILE_N + 1);
 			} else {
 				/* is the depot on a non-flat tile? */
-				if (slope != SLOPE_FLAT) z += TILE_HEIGHT;
+				if (slope != SLOPE_FLAT) z++;
 			}
 
 			/* 'z' is now the lowest part of the highest track bit -
@@ -2412,7 +2534,7 @@ static void TileLoop_Track(TileIndex tile)
 			 * for two track bits, it is 'z' of higher track bit
 			 * For non-continuous foundations (and STEEP_BOTH), 'half' is set */
 			if (z > GetSnowLine()) {
-				if (half && z - GetSnowLine() == TILE_HEIGHT) {
+				if (half && z - GetSnowLine() == 1) {
 					/* track on non-continuous foundation, lower part is not under snow */
 					new_ground = RAIL_GROUND_HALF_SNOW;
 				} else {
@@ -2437,78 +2559,37 @@ static void TileLoop_Track(TileIndex tile)
 		/* determine direction of fence */
 		TrackBits rail = GetTrackBits(tile);
 
-		switch (rail) {
-			case TRACK_BIT_UPPER: new_ground = RAIL_GROUND_FENCE_HORIZ1; break;
-			case TRACK_BIT_LOWER: new_ground = RAIL_GROUND_FENCE_HORIZ2; break;
-			case TRACK_BIT_LEFT:  new_ground = RAIL_GROUND_FENCE_VERT1;  break;
-			case TRACK_BIT_RIGHT: new_ground = RAIL_GROUND_FENCE_VERT2;  break;
+		Owner owner = GetTileOwner(tile);
+		byte fences = 0;
 
-			default: {
-				Owner owner = GetTileOwner(tile);
+		for (DiagDirection d = DIAGDIR_BEGIN; d < DIAGDIR_END; d++) {
+			static const TrackBits dir_to_trackbits[DIAGDIR_END] = {TRACK_BIT_3WAY_NE, TRACK_BIT_3WAY_SE, TRACK_BIT_3WAY_SW, TRACK_BIT_3WAY_NW};
 
-				if (rail == (TRACK_BIT_LOWER | TRACK_BIT_RIGHT) || (
-							(rail & TRACK_BIT_3WAY_NW) == 0 &&
-							(rail & TRACK_BIT_X)
-						)) {
-					TileIndex n = tile + TileDiffXY(0, -1);
-					TrackBits nrail = (IsPlainRailTile(n) ? GetTrackBits(n) : TRACK_BIT_NONE);
+			/* Track bit on this edge => no fence. */
+			if ((rail & dir_to_trackbits[d]) != TRACK_BIT_NONE) continue;
 
-					if (!IsTileType(n, MP_RAILWAY) ||
-							!IsTileOwner(n, owner) ||
-							nrail == TRACK_BIT_UPPER ||
-							nrail == TRACK_BIT_LEFT) {
-						new_ground = RAIL_GROUND_FENCE_NW;
-					}
-				}
+			TileIndex tile2 = tile + TileOffsByDiagDir(d);
 
-				if (rail == (TRACK_BIT_UPPER | TRACK_BIT_LEFT) || (
-							(rail & TRACK_BIT_3WAY_SE) == 0 &&
-							(rail & TRACK_BIT_X)
-						)) {
-					TileIndex n = tile + TileDiffXY(0, 1);
-					TrackBits nrail = (IsPlainRailTile(n) ? GetTrackBits(n) : TRACK_BIT_NONE);
-
-					if (!IsTileType(n, MP_RAILWAY) ||
-							!IsTileOwner(n, owner) ||
-							nrail == TRACK_BIT_LOWER ||
-							nrail == TRACK_BIT_RIGHT) {
-						new_ground = (new_ground == RAIL_GROUND_FENCE_NW) ?
-							RAIL_GROUND_FENCE_SENW : RAIL_GROUND_FENCE_SE;
-					}
-				}
-
-				if (rail == (TRACK_BIT_LOWER | TRACK_BIT_LEFT) || (
-							(rail & TRACK_BIT_3WAY_NE) == 0 &&
-							(rail & TRACK_BIT_Y)
-						)) {
-					TileIndex n = tile + TileDiffXY(-1, 0);
-					TrackBits nrail = (IsPlainRailTile(n) ? GetTrackBits(n) : TRACK_BIT_NONE);
-
-					if (!IsTileType(n, MP_RAILWAY) ||
-							!IsTileOwner(n, owner) ||
-							nrail == TRACK_BIT_UPPER ||
-							nrail == TRACK_BIT_RIGHT) {
-						new_ground = RAIL_GROUND_FENCE_NE;
-					}
-				}
-
-				if (rail == (TRACK_BIT_UPPER | TRACK_BIT_RIGHT) || (
-							(rail & TRACK_BIT_3WAY_SW) == 0 &&
-							(rail & TRACK_BIT_Y)
-						)) {
-					TileIndex n = tile + TileDiffXY(1, 0);
-					TrackBits nrail = (IsPlainRailTile(n) ? GetTrackBits(n) : TRACK_BIT_NONE);
-
-					if (!IsTileType(n, MP_RAILWAY) ||
-							!IsTileOwner(n, owner) ||
-							nrail == TRACK_BIT_LOWER ||
-							nrail == TRACK_BIT_LEFT) {
-						new_ground = (new_ground == RAIL_GROUND_FENCE_NE) ?
-							RAIL_GROUND_FENCE_NESW : RAIL_GROUND_FENCE_SW;
-					}
-				}
-				break;
+			/* Show fences if it's a house, industry, object, road, tunnelbridge or not owned by us. */
+			if (!IsValidTile(tile2) || IsTileType(tile2, MP_HOUSE) || IsTileType(tile2, MP_INDUSTRY) ||
+					IsTileType(tile2, MP_ROAD) || (IsTileType(tile2, MP_OBJECT) && !IsOwnedLand(tile2)) || IsTileType(tile2, MP_TUNNELBRIDGE) || !IsTileOwner(tile2, owner)) {
+				fences |= 1 << d;
 			}
+		}
+
+		switch (fences) {
+			case 0: break;
+			case (1 << DIAGDIR_NE): new_ground = RAIL_GROUND_FENCE_NE; break;
+			case (1 << DIAGDIR_SE): new_ground = RAIL_GROUND_FENCE_SE; break;
+			case (1 << DIAGDIR_SW): new_ground = RAIL_GROUND_FENCE_SW; break;
+			case (1 << DIAGDIR_NW): new_ground = RAIL_GROUND_FENCE_NW; break;
+			case (1 << DIAGDIR_NE) | (1 << DIAGDIR_SW): new_ground = RAIL_GROUND_FENCE_NESW; break;
+			case (1 << DIAGDIR_SE) | (1 << DIAGDIR_NW): new_ground = RAIL_GROUND_FENCE_SENW; break;
+			case (1 << DIAGDIR_NE) | (1 << DIAGDIR_SE): new_ground = RAIL_GROUND_FENCE_VERT1; break;
+			case (1 << DIAGDIR_NE) | (1 << DIAGDIR_NW): new_ground = RAIL_GROUND_FENCE_HORIZ2; break;
+			case (1 << DIAGDIR_SE) | (1 << DIAGDIR_SW): new_ground = RAIL_GROUND_FENCE_HORIZ1; break;
+			case (1 << DIAGDIR_SW) | (1 << DIAGDIR_NW): new_ground = RAIL_GROUND_FENCE_VERT2; break;
+			default: NOT_REACHED();
 		}
 	}
 
@@ -2523,7 +2604,7 @@ set_ground:
 static TrackStatus GetTileTrackStatus_Track(TileIndex tile, TransportType mode, uint sub_mode, DiagDirection side)
 {
 	/* Case of half tile slope with water. */
-	if (mode == TRANSPORT_WATER && IsPlainRail(tile) && GetRailGroundType(tile) == RAIL_GROUND_WATER) {
+	if (mode == TRANSPORT_WATER && IsPlainRail(tile) && GetRailGroundType(tile) == RAIL_GROUND_WATER && IsSlopeWithOneCornerRaised(GetTileSlope(tile))) {
 		TrackBits tb = GetTrackBits(tile);
 		switch (tb) {
 			default: NOT_REACHED();
@@ -2556,8 +2637,8 @@ static TrackStatus GetTileTrackStatus_Track(TileIndex tile, TransportType mode, 
 			/* When signals are not present (in neither direction),
 			 * we pretend them to be green. Otherwise, it depends on
 			 * the signal type. For signals that are only active from
-			 * one side, we set the missing signals explicitely to
-			 * `green'. Otherwise, they implicitely become `red'. */
+			 * one side, we set the missing signals explicitly to
+			 * `green'. Otherwise, they implicitly become `red'. */
 			if (!IsOnewaySignal(tile, TRACK_UPPER) || (a & SignalOnTrack(TRACK_UPPER)) == 0) b |= ~a & SignalOnTrack(TRACK_UPPER);
 			if (!IsOnewaySignal(tile, TRACK_LOWER) || (a & SignalOnTrack(TRACK_LOWER)) == 0) b |= ~a & SignalOnTrack(TRACK_LOWER);
 
@@ -2595,6 +2676,7 @@ static void GetTileDesc_Track(TileIndex tile, TileDesc *td)
 	const RailtypeInfo *rti = GetRailTypeInfo(GetRailType(tile));
 	td->rail_speed = rti->max_speed;
 	td->owner[0] = GetTileOwner(tile);
+	SetDParamX(td->dparam, 0, rti->strings.name);
 	switch (GetRailTileType(tile)) {
 		case RAIL_TILE_NORMAL:
 			td->str = STR_LAI_RAIL_DESCRIPTION_TRACK;
@@ -2687,6 +2769,23 @@ static void ChangeTileOwner_Track(TileIndex tile, Owner old_owner, Owner new_own
 	if (!IsTileOwner(tile, old_owner)) return;
 
 	if (new_owner != INVALID_OWNER) {
+		/* Update company infrastructure counts. No need to dirty windows here, we'll redraw the whole screen anyway. */
+		uint num_pieces = 1;
+		if (IsPlainRail(tile)) {
+			TrackBits bits = GetTrackBits(tile);
+			num_pieces = CountBits(bits);
+			if (TracksOverlap(bits)) num_pieces *= num_pieces;
+		}
+		RailType rt = GetRailType(tile);
+		Company::Get(old_owner)->infrastructure.rail[rt] -= num_pieces;
+		Company::Get(new_owner)->infrastructure.rail[rt] += num_pieces;
+
+		if (HasSignals(tile)) {
+			uint num_sigs = CountBits(GetPresentSignals(tile));
+			Company::Get(old_owner)->infrastructure.signal -= num_sigs;
+			Company::Get(new_owner)->infrastructure.signal += num_sigs;
+		}
+
 		SetTileOwner(tile, new_owner);
 	} else {
 		DoCommand(tile, 0, 0, DC_EXEC | DC_BANKRUPT, CMD_LANDSCAPE_CLEAR);
@@ -2710,7 +2809,7 @@ static const int8 _deltacoord_leaveoffset[8] = {
 int TicksToLeaveDepot(const Train *v)
 {
 	DiagDirection dir = GetRailDepotDirection(v->tile);
-	int length = v->gcache.cached_veh_length;
+	int length = v->CalcNextVehicleOffset();
 
 	switch (dir) {
 		case DIAGDIR_NE: return  ((int)(v->x_pos & 0x0F) - ((_fractcoords_enter[dir] & 0x0F) - (length + 1)));
@@ -2737,9 +2836,8 @@ static VehicleEnterTileStatus VehicleEnter_Track(Vehicle *u, TileIndex tile, int
 	/* depot direction */
 	DiagDirection dir = GetRailDepotDirection(tile);
 
-	/* calculate the point where the following wagon should be activated
-	 * this depends on the length of the current vehicle */
-	int length = v->gcache.cached_veh_length;
+	/* Calculate the point where the following wagon should be activated. */
+	int length = v->CalcNextVehicleOffset();
 
 	byte fract_coord_leave =
 		((_fractcoords_enter[dir] & 0x0F) + // x
@@ -2788,7 +2886,7 @@ static VehicleEnterTileStatus VehicleEnter_Track(Vehicle *u, TileIndex tile, int
  * @param tileh_new New TileSlope.
  * @param rail_bits Trackbits.
  */
-static CommandCost TestAutoslopeOnRailTile(TileIndex tile, uint flags, uint z_old, Slope tileh_old, uint z_new, Slope tileh_new, TrackBits rail_bits)
+static CommandCost TestAutoslopeOnRailTile(TileIndex tile, uint flags, int z_old, Slope tileh_old, int z_new, Slope tileh_new, TrackBits rail_bits)
 {
 	if (!_settings_game.construction.build_on_slopes || !AutoslopeEnabled()) return_cmd_error(STR_ERROR_MUST_REMOVE_RAILROAD_TRACK);
 
@@ -2827,14 +2925,25 @@ static CommandCost TestAutoslopeOnRailTile(TileIndex tile, uint flags, uint z_ol
 	return  cost;
 }
 
-static CommandCost TerraformTile_Track(TileIndex tile, DoCommandFlag flags, uint z_new, Slope tileh_new)
+/**
+ * Test-procedure for HasVehicleOnPos to check for a ship.
+ */
+static Vehicle *EnsureNoShipProc(Vehicle *v, void *data)
 {
-	uint z_old;
+	return v->type == VEH_SHIP ? v : NULL;
+}
+
+static CommandCost TerraformTile_Track(TileIndex tile, DoCommandFlag flags, int z_new, Slope tileh_new)
+{
+	int z_old;
 	Slope tileh_old = GetTileSlope(tile, &z_old);
 	if (IsPlainRail(tile)) {
 		TrackBits rail_bits = GetTrackBits(tile);
 		/* Is there flat water on the lower halftile that must be cleared expensively? */
 		bool was_water = (GetRailGroundType(tile) == RAIL_GROUND_WATER && IsSlopeWithOneCornerRaised(tileh_old));
+
+		/* Allow clearing the water only if there is no ship */
+		if (was_water && HasVehicleOnPos(tile, NULL, &EnsureNoShipProc)) return_cmd_error(STR_ERROR_SHIP_IN_THE_WAY);
 
 		/* First test autoslope. However if it succeeds we still have to test the rest, because non-autoslope terraforming is cheaper. */
 		CommandCost autoslope_result = TestAutoslopeOnRailTile(tile, flags, z_old, tileh_old, z_new, tileh_new, rail_bits);
@@ -2875,15 +2984,15 @@ static CommandCost TerraformTile_Track(TileIndex tile, DoCommandFlag flags, uint
 
 extern const TileTypeProcs _tile_type_rail_procs = {
 	DrawTile_Track,           // draw_tile_proc
-	GetSlopeZ_Track,          // get_slope_z_proc
+	GetSlopePixelZ_Track,     // get_slope_z_proc
 	ClearTile_Track,          // clear_tile_proc
 	NULL,                     // add_accepted_cargo_proc
 	GetTileDesc_Track,        // get_tile_desc_proc
 	GetTileTrackStatus_Track, // get_tile_track_status_proc
 	ClickTile_Track,          // click_tile_proc
 	NULL,                     // animate_tile_proc
-	TileLoop_Track,           // tile_loop_clear
-	ChangeTileOwner_Track,    // change_tile_owner_clear
+	TileLoop_Track,           // tile_loop_proc
+	ChangeTileOwner_Track,    // change_tile_owner_proc
 	NULL,                     // add_produced_cargo_proc
 	VehicleEnter_Track,       // vehicle_enter_tile_proc
 	GetFoundation_Track,      // get_foundation_proc

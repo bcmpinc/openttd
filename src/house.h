@@ -12,9 +12,7 @@
 #ifndef HOUSE_H
 #define HOUSE_H
 
-#include "strings_type.h"
 #include "cargo_type.h"
-#include "economy_type.h"
 #include "date_type.h"
 #include "house_type.h"
 #include "newgrf_animation_type.h"
@@ -120,10 +118,11 @@ struct HouseSpec {
 	AnimationInfo animation;           ///< information about the animation.
 	byte processing_time;              ///< Periodic refresh multiplier
 	byte minimum_life;                 ///< The minimum number of years this house will survive before the town rebuilds it
+	uint32 watched_cargoes;            ///< Cargo types watched for acceptance.
 
 	Money GetRemovalCost() const;
 
-	static FORCEINLINE HouseSpec *Get(size_t house_id)
+	static inline HouseSpec *Get(size_t house_id)
 	{
 		assert(house_id < HOUSE_MAX);
 		extern HouseSpec _house_specs[];

@@ -10,7 +10,6 @@
 /** @file npf.cpp Implementation of the NPF pathfinder. */
 
 #include "../../stdafx.h"
-#include "../../debug.h"
 #include "../../network/network.h"
 #include "../../viewport_func.h"
 #include "../../ship.h"
@@ -101,7 +100,7 @@ static inline void NPFSetFlag(AyStarNode *node, NPFNodeFlag flag, bool value)
 }
 
 /**
- * Calculates the minimum distance traveled to get from t0 to t1 when only
+ * Calculates the minimum distance travelled to get from t0 to t1 when only
  * using tracks (ie, only making 45 degree turns). Returns the distance in the
  * NPF scale, ie the number of full tiles multiplied by NPF_TILE_LENGTH to
  * prevent rounding.
@@ -146,7 +145,7 @@ static int32 NPFCalcZero(AyStar *as, AyStarNode *current, OpenListNode *parent)
 	return 0;
 }
 
-/* Calcs the heuristic to the target station or tile. For train stations, it
+/* Calculates the heuristic to the target station or tile. For train stations, it
  * takes into account the direction of approach.
  */
 static int32 NPFCalcStationOrTileHeuristic(AyStar *as, AyStarNode *current, OpenListNode *parent)
@@ -237,8 +236,8 @@ static uint NPFSlopeCost(AyStarNode *current)
 	/* Get the height on both sides of the tile edge.
 	 * Avoid testing the height on the tile-center. This will fail for halftile-foundations.
 	 */
-	int z1 = GetSlopeZ(x1 + dx4, y1 + dy4);
-	int z2 = GetSlopeZ(x2 - dx4, y2 - dy4);
+	int z1 = GetSlopePixelZ(x1 + dx4, y1 + dy4);
+	int z2 = GetSlopePixelZ(x2 - dx4, y2 - dy4);
 
 	if (z2 - z1 > 1) {
 		/* Slope up */
@@ -246,7 +245,7 @@ static uint NPFSlopeCost(AyStarNode *current)
 	}
 	return 0;
 	/* Should we give a bonus for slope down? Probably not, we
-	 * could just substract that bonus from the penalty, because
+	 * could just subtract that bonus from the penalty, because
 	 * there is only one level of steepness... */
 }
 
@@ -570,7 +569,7 @@ static int32 NPFFindStationOrTile(AyStar *as, OpenListNode *current)
  * Find the node containing the first signal on the path.
  *
  * If the first signal is on the very first two tiles of the path,
- * the second signal is returnd. If no suitable signal is present, the
+ * the second signal is returned. If no suitable signal is present, the
  * last node of the path is returned.
  */
 static const PathNode *FindSafePosition(PathNode *path, const Train *v)
@@ -1053,7 +1052,7 @@ static NPFFoundTargetData NPFRouteToStationOrTile(TileIndex tile, Trackdir track
 /* Search using breadth first. Good for little track choice and inaccurate
  * heuristic, such as railway/road with two start nodes, the second being the reverse. Call
  * NPFGetFlag(result.node, NPF_FLAG_REVERSE) to see from which node the path
- * orginated. All pathfs from the second node will have the given
+ * originated. All paths from the second node will have the given
  * reverse_penalty applied (NPF_TILE_LENGTH is the equivalent of one full
  * tile).
  */
@@ -1179,6 +1178,23 @@ Track NPFShipChooseTrack(const Ship *v, TileIndex tile, DiagDirection enterdir, 
 	return TrackdirToTrack(ftd.best_trackdir);
 }
 
+bool NPFShipCheckReverse(const Ship *v)
+{
+	NPFFindStationOrTileData fstd;
+	NPFFoundTargetData ftd;
+
+	NPFFillWithOrderData(&fstd, v);
+
+	Trackdir trackdir = v->GetVehicleTrackdir();
+	Trackdir trackdir_rev = ReverseTrackdir(trackdir);
+	assert(trackdir != INVALID_TRACKDIR);
+	assert(trackdir_rev != INVALID_TRACKDIR);
+
+	ftd = NPFRouteToStationOrTileTwoWay(v->tile, trackdir, false, v->tile, trackdir_rev, false, &fstd, TRANSPORT_WATER, 0, v->owner, INVALID_RAILTYPES);
+	/* If we didn't find anything, just keep on going straight ahead, otherwise take the reverse flag */
+	return ftd.best_bird_dist == 0 && NPFGetFlag(&ftd.node, NPF_FLAG_REVERSE);
+}
+
 /*** Trains ***/
 
 FindDepotData NPFTrainFindNearestDepot(const Train *v, int max_penalty)
@@ -1241,7 +1257,7 @@ bool NPFTrainCheckReverse(const Train *v)
 
 	ftd = NPFRouteToStationOrTileTwoWay(v->tile, trackdir, false, last->tile, trackdir_rev, false, &fstd, TRANSPORT_RAIL, 0, v->owner, v->compatible_railtypes);
 	/* If we didn't find anything, just keep on going straight ahead, otherwise take the reverse flag */
-	return ftd.best_bird_dist != 0 && NPFGetFlag(&ftd.node, NPF_FLAG_REVERSE);
+	return ftd.best_bird_dist == 0 && NPFGetFlag(&ftd.node, NPF_FLAG_REVERSE);
 }
 
 Track NPFTrainChooseTrack(const Train *v, TileIndex tile, DiagDirection enterdir, TrackBits tracks, bool &path_found, bool reserve_track, struct PBSTileInfo *target)

@@ -10,7 +10,7 @@
 /** @file console_gui.cpp Handling the GUI of the in-game console. */
 
 #include "stdafx.h"
-#include "textbuf_gui.h"
+#include "textbuf_type.h"
 #include "window_gui.h"
 #include "console_gui.h"
 #include "console_internal.h"
@@ -21,6 +21,8 @@
 #include "settings_type.h"
 #include "console_func.h"
 #include "rev.h"
+
+#include "widgets/console_widget.h"
 
 #include "table/strings.h"
 
@@ -124,9 +126,9 @@ struct IConsoleLine {
 
 
 /* ** main console cmd buffer ** */
-static Textbuf _iconsole_cmdline;
+static Textbuf _iconsole_cmdline(ICON_CMDLN_SIZE);
 static char *_iconsole_history[ICON_HISTORY_SIZE];
-static byte _iconsole_historypos;
+static int _iconsole_historypos;
 IConsoleModes _iconsole_mode;
 
 /* *************** *
@@ -145,24 +147,19 @@ static void IConsoleClearCommand()
 
 static inline void IConsoleResetHistoryPos()
 {
-	_iconsole_historypos = ICON_HISTORY_SIZE - 1;
+	_iconsole_historypos = -1;
 }
 
 
 static const char *IConsoleHistoryAdd(const char *cmd);
 static void IConsoleHistoryNavigate(int direction);
 
-/** Widgets of the console window. */
-enum ConsoleWidgets {
-	CW_BACKGROUND, ///< Background of the console
-};
-
 static const struct NWidgetPart _nested_console_window_widgets[] = {
-	NWidget(WWT_EMPTY, INVALID_COLOUR, CW_BACKGROUND), SetResize(1, 1),
+	NWidget(WWT_EMPTY, INVALID_COLOUR, WID_C_BACKGROUND), SetResize(1, 1),
 };
 
-static const WindowDesc _console_window_desc(
-	WDP_MANUAL, 0, 0,
+static WindowDesc _console_window_desc(
+	WDP_MANUAL, NULL, 0, 0,
 	WC_CONSOLE, WC_NONE,
 	0,
 	_nested_console_window_widgets, lengthof(_nested_console_window_widgets)
@@ -174,13 +171,13 @@ struct IConsoleWindow : Window
 	int line_height;   ///< Height of one line of text in the console.
 	int line_offset;
 
-	IConsoleWindow() : Window()
+	IConsoleWindow() : Window(&_console_window_desc)
 	{
 		_iconsole_mode = ICONSOLE_OPENED;
 		this->line_height = FONT_HEIGHT_NORMAL + ICON_LINE_SPACING;
 		this->line_offset = GetStringBoundingBox("] ").width + 5;
 
-		this->InitNested(&_console_window_desc, 0);
+		this->InitNested(0);
 		ResizeWindow(this, _screen.width, _screen.height / 3);
 	}
 
@@ -236,7 +233,7 @@ struct IConsoleWindow : Window
 
 	virtual void OnMouseLoop()
 	{
-		if (HandleCaret(&_iconsole_cmdline)) this->SetDirty();
+		if (_iconsole_cmdline.HandleCaret()) this->SetDirty();
 	}
 
 	virtual EventState OnKeyPress(uint16 key, uint16 keycode)
@@ -293,46 +290,13 @@ struct IConsoleWindow : Window
 				MarkWholeScreenDirty();
 				break;
 
-#ifdef WITH_COCOA
-			case (WKC_META | 'V'):
-#endif
-			case (WKC_CTRL | 'V'):
-				if (InsertTextBufferClipboard(&_iconsole_cmdline)) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
 			case (WKC_CTRL | 'L'):
 				IConsoleCmdExec("clear");
 				break;
 
-#ifdef WITH_COCOA
-			case (WKC_META | 'U'):
-#endif
-			case (WKC_CTRL | 'U'):
-				DeleteTextBufferAll(&_iconsole_cmdline);
-				this->SetDirty();
-				break;
-
-			case WKC_BACKSPACE: case WKC_DELETE:
-				if (DeleteTextBufferChar(&_iconsole_cmdline, keycode)) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
-			case WKC_LEFT: case WKC_RIGHT: case WKC_END: case WKC_HOME:
-				if (MoveTextBufferPos(&_iconsole_cmdline, keycode)) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
 			default:
-				if (IsValidChar(key, CS_ALPHANUMERAL)) {
+				if (_iconsole_cmdline.HandleKeyPress(key, keycode) != HKPR_NOT_HANDLED) {
 					IConsoleWindow::scroll = 0;
-					InsertTextBufferChar(&_iconsole_cmdline, key);
 					IConsoleResetHistoryPos();
 					this->SetDirty();
 				} else {
@@ -353,15 +317,11 @@ int IConsoleWindow::scroll = 0;
 
 void IConsoleGUIInit()
 {
-	_iconsole_historypos = ICON_HISTORY_SIZE - 1;
+	IConsoleResetHistoryPos();
 	_iconsole_mode = ICONSOLE_CLOSED;
 
 	IConsoleLine::Reset();
 	memset(_iconsole_history, 0, sizeof(_iconsole_history));
-
-	_iconsole_cmdline.buf = CallocT<char>(ICON_CMDLN_SIZE); // create buffer and zero it
-	_iconsole_cmdline.max_bytes = ICON_CMDLN_SIZE;
-	_iconsole_cmdline.max_chars = ICON_CMDLN_SIZE;
 
 	IConsolePrintF(CC_WARNING, "OpenTTD Game Console Revision 7 - %s", _openttd_revision);
 	IConsolePrint(CC_WHITE,  "------------------------------------");
@@ -377,7 +337,6 @@ void IConsoleClearBuffer()
 
 void IConsoleGUIFree()
 {
-	free(_iconsole_cmdline.buf);
 	IConsoleClearBuffer();
 }
 
@@ -454,26 +413,15 @@ static const char *IConsoleHistoryAdd(const char *cmd)
 static void IConsoleHistoryNavigate(int direction)
 {
 	if (_iconsole_history[0] == NULL) return; // Empty history
-	int i = _iconsole_historypos + direction;
+	_iconsole_historypos = Clamp(_iconsole_historypos + direction, -1, ICON_HISTORY_SIZE - 1);
 
-	/* watch out for overflows, just wrap around */
-	if (i < 0) i = ICON_HISTORY_SIZE - 1;
-	if ((uint)i >= ICON_HISTORY_SIZE) i = 0;
+	if (direction > 0 && _iconsole_history[_iconsole_historypos] == NULL) _iconsole_historypos--;
 
-	if (direction > 0) {
-		if (_iconsole_history[i] == NULL) i = 0;
+	if (_iconsole_historypos == -1) {
+		_iconsole_cmdline.DeleteAll();
+	} else {
+		_iconsole_cmdline.Assign(_iconsole_history[_iconsole_historypos]);
 	}
-
-	if (direction < 0) {
-		while (i > 0 && _iconsole_history[i] == NULL) i--;
-	}
-
-	_iconsole_historypos = i;
-	IConsoleClearCommand();
-	/* copy history to 'command prompt / bash' */
-	assert(_iconsole_history[i] != NULL && IsInsideMM(i, 0, ICON_HISTORY_SIZE));
-	ttd_strlcpy(_iconsole_cmdline.buf, _iconsole_history[i], _iconsole_cmdline.max_bytes);
-	UpdateTextBufferSize(&_iconsole_cmdline);
 }
 
 /**

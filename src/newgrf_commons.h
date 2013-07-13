@@ -15,7 +15,6 @@
 #ifndef NEWGRF_COMMONS_H
 #define NEWGRF_COMMONS_H
 
-#include "tile_type.h"
 #include "sprite.h"
 #include "core/alloc_type.hpp"
 #include "core/smallvec_type.hpp"
@@ -140,8 +139,8 @@ struct NewGRFSpriteLayout : ZeroedMemoryAllocator, DrawTileSprites {
 
 	virtual ~NewGRFSpriteLayout()
 	{
-		free(const_cast<DrawTileSeqStruct*>(this->seq));
-		free(const_cast<TileLayoutRegisters*>(this->registers));
+		free(this->seq);
+		free(this->registers);
 	}
 
 	/**
@@ -200,7 +199,7 @@ protected:
 	uint16 max_offset;       ///< what is the length of the original entity's array of specs
 	uint16 max_new_entities; ///< what is the amount of entities, old and new summed
 
-	uint16 invalid_ID;       ///< ID used to dected invalid entities;
+	uint16 invalid_ID;       ///< ID used to detected invalid entities;
 	virtual bool CheckValidNewID(uint16 testid) { return true; }
 
 public:
@@ -296,9 +295,13 @@ extern ObjectOverrideManager _object_mngr;
 
 uint32 GetTerrainType(TileIndex tile, TileContext context = TCX_NORMAL);
 TileIndex GetNearbyTile(byte parameter, TileIndex tile, bool signed_offsets = true, Axis axis = INVALID_AXIS);
-uint32 GetNearbyTileInformation(TileIndex tile);
+uint32 GetNearbyTileInformation(TileIndex tile, bool grf_version8);
 uint32 GetCompanyInfo(CompanyID owner, const struct Livery *l = NULL);
 CommandCost GetErrorMessageFromLocationCallbackResult(uint16 cb_res, uint32 grfid, StringID default_error);
+
+void ErrorUnknownCallbackResult(uint32 grfid, uint16 cbid, uint16 cb_res);
+bool ConvertBooleanCallback(const struct GRFFile *grffile, uint16 cbid, uint16 cb_res);
+bool Convert8bitBooleanCallback(const struct GRFFile *grffile, uint16 cbid, uint16 cb_res);
 
 /**
  * Data related to the handling of grf files.

@@ -138,7 +138,6 @@ static void *_dedicated_video_mem;
 bool _dedicated_forks;
 
 extern bool SafeLoad(const char *filename, int mode, GameMode newgm, Subdirectory subdir, struct LoadFilter *lf = NULL);
-extern void SwitchToMode(SwitchMode new_mode);
 
 static FVideoDriver_Dedicated iFVideoDriver_Dedicated;
 
@@ -161,6 +160,11 @@ const char *VideoDriver_Dedicated::Start(const char * const *parm)
 	CreateConsole();
 	CreateWindowsConsoleThread();
 	SetConsoleTitle(_T("OpenTTD Dedicated Server"));
+#endif
+
+#ifdef _MSC_VER
+	/* Disable the MSVC assertion message box. */
+	_set_error_mode(_OUT_TO_STDERR);
 #endif
 
 #ifdef __OS2__
@@ -233,7 +237,7 @@ static void DedicatedHandleKeyInput()
 #if defined(UNIX) || defined(__OS2__) || defined(PSP)
 	if (fgets(input_line, lengthof(input_line), stdin) == NULL) return;
 #else
-	/* Handle console input, and singal console thread, it can accept input again */
+	/* Handle console input, and signal console thread, it can accept input again */
 	assert_compile(lengthof(_win_console_thread_buffer) <= lengthof(input_line));
 	strecpy(input_line, _win_console_thread_buffer, lastof(input_line));
 	SetEvent(_hWaitForInputHandling);

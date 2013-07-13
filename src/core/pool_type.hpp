@@ -45,7 +45,7 @@ struct PoolBase {
 	static void Clean(PoolType);
 
 	/**
-	 * Contructor registers this object in the pool vector.
+	 * Constructor registers this object in the pool vector.
 	 * @param pt type of this pool.
 	 */
 	PoolBase(PoolType pt) : type(pt)
@@ -59,6 +59,13 @@ struct PoolBase {
 	 * Virtual method that deletes all items in the pool.
 	 */
 	virtual void CleanPool() = 0;
+
+private:
+	/**
+	 * Dummy private copy constructor to prevent compilers from
+	 * copying the structure, which fails due to GetPools().
+	 */
+	PoolBase(const PoolBase &other);
 };
 
 /**
@@ -98,7 +105,7 @@ struct Pool : PoolBase {
 	 * @return pointer to Titem
 	 * @pre index < this->first_unused
 	 */
-	FORCEINLINE Titem *Get(size_t index)
+	inline Titem *Get(size_t index)
 	{
 		assert(index < this->first_unused);
 		return this->data[index];
@@ -109,7 +116,7 @@ struct Pool : PoolBase {
 	 * @param index index to examine
 	 * @return true if PoolItem::Get(index) will return non-NULL pointer
 	 */
-	FORCEINLINE bool IsValidID(size_t index)
+	inline bool IsValidID(size_t index)
 	{
 		return index < this->first_unused && this->Get(index) != NULL;
 	}
@@ -119,7 +126,7 @@ struct Pool : PoolBase {
 	 * @param n number of items we want to allocate
 	 * @return true if 'n' items can be allocated
 	 */
-	FORCEINLINE bool CanAllocate(size_t n = 1)
+	inline bool CanAllocate(size_t n = 1)
 	{
 		bool ret = this->items <= Tmax_size - n;
 #ifdef OTTD_ASSERT
@@ -142,7 +149,7 @@ struct Pool : PoolBase {
 		 * @return pointer to allocated memory
 		 * @note can never fail (return NULL), use CanAllocate() to check first!
 		 */
-		FORCEINLINE void *operator new(size_t size)
+		inline void *operator new(size_t size)
 		{
 			return Tpool->GetNew(size);
 		}
@@ -152,7 +159,7 @@ struct Pool : PoolBase {
 		 * @param p memory to free
 		 * @note the item has to be allocated in the pool!
 		 */
-		FORCEINLINE void operator delete(void *p)
+		inline void operator delete(void *p)
 		{
 			Titem *pn = (Titem *)p;
 			assert(pn == Tpool->Get(pn->index));
@@ -167,7 +174,7 @@ struct Pool : PoolBase {
 		 * @note can never fail (return NULL), use CanAllocate() to check first!
 		 * @pre index has to be unused! Else it will crash
 		 */
-		FORCEINLINE void *operator new(size_t size, size_t index)
+		inline void *operator new(size_t size, size_t index)
 		{
 			return Tpool->GetNew(size, index);
 		}
@@ -180,7 +187,7 @@ struct Pool : PoolBase {
 		 * @note use of this is strongly discouraged
 		 * @pre the memory must not be allocated in the Pool!
 		 */
-		FORCEINLINE void *operator new(size_t size, void *ptr)
+		inline void *operator new(size_t size, void *ptr)
 		{
 			for (size_t i = 0; i < Tpool->first_unused; i++) {
 				/* Don't allow creating new objects over existing.
@@ -202,7 +209,7 @@ struct Pool : PoolBase {
 		 * @param n number of items we want to allocate
 		 * @return true if 'n' items can be allocated
 		 */
-		static FORCEINLINE bool CanAllocateItem(size_t n = 1)
+		static inline bool CanAllocateItem(size_t n = 1)
 		{
 			return Tpool->CanAllocate(n);
 		}
@@ -211,7 +218,7 @@ struct Pool : PoolBase {
 		 * Returns current state of pool cleaning - yes or no
 		 * @return true iff we are cleaning the pool now
 		 */
-		static FORCEINLINE bool CleaningPool()
+		static inline bool CleaningPool()
 		{
 			return Tpool->cleaning;
 		}
@@ -221,7 +228,7 @@ struct Pool : PoolBase {
 		 * @param index index to examine
 		 * @return true if PoolItem::Get(index) will return non-NULL pointer
 		 */
-		static FORCEINLINE bool IsValidID(size_t index)
+		static inline bool IsValidID(size_t index)
 		{
 			return Tpool->IsValidID(index);
 		}
@@ -232,7 +239,7 @@ struct Pool : PoolBase {
 		 * @return pointer to Titem
 		 * @pre index < this->first_unused
 		 */
-		static FORCEINLINE Titem *Get(size_t index)
+		static inline Titem *Get(size_t index)
 		{
 			return Tpool->Get(index);
 		}
@@ -243,7 +250,7 @@ struct Pool : PoolBase {
 		 * @return pointer to Titem
 		 * @note returns NULL for invalid index
 		 */
-		static FORCEINLINE Titem *GetIfValid(size_t index)
+		static inline Titem *GetIfValid(size_t index)
 		{
 			return index < Tpool->first_unused ? Tpool->Get(index) : NULL;
 		}
@@ -253,7 +260,7 @@ struct Pool : PoolBase {
 		 * all pool items.
 		 * @return first unused index
 		 */
-		static FORCEINLINE size_t GetPoolSize()
+		static inline size_t GetPoolSize()
 		{
 			return Tpool->first_unused;
 		}
@@ -262,7 +269,7 @@ struct Pool : PoolBase {
 		 * Returns number of valid items in the pool
 		 * @return number of valid items in the pool
 		 */
-		static FORCEINLINE size_t GetNumItems()
+		static inline size_t GetNumItems()
 		{
 			return Tpool->items;
 		}
@@ -274,11 +281,11 @@ struct Pool : PoolBase {
 		 * @note when this function is called, PoolItem::Get(index) == NULL.
 		 * @note it's called only when !CleaningPool()
 		 */
-		static FORCEINLINE void PostDestructor(size_t index) { }
+		static inline void PostDestructor(size_t index) { }
 	};
 
 private:
-	static const size_t NO_FREE_ITEM = MAX_UVALUE(size_t); ///< Contant to indicate we can't allocate any more items
+	static const size_t NO_FREE_ITEM = MAX_UVALUE(size_t); ///< Constant to indicate we can't allocate any more items
 
 	/**
 	 * Helper struct to cache 'freed' PoolItems so we

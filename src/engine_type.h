@@ -105,6 +105,7 @@ struct AircraftVehicleInfo {
 	uint16 max_speed;           ///< Maximum speed (1 unit = 8 mph = 12.8 km-ish/h)
 	byte mail_capacity;         ///< Mail capacity (bags).
 	uint16 passenger_capacity;  ///< Passenger capacity (persons).
+	uint16 max_range;           ///< Maximum range of this aircraft.
 };
 
 /** Information about a road vehicle. */
@@ -121,6 +122,7 @@ struct RoadVehicleInfo {
 	uint8 tractive_effort;   ///< Coefficient of tractive effort
 	uint8 air_drag;          ///< Coefficient of air drag
 	byte visual_effect;      ///< Bitstuffed NewGRF visual effect data
+	byte shorten_factor;     ///< length on main map for this type is 8 - shorten_factor
 };
 
 /**
@@ -153,6 +155,9 @@ enum EngineMiscFlags {
 	EF_USES_2CC   = 1, ///< Vehicle uses two company colours
 	EF_RAIL_IS_MU = 2, ///< Rail vehicle is a multiple-unit (DMU/EMU)
 	EF_RAIL_FLIPS = 3, ///< Rail vehicle can be flipped in the depot
+	EF_AUTO_REFIT = 4, ///< Automatic refitting is allowed
+	EF_NO_DEFAULT_CARGO_MULTIPLIER = 5, ///< Use the new capacity algorithm. The default cargotype of the vehicle does not affect capacity multipliers. CB 15 is also called in purchase list.
+	EF_NO_BREAKDOWN_SMOKE          = 6, ///< Do not show black smoke during a breakdown.
 };
 
 /**
@@ -161,7 +166,6 @@ enum EngineMiscFlags {
 enum EngineFlags {
 	ENGINE_AVAILABLE         = 1, ///< This vehicle is available to everyone.
 	ENGINE_EXCLUSIVE_PREVIEW = 2, ///< This vehicle is in the exclusive preview stage, either being used or being offered to a company.
-	ENGINE_OFFER_WINDOW_OPEN = 4, ///< The exclusive offer window is currently open for a company.
 };
 
 static const uint MAX_LENGTH_ENGINE_NAME_CHARS = 32; ///< The maximum length of an engine name in characters including '\0'

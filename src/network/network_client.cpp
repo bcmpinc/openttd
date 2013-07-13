@@ -12,7 +12,6 @@
 #ifdef ENABLE_NETWORK
 
 #include "../stdafx.h"
-#include "../debug.h"
 #include "network_gui.h"
 #include "../saveload/saveload.h"
 #include "../saveload/saveload_filter.h"
@@ -26,7 +25,7 @@
 #include "../core/random_func.hpp"
 #include "../date_func.h"
 #include "../gfx_func.h"
-#include "../gui.h"
+#include "../error.h"
 #include "../rev.h"
 #include "network.h"
 #include "network_base.h"
@@ -181,7 +180,7 @@ void ClientNetworkGameSocketHandler::ClientError(NetworkRecvStatus res)
 		this->CloseConnection(res);
 		_networking = false;
 
-		DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+		DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 		return;
 	}
 
@@ -314,7 +313,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::SendCompanyInformationQuery()
 {
 	my_client->status = STATUS_COMPANY_INFO;
 	_network_join_status = NETWORK_JOIN_STATUS_GETTING_COMPANY_INFO;
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	Packet *p = new Packet(PACKET_CLIENT_COMPANY_INFO);
 	my_client->SendPacket(p);
@@ -326,10 +325,11 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::SendJoin()
 {
 	my_client->status = STATUS_JOIN;
 	_network_join_status = NETWORK_JOIN_STATUS_AUTHORIZING;
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	Packet *p = new Packet(PACKET_CLIENT_JOIN);
 	p->Send_string(_openttd_revision);
+	p->Send_uint32(_openttd_newgrf_version);
 	p->Send_string(_settings_client.network.client_name); // Client name
 	p->Send_uint8 (_network_join_as);     // PlayAs
 	p->Send_uint8 (NETLANG_ANY);          // Language
@@ -375,13 +375,6 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::SendGetMap()
 	my_client->status = STATUS_MAP_WAIT;
 
 	Packet *p = new Packet(PACKET_CLIENT_GETMAP);
-	/* Send the OpenTTD version to the server, let it validate it too.
-	 * But only do it for stable releases because of those we are sure
-	 * that everybody has the same NewGRF version. For trunk and the
-	 * branches we make tarballs of the OpenTTDs compiled from tarball
-	 * will have the lower bits set to 0. As such they would become
-	 * incompatible, which we would like to prevent by this. */
-	if (IsReleasedVersion()) p->Send_uint32(_openttd_newgrf_version);
 	my_client->SendPacket(p);
 	return NETWORK_RECV_STATUS_OKAY;
 }
@@ -526,13 +519,12 @@ bool ClientNetworkGameSocketHandler::IsConnected()
  ************/
 
 extern bool SafeLoad(const char *filename, int mode, GameMode newgm, Subdirectory subdir, struct LoadFilter *lf = NULL);
-extern StringID _switch_mode_errorstr;
 
 NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_FULL(Packet *p)
 {
 	/* We try to join a server which is full */
-	_switch_mode_errorstr = STR_NETWORK_ERROR_SERVER_FULL;
-	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+	ShowErrorMessage(STR_NETWORK_ERROR_SERVER_FULL, INVALID_STRING_ID, WL_CRITICAL);
+	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_SERVER_FULL;
 }
@@ -540,8 +532,8 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_FULL(Packet *p)
 NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_BANNED(Packet *p)
 {
 	/* We try to join a server where we are banned */
-	_switch_mode_errorstr = STR_NETWORK_ERROR_SERVER_BANNED;
-	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+	ShowErrorMessage(STR_NETWORK_ERROR_SERVER_BANNED, INVALID_STRING_ID, WL_CRITICAL);
+	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_SERVER_BANNED;
 }
@@ -579,7 +571,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_COMPANY_INFO(Pa
 
 		p->Recv_string(company_info->clients, sizeof(company_info->clients));
 
-		SetWindowDirty(WC_NETWORK_WINDOW, 0);
+		SetWindowDirty(WC_NETWORK_WINDOW, WN_NETWORK_WINDOW_LOBBY);
 
 		return NETWORK_RECV_STATUS_OKAY;
 	}
@@ -625,8 +617,8 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_CLIENT_INFO(Pac
 	}
 
 	/* There are at most as many ClientInfo as ClientSocket objects in a
-	 * server. Having more Infos than a server can have means something
-	 * has gone wrong somewhere, i.e. the server has more Infos than it
+	 * server. Having more info than a server can have means something
+	 * has gone wrong somewhere, i.e. the server has more info than it
 	 * has actual clients. That means the server is feeding us an invalid
 	 * state. So, bail out! This server is broken. */
 	if (!NetworkClientInfo::CanAllocateItem()) return NETWORK_RECV_STATUS_MALFORMED_PACKET;
@@ -645,38 +637,38 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_CLIENT_INFO(Pac
 
 NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_ERROR(Packet *p)
 {
+	static const StringID network_error_strings[] = {
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_GENERAL
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_DESYNC
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_SAVEGAME_FAILED
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_CONNECTION_LOST
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_ILLEGAL_PACKET
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_NEWGRF_MISMATCH
+		STR_NETWORK_ERROR_SERVER_ERROR,      // NETWORK_ERROR_NOT_AUTHORIZED
+		STR_NETWORK_ERROR_SERVER_ERROR,      // NETWORK_ERROR_NOT_EXPECTED
+		STR_NETWORK_ERROR_WRONG_REVISION,    // NETWORK_ERROR_WRONG_REVISION
+		STR_NETWORK_ERROR_LOSTCONNECTION,    // NETWORK_ERROR_NAME_IN_USE
+		STR_NETWORK_ERROR_WRONG_PASSWORD,    // NETWORK_ERROR_WRONG_PASSWORD
+		STR_NETWORK_ERROR_SERVER_ERROR,      // NETWORK_ERROR_COMPANY_MISMATCH
+		STR_NETWORK_ERROR_KICKED,            // NETWORK_ERROR_KICKED
+		STR_NETWORK_ERROR_CHEATER,           // NETWORK_ERROR_CHEATER
+		STR_NETWORK_ERROR_SERVER_FULL,       // NETWORK_ERROR_FULL
+		STR_NETWORK_ERROR_TOO_MANY_COMMANDS, // NETWORK_ERROR_TOO_MANY_COMMANDS
+		STR_NETWORK_ERROR_TIMEOUT_PASSWORD,  // NETWORK_ERROR_TIMEOUT_PASSWORD
+		STR_NETWORK_ERROR_TIMEOUT_COMPUTER,  // NETWORK_ERROR_TIMEOUT_COMPUTER
+		STR_NETWORK_ERROR_TIMEOUT_MAP,       // NETWORK_ERROR_TIMEOUT_MAP
+		STR_NETWORK_ERROR_TIMEOUT_JOIN,      // NETWORK_ERROR_TIMEOUT_JOIN
+	};
+	assert_compile(lengthof(network_error_strings) == NETWORK_ERROR_END);
+
 	NetworkErrorCode error = (NetworkErrorCode)p->Recv_uint8();
 
-	switch (error) {
-		/* We made an error in the protocol, and our connection is closed.... */
-		case NETWORK_ERROR_NOT_AUTHORIZED:
-		case NETWORK_ERROR_NOT_EXPECTED:
-		case NETWORK_ERROR_COMPANY_MISMATCH:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_SERVER_ERROR;
-			break;
-		case NETWORK_ERROR_FULL:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_SERVER_FULL;
-			break;
-		case NETWORK_ERROR_WRONG_REVISION:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_WRONG_REVISION;
-			break;
-		case NETWORK_ERROR_WRONG_PASSWORD:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_WRONG_PASSWORD;
-			break;
-		case NETWORK_ERROR_KICKED:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_KICKED;
-			break;
-		case NETWORK_ERROR_CHEATER:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_CHEATER;
-			break;
-		case NETWORK_ERROR_TOO_MANY_COMMANDS:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_TOO_MANY_COMMANDS;
-			break;
-		default:
-			_switch_mode_errorstr = STR_NETWORK_ERROR_LOSTCONNECTION;
-	}
+	StringID err = STR_NETWORK_ERROR_LOSTCONNECTION;
+	if (error < (ptrdiff_t)lengthof(network_error_strings)) err = network_error_strings[error];
 
-	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+	ShowErrorMessage(err, INVALID_STRING_ID, WL_CRITICAL);
+
+	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_SERVER_ERROR;
 }
@@ -710,7 +702,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_CHECK_NEWGRFS(P
 	}
 
 	/* NewGRF mismatch, bail out */
-	_switch_mode_errorstr = STR_NETWORK_ERROR_NEWGRF_MISMATCH;
+	ShowErrorMessage(STR_NETWORK_ERROR_NEWGRF_MISMATCH, INVALID_STRING_ID, WL_CRITICAL);
 	return ret;
 }
 
@@ -771,7 +763,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_WAIT(Packet *p)
 	/* But... only now we set the join status to waiting, instead of requesting. */
 	_network_join_status = NETWORK_JOIN_STATUS_WAITING;
 	_network_join_waiting = p->Recv_uint8();
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_OKAY;
 }
@@ -791,7 +783,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_MAP_BEGIN(Packe
 	_network_join_bytes_total = 0;
 
 	_network_join_status = NETWORK_JOIN_STATUS_DOWNLOADING;
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_OKAY;
 }
@@ -802,7 +794,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_MAP_SIZE(Packet
 	if (this->savegame == NULL) return NETWORK_RECV_STATUS_MALFORMED_PACKET;
 
 	_network_join_bytes_total = p->Recv_uint32();
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_OKAY;
 }
@@ -816,7 +808,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_MAP_DATA(Packet
 	this->savegame->AddPacket(p);
 
 	_network_join_bytes = (uint32)this->savegame->written_bytes;
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	return NETWORK_RECV_STATUS_OKAY;
 }
@@ -827,7 +819,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_MAP_DONE(Packet
 	if (this->savegame == NULL) return NETWORK_RECV_STATUS_MALFORMED_PACKET;
 
 	_network_join_status = NETWORK_JOIN_STATUS_PROCESSING;
-	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, 0);
+	SetWindowDirty(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	/*
 	 * Make sure everything is set for reading.
@@ -841,14 +833,15 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_MAP_DONE(Packet
 	lf->Reset();
 
 	/* The map is done downloading, load it */
+	ClearErrorMessages();
 	bool load_success = SafeLoad(NULL, SL_LOAD, GM_NORMAL, NO_DIRECTORY, lf);
 
 	/* Long savegame loads shouldn't affect the lag calculation! */
 	this->last_packet = _realtime_tick;
 
 	if (!load_success) {
-		DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
-		_switch_mode_errorstr = STR_NETWORK_ERROR_SAVEGAMEERROR;
+		DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
+		ShowErrorMessage(STR_NETWORK_ERROR_SAVEGAMEERROR, INVALID_STRING_ID, WL_CRITICAL);
 		return NETWORK_RECV_STATUS_SAVEGAME;
 	}
 	/* If the savegame has successfully loaded, ALL windows have been removed,
@@ -1052,7 +1045,7 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_SHUTDOWN(Packet
 	/* Only when we're trying to join we really
 	 * care about the server shutting down. */
 	if (this->status >= STATUS_JOIN) {
-		_switch_mode_errorstr = STR_NETWORK_MESSAGE_SERVER_SHUTDOWN;
+		ShowErrorMessage(STR_NETWORK_MESSAGE_SERVER_SHUTDOWN, INVALID_STRING_ID, WL_CRITICAL);
 	}
 
 	return NETWORK_RECV_STATUS_SERVER_ERROR;
@@ -1063,11 +1056,11 @@ NetworkRecvStatus ClientNetworkGameSocketHandler::Receive_SERVER_NEWGAME(Packet 
 	/* Only when we're trying to join we really
 	 * care about the server shutting down. */
 	if (this->status >= STATUS_JOIN) {
-		/* To trottle the reconnects a bit, every clients waits its
+		/* To throttle the reconnects a bit, every clients waits its
 		 * Client ID modulo 16. This way reconnects should be spread
 		 * out a bit. */
 		_network_reconnect = _network_own_client_id % 16;
-		_switch_mode_errorstr = STR_NETWORK_MESSAGE_SERVER_REBOOT;
+		ShowErrorMessage(STR_NETWORK_MESSAGE_SERVER_REBOOT, INVALID_STRING_ID, WL_CRITICAL);
 	}
 
 	return NETWORK_RECV_STATUS_SERVER_ERROR;
@@ -1156,7 +1149,7 @@ void ClientNetworkGameSocketHandler::CheckConnection()
 	 * the server will forcefully disconnect you. */
 	if (lag > 20) {
 		this->NetworkGameSocketHandler::CloseConnection();
-		_switch_mode_errorstr = STR_NETWORK_ERROR_LOSTCONNECTION;
+		ShowErrorMessage(STR_NETWORK_ERROR_LOSTCONNECTION, INVALID_STRING_ID, WL_CRITICAL);
 		return;
 	}
 

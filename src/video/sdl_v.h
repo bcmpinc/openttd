@@ -28,7 +28,16 @@ public:
 	/* virtual */ bool ChangeResolution(int w, int h);
 
 	/* virtual */ bool ToggleFullscreen(bool fullscreen);
+
+	/* virtual */ bool AfterBlitterChange();
+
+	/* virtual */ bool ClaimMousePointer();
+
 	/* virtual */ const char *GetName() const { return "sdl"; }
+private:
+	int PollEvent();
+	bool CreateMainSurface(uint w, uint h);
+	void SetupKeyboard();
 };
 
 /** Factory for the SDL video driver. */

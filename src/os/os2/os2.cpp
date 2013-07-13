@@ -172,7 +172,7 @@ int CDECL main(int argc, char *argv[])
 {
 	SetRandomSeed(time(NULL));
 
-	return ttd_main(argc, argv);
+	return openttd_main(argc, argv);
 }
 
 bool GetClipboardContents(char *buffer, size_t buff_len)
@@ -210,3 +210,8 @@ void CSleep(int milliseconds)
 
 const char *FS2OTTD(const char *name) {return name;}
 const char *OTTD2FS(const char *name) {return name;}
+
+uint GetCPUCoreCount()
+{
+	return 1;
+}

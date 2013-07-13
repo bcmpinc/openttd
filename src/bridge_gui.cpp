@@ -10,7 +10,7 @@
 /** @file bridge_gui.cpp Graphical user interface for bridge construction */
 
 #include "stdafx.h"
-#include "gui.h"
+#include "error.h"
 #include "command_func.h"
 #include "rail.h"
 #include "strings_func.h"
@@ -24,6 +24,8 @@
 #include "cmd_helper.h"
 #include "tunnelbridge_map.h"
 #include "road_gui.h"
+
+#include "widgets/bridge_widget.h"
 
 #include "table/strings.h"
 
@@ -57,7 +59,7 @@ typedef GUIList<BuildBridgeData> GUIBridgeList; ///< List of bridges, used in #B
 void CcBuildBridge(const CommandCost &result, TileIndex end_tile, uint32 p1, uint32 p2)
 {
 	if (result.Failed()) return;
-	SndPlayTileFx(SND_27_BLACKSMITH_ANVIL, end_tile);
+	if (_settings_client.sound.confirm) SndPlayTileFx(SND_27_BLACKSMITH_ANVIL, end_tile);
 
 	TransportType transport_type = Extract<TransportType, 15, 2>(p2);
 
@@ -70,20 +72,10 @@ void CcBuildBridge(const CommandCost &result, TileIndex end_tile, uint32 p1, uin
 	}
 }
 
-/** Names of the widgets of the build-bridge selection window. */
-enum BuildBridgeSelectionWidgets {
-	BBSW_CAPTION,
-	BBSW_DROPDOWN_ORDER,
-	BBSW_DROPDOWN_CRITERIA,
-	BBSW_BRIDGE_LIST,
-	BBSW_SCROLLBAR,
-};
-
 /** Window class for handling the bridge-build GUI. */
 class BuildBridgeWindow : public Window {
 private:
 	/* Runtime saved values */
-	static uint16 last_size;     ///< Last size of the bridge GUI window.
 	static Listing last_sorting; ///< Last setting of the sort.
 
 	/* Constants for sorting the bridges */
@@ -95,7 +87,7 @@ private:
 	TileIndex end_tile;
 	uint32 type;
 	GUIBridgeList *bridges;
-	int bridgetext_offset; ///< Horizontal offset of the text describing the bridge properties in #BBSW_BRIDGE_LIST relative to the left edge.
+	int bridgetext_offset; ///< Horizontal offset of the text describing the bridge properties in #WID_BBS_BRIDGE_LIST relative to the left edge.
 	Scrollbar *vscroll;
 
 	/** Sort the bridges by their index */
@@ -133,25 +125,25 @@ private:
 		this->bridges->Sort();
 
 		/* Display the current sort variant */
-		this->GetWidget<NWidgetCore>(BBSW_DROPDOWN_CRITERIA)->widget_data = this->sorter_names[this->bridges->SortType()];
+		this->GetWidget<NWidgetCore>(WID_BBS_DROPDOWN_CRITERIA)->widget_data = this->sorter_names[this->bridges->SortType()];
 
 		/* Set the modified widgets dirty */
-		this->SetWidgetDirty(BBSW_DROPDOWN_CRITERIA);
-		this->SetWidgetDirty(BBSW_BRIDGE_LIST);
+		this->SetWidgetDirty(WID_BBS_DROPDOWN_CRITERIA);
+		this->SetWidgetDirty(WID_BBS_BRIDGE_LIST);
 	}
 
 public:
-	BuildBridgeWindow(const WindowDesc *desc, TileIndex start, TileIndex end, uint32 br_type, GUIBridgeList *bl) : Window(),
+	BuildBridgeWindow(WindowDesc *desc, TileIndex start, TileIndex end, uint32 br_type, GUIBridgeList *bl) : Window(desc),
 		start_tile(start),
 		end_tile(end),
 		type(br_type),
 		bridges(bl)
 	{
-		this->CreateNestedTree(desc);
-		this->vscroll = this->GetScrollbar(BBSW_SCROLLBAR);
+		this->CreateNestedTree();
+		this->vscroll = this->GetScrollbar(WID_BBS_SCROLLBAR);
 		/* Change the data, or the caption of the gui. Set it to road or rail, accordingly. */
-		this->GetWidget<NWidgetCore>(BBSW_CAPTION)->widget_data = (GB(this->type, 15, 2) == TRANSPORT_ROAD) ? STR_SELECT_ROAD_BRIDGE_CAPTION : STR_SELECT_RAIL_BRIDGE_CAPTION;
-		this->FinishInitNested(desc, GB(br_type, 15, 2)); // Initializes 'this->bridgetext_offset'.
+		this->GetWidget<NWidgetCore>(WID_BBS_CAPTION)->widget_data = (GB(this->type, 15, 2) == TRANSPORT_ROAD) ? STR_SELECT_ROAD_BRIDGE_CAPTION : STR_SELECT_RAIL_BRIDGE_CAPTION;
+		this->FinishInitNested(GB(br_type, 15, 2)); // Initializes 'this->bridgetext_offset'.
 
 		this->parent = FindWindowById(WC_BUILD_TOOLBAR, GB(this->type, 15, 2));
 		this->bridges->SetListing(this->last_sorting);
@@ -160,13 +152,6 @@ public:
 		this->SortBridgeList();
 
 		this->vscroll->SetCount(bl->Length());
-		if (this->last_size < this->vscroll->GetCapacity()) this->last_size = this->vscroll->GetCapacity();
-		if (this->last_size > this->vscroll->GetCount()) this->last_size = this->vscroll->GetCount();
-		/* Resize the bridge selection window if we used a bigger one the last time. */
-		if (this->last_size > this->vscroll->GetCapacity()) {
-			ResizeWindow(this, 0, (this->last_size - this->vscroll->GetCapacity()) * this->resize.step_height);
-		}
-		this->GetWidget<NWidgetCore>(BBSW_BRIDGE_LIST)->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
 	}
 
 	~BuildBridgeWindow()
@@ -179,14 +164,14 @@ public:
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
 		switch (widget) {
-			case BBSW_DROPDOWN_ORDER: {
+			case WID_BBS_DROPDOWN_ORDER: {
 				Dimension d = GetStringBoundingBox(this->GetWidget<NWidgetCore>(widget)->widget_data);
 				d.width += padding.width + WD_SORTBUTTON_ARROW_WIDTH * 2; // Doubled since the string is centred and it also looks better.
 				d.height += padding.height;
 				*size = maxdim(*size, d);
 				break;
 			}
-			case BBSW_DROPDOWN_CRITERIA: {
+			case WID_BBS_DROPDOWN_CRITERIA: {
 				Dimension d = {0, 0};
 				for (const StringID *str = this->sorter_names; *str != INVALID_STRING_ID; str++) {
 					d = maxdim(d, GetStringBoundingBox(*str));
@@ -196,7 +181,7 @@ public:
 				*size = maxdim(*size, d);
 				break;
 			}
-			case BBSW_BRIDGE_LIST: {
+			case WID_BBS_BRIDGE_LIST: {
 				Dimension sprite_dim = {0, 0}; // Biggest bridge sprite dimension
 				Dimension text_dim   = {0, 0}; // Biggest text dimension
 				for (int i = 0; i < (int)this->bridges->Length(); i++) {
@@ -220,10 +205,10 @@ public:
 		}
 	}
 
-	virtual Point OnInitialPosition(const WindowDesc *desc, int16 sm_width, int16 sm_height, int window_number)
+	virtual Point OnInitialPosition(int16 sm_width, int16 sm_height, int window_number)
 	{
 		/* Position the window so hopefully the first bridge from the list is under the mouse pointer. */
-		NWidgetBase *list = this->GetWidget<NWidgetBase>(BBSW_BRIDGE_LIST);
+		NWidgetBase *list = this->GetWidget<NWidgetBase>(WID_BBS_BRIDGE_LIST);
 		Point corner; // point of the top left corner of the window.
 		corner.y = Clamp(_cursor.pos.y - list->pos_y - 5, GetMainViewTop(), GetMainViewBottom() - sm_height);
 		corner.x = Clamp(_cursor.pos.x - list->pos_x - 5, 0, _screen.width - sm_width);
@@ -233,11 +218,11 @@ public:
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
 		switch (widget) {
-			case BBSW_DROPDOWN_ORDER:
+			case WID_BBS_DROPDOWN_ORDER:
 				this->DrawSortButtonState(widget, this->bridges->IsDescSortOrder() ? SBS_DOWN : SBS_UP);
 				break;
 
-			case BBSW_BRIDGE_LIST: {
+			case WID_BBS_BRIDGE_LIST: {
 				uint y = r.top;
 				for (int i = this->vscroll->GetPosition(); this->vscroll->IsVisible(i) && i < (int)this->bridges->Length(); i++) {
 					const BridgeSpec *b = this->bridges->Get(i)->spec;
@@ -272,8 +257,8 @@ public:
 	{
 		switch (widget) {
 			default: break;
-			case BBSW_BRIDGE_LIST: {
-				uint i = this->vscroll->GetScrolledRowFromWidget(pt.y, this, BBSW_BRIDGE_LIST);
+			case WID_BBS_BRIDGE_LIST: {
+				uint i = this->vscroll->GetScrolledRowFromWidget(pt.y, this, WID_BBS_BRIDGE_LIST);
 				if (i < this->bridges->Length()) {
 					this->BuildBridge(i);
 					delete this;
@@ -281,20 +266,20 @@ public:
 				break;
 			}
 
-			case BBSW_DROPDOWN_ORDER:
+			case WID_BBS_DROPDOWN_ORDER:
 				this->bridges->ToggleSortOrder();
 				this->SetDirty();
 				break;
 
-			case BBSW_DROPDOWN_CRITERIA:
-				ShowDropDownMenu(this, this->sorter_names, this->bridges->SortType(), BBSW_DROPDOWN_CRITERIA, 0, 0);
+			case WID_BBS_DROPDOWN_CRITERIA:
+				ShowDropDownMenu(this, this->sorter_names, this->bridges->SortType(), WID_BBS_DROPDOWN_CRITERIA, 0, 0);
 				break;
 		}
 	}
 
 	virtual void OnDropdownSelect(int widget, int index)
 	{
-		if (widget == BBSW_DROPDOWN_CRITERIA && this->bridges->SortType() != index) {
+		if (widget == WID_BBS_DROPDOWN_CRITERIA && this->bridges->SortType() != index) {
 			this->bridges->SetSortType(index);
 
 			this->SortBridgeList();
@@ -303,15 +288,10 @@ public:
 
 	virtual void OnResize()
 	{
-		this->vscroll->SetCapacityFromWidget(this, BBSW_BRIDGE_LIST);
-		this->GetWidget<NWidgetCore>(BBSW_BRIDGE_LIST)->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
-
-		this->last_size = max(this->vscroll->GetCapacity(), this->last_size);
+		this->vscroll->SetCapacityFromWidget(this, WID_BBS_BRIDGE_LIST);
 	}
 };
 
-/** Set the default size of the Build Bridge Window. */
-uint16 BuildBridgeWindow::last_size = 4;
 /** Set the default sorting for the bridges */
 Listing BuildBridgeWindow::last_sorting = {true, 2};
 
@@ -335,31 +315,32 @@ static const NWidgetPart _nested_build_bridge_widgets[] = {
 	/* Header */
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
-		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN, BBSW_CAPTION), SetDataTip(STR_SELECT_RAIL_BRIDGE_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN, WID_BBS_CAPTION), SetDataTip(STR_SELECT_RAIL_BRIDGE_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_DARK_GREEN),
 	EndContainer(),
 
 	NWidget(NWID_HORIZONTAL),
 		NWidget(NWID_VERTICAL),
 			/* Sort order + criteria buttons */
 			NWidget(NWID_HORIZONTAL),
-				NWidget(WWT_TEXTBTN, COLOUR_DARK_GREEN, BBSW_DROPDOWN_ORDER), SetFill(1, 0), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER),
-				NWidget(WWT_DROPDOWN, COLOUR_DARK_GREEN, BBSW_DROPDOWN_CRITERIA), SetFill(1, 0), SetDataTip(0x0, STR_TOOLTIP_SORT_CRITERIA),
+				NWidget(WWT_TEXTBTN, COLOUR_DARK_GREEN, WID_BBS_DROPDOWN_ORDER), SetFill(1, 0), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER),
+				NWidget(WWT_DROPDOWN, COLOUR_DARK_GREEN, WID_BBS_DROPDOWN_CRITERIA), SetFill(1, 0), SetDataTip(0x0, STR_TOOLTIP_SORT_CRITERIA),
 			EndContainer(),
 			/* Matrix. */
-			NWidget(WWT_MATRIX, COLOUR_DARK_GREEN, BBSW_BRIDGE_LIST), SetFill(1, 0), SetResize(0, 22), SetDataTip(0x401, STR_SELECT_BRIDGE_SELECTION_TOOLTIP), SetScrollbar(BBSW_SCROLLBAR),
+			NWidget(WWT_MATRIX, COLOUR_DARK_GREEN, WID_BBS_BRIDGE_LIST), SetFill(1, 0), SetResize(0, 22), SetMatrixDataTip(1, 0, STR_SELECT_BRIDGE_SELECTION_TOOLTIP), SetScrollbar(WID_BBS_SCROLLBAR),
 		EndContainer(),
 
 		/* scrollbar + resize button */
 		NWidget(NWID_VERTICAL),
-			NWidget(NWID_VSCROLLBAR, COLOUR_DARK_GREEN, BBSW_SCROLLBAR),
+			NWidget(NWID_VSCROLLBAR, COLOUR_DARK_GREEN, WID_BBS_SCROLLBAR),
 			NWidget(WWT_RESIZEBOX, COLOUR_DARK_GREEN),
 		EndContainer(),
 	EndContainer(),
 };
 
 /** Window definition for the rail bridge selection window. */
-static const WindowDesc _build_bridge_desc(
-	WDP_AUTO, 200, 114,
+static WindowDesc _build_bridge_desc(
+	WDP_AUTO, "build_bridge", 200, 114,
 	WC_BUILD_BRIDGE, WC_BUILD_TOOLBAR,
 	WDF_CONSTRUCTION,
 	_nested_build_bridge_widgets, lengthof(_nested_build_bridge_widgets)
@@ -388,7 +369,7 @@ void ShowBuildBridgeWindow(TileIndex start, TileIndex end, TransportType transpo
 	/* The bridge length without ramps. */
 	const uint bridge_len = GetTunnelBridgeLength(start, end);
 
-	/* If Ctrl is being pressed, check wether the last bridge built is available
+	/* If Ctrl is being pressed, check whether the last bridge built is available
 	 * If so, return this bridge type. Otherwise continue normally.
 	 * We store bridge types for each transport type, so we have to check for
 	 * the transport type beforehand.

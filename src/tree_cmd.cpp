@@ -15,21 +15,17 @@
 #include "tree_map.h"
 #include "viewport_func.h"
 #include "command_func.h"
-#include "economy_func.h"
 #include "town.h"
 #include "genworld.h"
-#include "transparency.h"
 #include "clear_func.h"
 #include "company_func.h"
 #include "sound_func.h"
-#include "water_map.h"
 #include "water.h"
-#include "landscape_type.h"
 #include "company_base.h"
 #include "core/random_func.hpp"
+#include "newgrf_generic.h"
 
 #include "table/strings.h"
-#include "table/sprites.h"
 #include "table/tree_land.h"
 #include "table/clear_land.h"
 
@@ -70,7 +66,7 @@ static bool CanPlantTreesOnTile(TileIndex tile, bool allow_desert)
 {
 	switch (GetTileType(tile)) {
 		case MP_WATER:
-			return !IsBridgeAbove(tile) && IsCoast(tile) && !IsSlopeWithOneCornerRaised(GetTileSlope(tile, NULL));
+			return !IsBridgeAbove(tile) && IsCoast(tile) && !IsSlopeWithOneCornerRaised(GetTileSlope(tile));
 
 		case MP_CLEAR:
 			return !IsBridgeAbove(tile) && !IsClearGround(tile, CLEAR_FIELDS) && GetRawClearGround(tile) != CLEAR_ROCKS &&
@@ -216,7 +212,7 @@ static void PlaceTreeGroups(uint num_groups)
  * @param tile The base tile to add a new tree somewhere around
  * @param height The height (like the one from the tile)
  */
-static void PlaceTreeAtSameHeight(TileIndex tile, uint height)
+static void PlaceTreeAtSameHeight(TileIndex tile, int height)
 {
 	for (uint i = 0; i < DEFAULT_TREE_STEPS; i++) {
 		uint32 r = Random();
@@ -247,7 +243,7 @@ static void PlaceTreeAtSameHeight(TileIndex tile, uint height)
  */
 void PlaceTreesRandomly()
 {
-	uint i, j, ht;
+	int i, j, ht;
 
 	i = ScaleByMapSize(DEFAULT_TREE_STEPS);
 	if (_game_mode == GM_EDITOR) i /= EDITOR_TREE_DIV;
@@ -266,7 +262,7 @@ void PlaceTreesRandomly()
 			 *  It is almost real life ;) */
 			ht = GetTileZ(tile);
 			/* The higher we get, the more trees we plant */
-			j = GetTileZ(tile) / TILE_HEIGHT * 2;
+			j = GetTileZ(tile) * 2;
 			/* Above snowline more trees! */
 			if (_settings_game.game_creation.landscape == LT_ARCTIC && ht > GetSnowLine()) j *= 3;
 			while (j--) {
@@ -344,6 +340,9 @@ CommandCost CmdPlantTree(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 	/* Check the tree type within the current climate */
 	if (tree_to_plant != TREE_INVALID && !IsInsideBS(tree_to_plant, _tree_base_by_landscape[_settings_game.game_creation.landscape], _tree_count_by_landscape[_settings_game.game_creation.landscape])) return CMD_ERROR;
 
+	Company *c = (_game_mode != GM_EDITOR) ? Company::GetIfValid(_current_company) : NULL;
+	int limit = (c == NULL ? INT32_MAX : GB(c->tree_limit, 16, 16));
+
 	TileArea ta(tile, p2);
 	TILE_AREA_LOOP(tile, ta) {
 		switch (GetTileType(tile)) {
@@ -354,16 +353,23 @@ CommandCost CmdPlantTree(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 					continue;
 				}
 
+				/* Test tree limit. */
+				if (--limit < 1) {
+					msg = STR_ERROR_TREE_PLANT_LIMIT_REACHED;
+					break;
+				}
+
 				if (flags & DC_EXEC) {
 					AddTreeCount(tile, 1);
 					MarkTileDirtyByTile(tile);
+					if (c != NULL) c->tree_limit -= 1 << 16;
 				}
 				/* 2x as expensive to add more trees to an existing tile */
 				cost.AddCost(_price[PR_BUILD_TREES] * 2);
 				break;
 
 			case MP_WATER:
-				if (!IsCoast(tile) || IsSlopeWithOneCornerRaised(GetTileSlope(tile, NULL))) {
+				if (!IsCoast(tile) || IsSlopeWithOneCornerRaised(GetTileSlope(tile))) {
 					msg = STR_ERROR_CAN_T_BUILD_ON_WATER;
 					continue;
 				}
@@ -385,6 +391,12 @@ CommandCost CmdPlantTree(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 						(IsInsideMM(treetype, TREE_SUB_TROPICAL, TREE_TOYLAND) && GetTropicZone(tile) != TROPICZONE_NORMAL))) {
 					msg = STR_ERROR_TREE_WRONG_TERRAIN_FOR_TREE_TYPE;
 					continue;
+				}
+
+				/* Test tree limit. */
+				if (--limit < 1) {
+					msg = STR_ERROR_TREE_PLANT_LIMIT_REACHED;
+					break;
 				}
 
 				if (IsTileType(tile, MP_CLEAR)) {
@@ -416,6 +428,7 @@ CommandCost CmdPlantTree(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 					/* Plant full grown trees in scenario editor */
 					PlantTreesOnTile(tile, treetype, 0, _game_mode == GM_EDITOR ? 3 : 0);
 					MarkTileDirtyByTile(tile);
+					if (c != NULL) c->tree_limit -= 1 << 16;
 
 					/* When planting rainforest-trees, set tropiczone to rainforest in editor. */
 					if (_game_mode == GM_EDITOR && IsInsideMM(treetype, TREE_RAINFOREST, TREE_CACTUS)) {
@@ -430,6 +443,9 @@ CommandCost CmdPlantTree(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 
 				msg = STR_ERROR_SITE_UNSUITABLE;
 				break;
 		}
+
+		/* Tree limit used up? No need to check more. */
+		if (limit < 0) break;
 	}
 
 	if (cost.GetCost() == 0) {
@@ -451,8 +467,6 @@ static void DrawTile_Trees(TileInfo *ti)
 		case TREE_GROUND_ROUGH: DrawHillyLandTile(ti); break;
 		default: DrawGroundSprite(_clear_land_sprites_snow_desert[GetTreeDensity(ti->tile)] + SlopeToSpriteOffset(ti->tileh), PAL_NONE); break;
 	}
-
-	DrawClearLandFence(ti);
 
 	/* Do not draw trees when the invisible trees setting is set */
 	if (IsInvisibilitySet(TO_TREES)) return;
@@ -493,7 +507,7 @@ static void DrawTile_Trees(TileInfo *ti)
 	}
 
 	/* draw them in a sorted way */
-	byte z = ti->z + GetSlopeMaxZ(ti->tileh) / 2;
+	int z = ti->z + GetSlopeMaxPixelZ(ti->tileh) / 2;
 
 	for (; trees > 0; trees--) {
 		uint min = te[0].x + te[0].y;
@@ -516,12 +530,12 @@ static void DrawTile_Trees(TileInfo *ti)
 }
 
 
-static uint GetSlopeZ_Trees(TileIndex tile, uint x, uint y)
+static int GetSlopePixelZ_Trees(TileIndex tile, uint x, uint y)
 {
-	uint z;
-	Slope tileh = GetTileSlope(tile, &z);
+	int z;
+	Slope tileh = GetTilePixelSlope(tile, &z);
 
-	return z + GetPartialZ(x & 0xF, y & 0xF, tileh);
+	return z + GetPartialPixelZ(x & 0xF, y & 0xF, tileh);
 }
 
 static Foundation GetFoundation_Trees(TileIndex tile, Slope tileh)
@@ -578,7 +592,7 @@ static void TileLoopTreesDesert(TileIndex tile)
 			};
 			uint32 r = Random();
 
-			if (Chance16I(1, 200, r)) SndPlayTileFx(forest_sounds[GB(r, 16, 2)], tile);
+			if (Chance16I(1, 200, r) && _settings_client.sound.ambient) SndPlayTileFx(forest_sounds[GB(r, 16, 2)], tile);
 			break;
 		}
 
@@ -588,7 +602,7 @@ static void TileLoopTreesDesert(TileIndex tile)
 
 static void TileLoopTreesAlps(TileIndex tile)
 {
-	int k = GetTileZ(tile) - GetSnowLine() + TILE_HEIGHT;
+	int k = GetTileZ(tile) - GetSnowLine() + 1;
 
 	if (k < 0) {
 		switch (GetTreeGround(tile)) {
@@ -597,7 +611,7 @@ static void TileLoopTreesAlps(TileIndex tile)
 			default: return;
 		}
 	} else {
-		uint density = min((uint)k / TILE_HEIGHT, 3);
+		uint density = min<uint>(k, 3);
 
 		if (GetTreeGround(tile) != TREE_GROUND_SNOW_DESERT && GetTreeGround(tile) != TREE_GROUND_ROUGH_SNOW) {
 			TreeGround tg = GetTreeGround(tile) == TREE_GROUND_ROUGH ? TREE_GROUND_ROUGH_SNOW : TREE_GROUND_SNOW_DESERT;
@@ -607,7 +621,7 @@ static void TileLoopTreesAlps(TileIndex tile)
 		} else {
 			if (GetTreeDensity(tile) == 3) {
 				uint32 r = Random();
-				if (Chance16I(1, 200, r)) {
+				if (Chance16I(1, 200, r) && _settings_client.sound.ambient) {
 					SndPlayTileFx((r & 0x80000000) ? SND_39_HEAVY_WIND : SND_34_WIND, tile);
 				}
 			}
@@ -628,7 +642,7 @@ static void TileLoop_Trees(TileIndex tile)
 		}
 	}
 
-	TileLoopClearHelper(tile);
+	AmbientSoundEffect(tile);
 
 	uint treeCounter = GetTreeCounter(tile);
 
@@ -776,7 +790,7 @@ void InitializeTrees()
 	_trees_tick_ctr = 0;
 }
 
-static CommandCost TerraformTile_Trees(TileIndex tile, DoCommandFlag flags, uint z_new, Slope tileh_new)
+static CommandCost TerraformTile_Trees(TileIndex tile, DoCommandFlag flags, int z_new, Slope tileh_new)
 {
 	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
 }
@@ -784,15 +798,15 @@ static CommandCost TerraformTile_Trees(TileIndex tile, DoCommandFlag flags, uint
 
 extern const TileTypeProcs _tile_type_trees_procs = {
 	DrawTile_Trees,           // draw_tile_proc
-	GetSlopeZ_Trees,          // get_slope_z_proc
+	GetSlopePixelZ_Trees,     // get_slope_z_proc
 	ClearTile_Trees,          // clear_tile_proc
 	NULL,                     // add_accepted_cargo_proc
 	GetTileDesc_Trees,        // get_tile_desc_proc
 	GetTileTrackStatus_Trees, // get_tile_track_status_proc
 	NULL,                     // click_tile_proc
 	NULL,                     // animate_tile_proc
-	TileLoop_Trees,           // tile_loop_clear
-	ChangeTileOwner_Trees,    // change_tile_owner_clear
+	TileLoop_Trees,           // tile_loop_proc
+	ChangeTileOwner_Trees,    // change_tile_owner_proc
 	NULL,                     // add_produced_cargo_proc
 	NULL,                     // vehicle_enter_tile_proc
 	GetFoundation_Trees,      // get_foundation_proc

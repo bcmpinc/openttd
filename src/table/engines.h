@@ -580,12 +580,12 @@ static const ShipVehicleInfo _orig_ship_vehicle_info[] = {
  * @param c running_Cost
  * @param d subtype (bit 0 - plane, bit 1 - large plane)
  * @param e sound effect
- * @param f acceleration
- * @param g max_speed (1 unit = 8 mph = 12.8 km-ish/h)
+ * @param f acceleration (1 unit = 3/8 mph/tick = 3/5 km-ish/h/tick) (stays the same in the variable)
+ * @param g max_speed (1 unit = 8 mph = 12.8 km-ish/h) (is converted to km-ish/h by the macro)
  * @param h mail_capacity (bags)
  * @param i passenger_capacity (persons)
  */
-#define AVI(a, b, c, d, e, f, g, h, i) { a, b, c, d, e, f, (g * 128) / 10, h, i }
+#define AVI(a, b, c, d, e, f, g, h, i) { a, b, c, d, e, f, (g * 128) / 10, h, i, 0 }
 #define H AIR_HELI
 #define P AIR_CTOL
 #define J AIR_CTOL | AIR_FAST
@@ -656,7 +656,7 @@ static const AircraftVehicleInfo _orig_aircraft_vehicle_info[] = {
  * Tractive effort coefficient by default is the same as TTDPatch, 0.30*256=76
  * Air drag value depends on the top speed of the vehicle.
  */
-#define ROV(a, b, c, d, e, f, g, h) { a, b, c, PR_RUNNING_ROADVEH, d, e, f, g, h, 76, 0, VE_DEFAULT }
+#define ROV(a, b, c, d, e, f, g, h) { a, b, c, PR_RUNNING_ROADVEH, d, e, f, g, h, 76, 0, VE_DEFAULT, 0 }
 static const RoadVehicleInfo _orig_road_vehicle_info[] = {
 	/*    image_index       sfx                                 max_speed    power
 	 *    |    cost_factor  |                                   |   capacity |

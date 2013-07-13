@@ -16,36 +16,31 @@
 #include "strings_func.h"
 #include "date_func.h"
 #include "viewport_func.h"
-#include "gfx_func.h"
 #include "gui.h"
 #include "subsidy_func.h"
 #include "subsidy_base.h"
 #include "core/geometry_func.hpp"
 
-#include "table/strings.h"
+#include "widgets/subsidy_widget.h"
 
-/** Widget numbers for the subsidy list window. */
-enum SubsidyListWidgets {
-	SLW_PANEL,
-	SLW_SCROLLBAR,
-};
+#include "table/strings.h"
 
 struct SubsidyListWindow : Window {
 	Scrollbar *vscroll;
 
-	SubsidyListWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	SubsidyListWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
-		this->CreateNestedTree(desc);
-		this->vscroll = this->GetScrollbar(SLW_SCROLLBAR);
-		this->FinishInitNested(desc, window_number);
+		this->CreateNestedTree();
+		this->vscroll = this->GetScrollbar(WID_SUL_SCROLLBAR);
+		this->FinishInitNested(window_number);
 		this->OnInvalidateData(0);
 	}
 
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
-		if (widget != SLW_PANEL) return;
+		if (widget != WID_SUL_PANEL) return;
 
-		int y = this->vscroll->GetScrolledRowFromWidget(pt.y, this, SLW_PANEL, WD_FRAMERECT_TOP);
+		int y = this->vscroll->GetScrolledRowFromWidget(pt.y, this, WID_SUL_PANEL, WD_FRAMERECT_TOP);
 		int num = 0;
 		const Subsidy *s;
 		FOR_ALL_SUBSIDIES(s) {
@@ -134,7 +129,7 @@ struct SubsidyListWindow : Window {
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget != SLW_PANEL) return;
+		if (widget != WID_SUL_PANEL) return;
 		Dimension d = maxdim(GetStringBoundingBox(STR_SUBSIDIES_OFFERED_TITLE), GetStringBoundingBox(STR_SUBSIDIES_SUBSIDISED_TITLE));
 
 		resize->height = d.height;
@@ -147,7 +142,7 @@ struct SubsidyListWindow : Window {
 
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
-		if (widget != SLW_PANEL) return;
+		if (widget != WID_SUL_PANEL) return;
 
 		YearMonthDay ymd;
 		ConvertDateToYMD(_date, &ymd);
@@ -159,7 +154,7 @@ struct SubsidyListWindow : Window {
 		int pos = -this->vscroll->GetPosition();
 		const int cap = this->vscroll->GetCapacity();
 
-		/* Section for drawing the offered subisidies */
+		/* Section for drawing the offered subsidies */
 		if (IsInsideMM(pos, 0, cap)) DrawString(x, right, y + pos * FONT_HEIGHT_NORMAL, STR_SUBSIDIES_OFFERED_TITLE);
 		pos++;
 
@@ -183,7 +178,7 @@ struct SubsidyListWindow : Window {
 			pos++;
 		}
 
-		/* Section for drawing the already granted subisidies */
+		/* Section for drawing the already granted subsidies */
 		pos++;
 		if (IsInsideMM(pos, 0, cap)) DrawString(x, right, y + pos * FONT_HEIGHT_NORMAL, STR_SUBSIDIES_SUBSIDISED_TITLE);
 		pos++;
@@ -212,7 +207,7 @@ struct SubsidyListWindow : Window {
 
 	virtual void OnResize()
 	{
-		this->vscroll->SetCapacityFromWidget(this, SLW_PANEL);
+		this->vscroll->SetCapacityFromWidget(this, WID_SUL_PANEL);
 	}
 
 	/**
@@ -232,19 +227,20 @@ static const NWidgetPart _nested_subsidies_list_widgets[] = {
 		NWidget(WWT_CLOSEBOX, COLOUR_BROWN),
 		NWidget(WWT_CAPTION, COLOUR_BROWN), SetDataTip(STR_SUBSIDIES_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_SHADEBOX, COLOUR_BROWN),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_BROWN),
 		NWidget(WWT_STICKYBOX, COLOUR_BROWN),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_PANEL, COLOUR_BROWN, SLW_PANEL), SetDataTip(0x0, STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER), SetResize(1, 1), SetScrollbar(SLW_SCROLLBAR), EndContainer(),
+		NWidget(WWT_PANEL, COLOUR_BROWN, WID_SUL_PANEL), SetDataTip(0x0, STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER), SetResize(1, 1), SetScrollbar(WID_SUL_SCROLLBAR), EndContainer(),
 		NWidget(NWID_VERTICAL),
-			NWidget(NWID_VSCROLLBAR, COLOUR_BROWN, SLW_SCROLLBAR),
+			NWidget(NWID_VSCROLLBAR, COLOUR_BROWN, WID_SUL_SCROLLBAR),
 			NWidget(WWT_RESIZEBOX, COLOUR_BROWN),
 		EndContainer(),
 	EndContainer(),
 };
 
-static const WindowDesc _subsidies_list_desc(
-	WDP_AUTO, 500, 127,
+static WindowDesc _subsidies_list_desc(
+	WDP_AUTO, "list_subsidies", 500, 127,
 	WC_SUBSIDIES_LIST, WC_NONE,
 	0,
 	_nested_subsidies_list_widgets, lengthof(_nested_subsidies_list_widgets)

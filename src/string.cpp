@@ -178,16 +178,39 @@ char *CDECL str_fmt(const char *str, ...)
 	return p;
 }
 
+/**
+ * Scan the string for old values of SCC_ENCODED and fix it to
+ * it's new, static value.
+ * @param str the string to scan
+ * @param last the last valid character of str
+ */
+void str_fix_scc_encoded(char *str, const char *last)
+{
+	while (str <= last && *str != '\0') {
+		size_t len = Utf8EncodedCharLen(*str);
+		if ((len == 0 && str + 4 > last) || str + len > last) break;
+
+		WChar c;
+		len = Utf8Decode(&c, str);
+		if (c == '\0') break;
+
+		if (c == 0xE028 || c == 0xE02A) {
+			c = SCC_ENCODED;
+		}
+		str += Utf8Encode(str, c);
+	}
+	*str = '\0';
+}
+
 
 /**
  * Scans the string for valid characters and if it finds invalid ones,
  * replaces them with a question mark '?' (if not ignored)
  * @param str the string to validate
  * @param last the last valid character of str
- * @param allow_newlines whether newlines should be allowed or ignored
- * @param ignore whether to ignore or replace with a question mark
+ * @param settings the settings for the string validation.
  */
-void str_validate(char *str, const char *last, bool allow_newlines, bool ignore)
+void str_validate(char *str, const char *last, StringValidationSettings settings)
 {
 	/* Assume the ABSOLUTE WORST to be in str as it comes from the outside. */
 
@@ -208,38 +231,40 @@ void str_validate(char *str, const char *last, bool allow_newlines, bool ignore)
 		 * characters to be skipped */
 		if (c == '\0') break;
 
-		if (IsPrintable(c) && (c < SCC_SPRITE_START || c > SCC_SPRITE_END)) {
+		if ((IsPrintable(c) && (c < SCC_SPRITE_START || c > SCC_SPRITE_END)) || ((settings & SVS_ALLOW_CONTROL_CODE) != 0 && c == SCC_ENCODED)) {
 			/* Copy the character back. Even if dst is current the same as str
 			 * (i.e. no characters have been changed) this is quicker than
 			 * moving the pointers ahead by len */
 			do {
 				*dst++ = *str++;
 			} while (--len != 0);
-		} else if (allow_newlines && c == '\n') {
+		} else if ((settings & SVS_ALLOW_NEWLINE) != 0  && c == '\n') {
 			*dst++ = *str++;
 		} else {
-			if (allow_newlines && c == '\r' && str[1] == '\n') {
+			if ((settings & SVS_ALLOW_NEWLINE) != 0 && c == '\r' && str[1] == '\n') {
 				str += len;
 				continue;
 			}
 			/* Replace the undesirable character with a question mark */
 			str += len;
-			if (!ignore) *dst++ = '?';
-
-			/* In case of these two special cases assume that they really
-			 * mean SETX/SETXY and also "eat" the paramater. If this was
-			 * not the case the string was broken to begin with and this
-			 * would not break much more. */
-			if (c == SCC_SETX) {
-				str++;
-			} else if (c == SCC_SETXY) {
-				str += 2;
-			}
+			if ((settings & SVS_REPLACE_WITH_QUESTION_MARK) != 0) *dst++ = '?';
 		}
 	}
 
 	*dst = '\0';
 }
+
+/**
+ * Scans the string for valid characters and if it finds invalid ones,
+ * replaces them with a question mark '?'.
+ * @param str the string to validate
+ */
+void ValidateString(const char *str)
+{
+	/* We know it is '\0' terminated. */
+	str_validate(const_cast<char *>(str), str + strlen(str) + 1);
+}
+
 
 /**
  * Checks whether the given string is valid, i.e. contains only
@@ -390,7 +415,7 @@ int CDECL vsnprintf(char *str, size_t size, const char *format, va_list ap)
 		}
 	} else if ((size_t)ret < size) {
 		/* The buffer is big enough for the number of
-		 * characers stored (excluding null), i.e.
+		 * characters stored (excluding null), i.e.
 		 * the string has been null-terminated. */
 		return ret;
 	}
@@ -524,7 +549,7 @@ size_t Utf8Encode(char *buf, WChar c)
  * @param s string to check if it needs additional trimming
  * @param maxlen the maximum length the buffer can have.
  * @return the new length in bytes of the string (eg. strlen(new_string))
- * @NOTE maxlen is the string length _INCLUDING_ the terminating '\0'
+ * @note maxlen is the string length _INCLUDING_ the terminating '\0'
  */
 size_t Utf8TrimString(char *s, size_t maxlen)
 {
@@ -547,10 +572,9 @@ size_t Utf8TrimString(char *s, size_t maxlen)
 }
 
 #ifdef DEFINE_STRNDUP
-#include "core/math_func.hpp"
 char *strndup(const char *s, size_t len)
 {
-	len = min(strlen(s), len);
+	len = ttd_strnlen(s, len);
 	char *tmp = CallocT<char>(len + 1);
 	memcpy(tmp, s, len);
 	return tmp;
@@ -574,14 +598,33 @@ char *strcasestr(const char *haystack, const char *needle)
 #endif /* DEFINE_STRCASESTR */
 
 /**
+ * Skip some of the 'garbage' in the string that we don't want to use
+ * to sort on. This way the alphabetical sorting will work better as
+ * we would be actually using those characters instead of some other
+ * characters such as spaces and tildes at the begin of the name.
+ * @param str The string to skip the initial garbage of.
+ * @return The string with the garbage skipped.
+ */
+static const char *SkipGarbage(const char *str)
+{
+	while (*str != '\0' && (*str < 'A' || IsInsideMM(*str, '[', '`' + 1) || IsInsideMM(*str, '{', '~' + 1))) str++;
+	return str;
+}
+
+/**
  * Compares two strings using case insensitive natural sort.
  *
  * @param s1 First string to compare.
  * @param s2 Second string to compare.
+ * @param ignore_garbage_at_front Skip punctuation characters in the front
  * @return Less than zero if s1 < s2, zero if s1 == s2, greater than zero if s1 > s2.
  */
-int strnatcmp(const char *s1, const char *s2)
+int strnatcmp(const char *s1, const char *s2, bool ignore_garbage_at_front)
 {
+	if (ignore_garbage_at_front) {
+		s1 = SkipGarbage(s1);
+		s2 = SkipGarbage(s2);
+	}
 #ifdef WITH_ICU
 	if (_current_collator != NULL) {
 		UErrorCode status = U_ZERO_ERROR;

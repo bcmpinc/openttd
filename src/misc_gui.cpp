@@ -12,42 +12,32 @@
 #include "stdafx.h"
 #include "debug.h"
 #include "landscape.h"
-#include "newgrf_text.h"
+#include "error.h"
 #include "gui.h"
-#include "viewport_func.h"
-#include "gfx_func.h"
 #include "command_func.h"
 #include "company_func.h"
 #include "town.h"
 #include "string_func.h"
 #include "company_base.h"
 #include "texteff.hpp"
-#include "company_manager_face.h"
 #include "strings_func.h"
-#include "zoom_func.h"
 #include "window_func.h"
 #include "querystring_gui.h"
-#include "console_func.h"
 #include "core/geometry_func.hpp"
 #include "newgrf_debug.h"
 
+#include "widgets/misc_widget.h"
+
 #include "table/strings.h"
 
-/**
- * Try to retrive the current clipboard contents.
- *
- * @note OS-specific funtion.
- * @return True if some text could be retrived.
- */
-bool GetClipboardContents(char *buffer, size_t buff_len);
-
-int _caret_timer;
-
-
-/** Widgets for the land info window. */
-enum LandInfoWidgets {
-	LIW_BACKGROUND, ///< Background to draw on
+/** Method to open the OSK. */
+enum OskActivation {
+	OSKA_DISABLED,           ///< The OSK shall not be activated at all.
+	OSKA_DOUBLE_CLICK,       ///< Double click on the edit box opens OSK.
+	OSKA_SINGLE_CLICK,       ///< Single click after focus click opens OSK.
+	OSKA_IMMEDIATELY,        ///< Focusing click already opens OSK.
 };
+
 
 static const NWidgetPart _nested_land_info_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
@@ -55,11 +45,11 @@ static const NWidgetPart _nested_land_info_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_LAND_AREA_INFORMATION_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_DEBUGBOX, COLOUR_GREY),
 	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_GREY, LIW_BACKGROUND), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_GREY, WID_LI_BACKGROUND), EndContainer(),
 };
 
-static const WindowDesc _land_info_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _land_info_desc(
+	WDP_AUTO, "land_info", 0, 0,
 	WC_LAND_INFO, WC_NONE,
 	0,
 	_nested_land_info_widgets, lengthof(_nested_land_info_widgets)
@@ -80,7 +70,7 @@ public:
 
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
-		if (widget != LIW_BACKGROUND) return;
+		if (widget != WID_LI_BACKGROUND) return;
 
 		uint y = r.top + WD_TEXTPANEL_TOP;
 		for (uint i = 0; i < LAND_INFO_CENTERED_LINES; i++) {
@@ -99,7 +89,7 @@ public:
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget != LIW_BACKGROUND) return;
+		if (widget != WID_LI_BACKGROUND) return;
 
 		size->height = WD_TEXTPANEL_TOP + WD_TEXTPANEL_BOTTOM;
 		for (uint i = 0; i < LAND_INFO_CENTERED_LINES; i++) {
@@ -120,9 +110,9 @@ public:
 		}
 	}
 
-	LandInfoWindow(TileIndex tile) : Window(), tile(tile)
+	LandInfoWindow(TileIndex tile) : Window(&_land_info_desc), tile(tile)
 	{
-		this->InitNested(&_land_info_desc);
+		this->InitNested();
 
 #if defined(_DEBUG)
 #	define LANDINFOD_LEVEL 0
@@ -221,7 +211,7 @@ public:
 		snprintf(tmp, lengthof(tmp), "0x%.4X", tile);
 		SetDParam(0, TileX(tile));
 		SetDParam(1, TileY(tile));
-		SetDParam(2, GetTileZ(tile) / TILE_HEIGHT);
+		SetDParam(2, GetTileZ(tile));
 		SetDParamStr(3, tmp);
 		GetString(this->landinfo_data[line_nr], STR_LAND_AREA_INFORMATION_LANDINFO_COORDS, lastof(this->landinfo_data[line_nr]));
 		line_nr++;
@@ -359,12 +349,6 @@ void ShowLandInfo(TileIndex tile)
 	new LandInfoWindow(tile);
 }
 
-/** Widgets for the land info window. */
-enum AboutWidgets {
-	AW_SCROLLING_TEXT,       ///< The actually scrolling text
-	AW_WEBSITE,              ///< URL of OpenTTD website
-};
-
 static const NWidgetPart _nested_about_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_GREY),
@@ -374,15 +358,15 @@ static const NWidgetPart _nested_about_widgets[] = {
 		NWidget(WWT_LABEL, COLOUR_GREY), SetDataTip(STR_ABOUT_ORIGINAL_COPYRIGHT, STR_NULL),
 		NWidget(WWT_LABEL, COLOUR_GREY), SetDataTip(STR_ABOUT_VERSION, STR_NULL),
 		NWidget(WWT_FRAME, COLOUR_GREY), SetPadding(0, 5, 1, 5),
-			NWidget(WWT_EMPTY, INVALID_COLOUR, AW_SCROLLING_TEXT),
+			NWidget(WWT_EMPTY, INVALID_COLOUR, WID_A_SCROLLING_TEXT),
 		EndContainer(),
-		NWidget(WWT_LABEL, COLOUR_GREY, AW_WEBSITE), SetDataTip(STR_BLACK_RAW_STRING, STR_NULL),
+		NWidget(WWT_LABEL, COLOUR_GREY, WID_A_WEBSITE), SetDataTip(STR_BLACK_RAW_STRING, STR_NULL),
 		NWidget(WWT_LABEL, COLOUR_GREY), SetDataTip(STR_ABOUT_COPYRIGHT_OPENTTD, STR_NULL),
 	EndContainer(),
 };
 
-static const WindowDesc _about_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _about_desc(
+	WDP_CENTER, NULL, 0, 0,
 	WC_GAME_OPTIONS, WC_NONE,
 	0,
 	_nested_about_widgets, lengthof(_nested_about_widgets)
@@ -397,6 +381,7 @@ static const char * const _credits[] = {
 	"  Jean-Fran\xC3\xA7ois Claeys (Belugas) - GUI, newindustries and more",
 	"  Matthijs Kooijman (blathijs) - Pathfinder-guru, pool rework",
 	"  Christoph Elsenhans (frosch) - General coding",
+	"  Ulf Hermann (fonsinchen) - Cargo Distribution",
 	"  Lo\xC3\xAF""c Guilloux (glx) - Windows Expert",
 	"  Michael Lutz (michi_cc) - Path based signals",
 	"  Owen Rudge (orudge) - Forum host, OS/2 port",
@@ -406,6 +391,7 @@ static const char * const _credits[] = {
 	"  Zden\xC4\x9Bk Sojka (SmatZ) - Bug finder and fixer",
 	"  Jos\xC3\xA9 Soler (Terkhen) - General coding",
 	"  Thijs Marinussen (Yexo) - AI Framework",
+	"  Leif Linse (Zuu) - AI/Game Script",
 	"",
 	"Inactive Developers:",
 	"  Bjarni Corfitzen (Bjarni) - MacOSX port, coder and vehicles",
@@ -421,25 +407,25 @@ static const char * const _credits[] = {
 	"  Serge Paquet (vurlix) - Assistant project manager, coder (0.1 - 0.3.3)",
 	"  Dominik Scherer (dominik81) - Lead programmer, GUI expert (0.3.0 - 0.3.6)",
 	"  Benedikt Br\xC3\xBCggemeier (skidd13) - Bug fixer and code reworker",
-	"  Patric Stout (TrueLight) - Programmer (0.3 - pre0.7), sys op (active)",
+	"  Patric Stout (TrueBrain) - NoProgrammer (0.3 - 1.2), sys op (active)",
 	"",
 	"Special thanks go out to:",
 	"  Josef Drexler - For his great work on TTDPatch",
-	"  Marcin Grzegorczyk - For describing Transport Tycoon Deluxe internals",
+	"  Marcin Grzegorczyk - Track foundations and for describing TTD internals",
 	"  Petr Baudi\xC5\xA1 (pasky) - Many patches, newGRF support",
-	"  Stefan Mei\xC3\x9Fner (sign_de) - For his work on the console",
 	"  Simon Sasburg (HackyKid) - Many bugfixes he has blessed us with",
+	"  Stefan Mei\xC3\x9Fner (sign_de) - For his work on the console",
+	"  Mike Ragsdale - OpenTTD installer",
 	"  Cian Duffy (MYOB) - BeOS port / manual writing",
 	"  Christian Rosentreter (tokai) - MorphOS / AmigaOS port",
 	"  Richard Kempton (richK) - additional airports, initial TGP implementation",
 	"",
 	"  Alberto Demichelis - Squirrel scripting language \xC2\xA9 2003-2008",
 	"  L. Peter Deutsch - MD5 implementation \xC2\xA9 1999, 2000, 2002",
-	"  Michael Blunck - Pre-Signals and Semaphores \xC2\xA9 2003",
+	"  Michael Blunck - Pre-signals and semaphores \xC2\xA9 2003",
 	"  George - Canal/Lock graphics \xC2\xA9 2003-2004",
-	"  Andrew Parkhouse - River graphics",
-	"  David Dallaston - Tram tracks",
-	"  Marcin Grzegorczyk - Foundations for Tracks on Slopes",
+	"  Andrew Parkhouse (andythenorth) - River graphics",
+	"  David Dallaston (Pikka) - Tram tracks",
 	"  All Translators - Who made OpenTTD a truly international game",
 	"  Bug Reporters - Without whom OpenTTD would still be full of bugs!",
 	"",
@@ -454,22 +440,22 @@ struct AboutWindow : public Window {
 	int line_height;                         ///< The height of a single line
 	static const int num_visible_lines = 19; ///< The number of lines visible simultaneously
 
-	AboutWindow() : Window()
+	AboutWindow() : Window(&_about_desc)
 	{
-		this->InitNested(&_about_desc);
+		this->InitNested(WN_GAME_OPTIONS_ABOUT);
 
 		this->counter = 5;
-		this->text_position = this->GetWidget<NWidgetBase>(AW_SCROLLING_TEXT)->pos_y + this->GetWidget<NWidgetBase>(AW_SCROLLING_TEXT)->current_y;
+		this->text_position = this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->pos_y + this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->current_y;
 	}
 
 	virtual void SetStringParameters(int widget) const
 	{
-		if (widget == AW_WEBSITE) SetDParamStr(0, "Website: http://www.openttd.org");
+		if (widget == WID_A_WEBSITE) SetDParamStr(0, "Website: http://www.openttd.org");
 	}
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget != AW_SCROLLING_TEXT) return;
+		if (widget != WID_A_SCROLLING_TEXT) return;
 
 		this->line_height = FONT_HEIGHT_NORMAL;
 
@@ -485,7 +471,7 @@ struct AboutWindow : public Window {
 
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
-		if (widget != AW_SCROLLING_TEXT) return;
+		if (widget != WID_A_SCROLLING_TEXT) return;
 
 		int y = this->text_position;
 
@@ -504,8 +490,8 @@ struct AboutWindow : public Window {
 			this->counter = 5;
 			this->text_position--;
 			/* If the last text has scrolled start a new from the start */
-			if (this->text_position < (int)(this->GetWidget<NWidgetBase>(AW_SCROLLING_TEXT)->pos_y - lengthof(_credits) * this->line_height)) {
-				this->text_position = this->GetWidget<NWidgetBase>(AW_SCROLLING_TEXT)->pos_y + this->GetWidget<NWidgetBase>(AW_SCROLLING_TEXT)->current_y;
+			if (this->text_position < (int)(this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->pos_y - lengthof(_credits) * this->line_height)) {
+				this->text_position = this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->pos_y + this->GetWidget<NWidgetBase>(WID_A_SCROLLING_TEXT)->current_y;
 			}
 			this->SetDirty();
 		}
@@ -514,264 +500,8 @@ struct AboutWindow : public Window {
 
 void ShowAboutWindow()
 {
-	DeleteWindowById(WC_GAME_OPTIONS, 0);
+	DeleteWindowByClass(WC_GAME_OPTIONS);
 	new AboutWindow();
-}
-
-/** Widgets of the error message windows */
-enum ErrorMessageWidgets {
-	EMW_CAPTION,
-	EMW_FACE,
-	EMW_MESSAGE,
-};
-
-static const NWidgetPart _nested_errmsg_widgets[] = {
-	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_CLOSEBOX, COLOUR_RED),
-		NWidget(WWT_CAPTION, COLOUR_RED, EMW_CAPTION), SetDataTip(STR_ERROR_MESSAGE_CAPTION, STR_NULL),
-	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_RED),
-		NWidget(WWT_EMPTY, COLOUR_RED, EMW_MESSAGE), SetPadding(0, 2, 0, 2), SetMinimalSize(236, 32),
-	EndContainer(),
-};
-
-static const WindowDesc _errmsg_desc(
-	WDP_MANUAL, 0, 0,
-	WC_ERRMSG, WC_NONE,
-	0,
-	_nested_errmsg_widgets, lengthof(_nested_errmsg_widgets)
-);
-
-static const NWidgetPart _nested_errmsg_face_widgets[] = {
-	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_CLOSEBOX, COLOUR_RED),
-		NWidget(WWT_CAPTION, COLOUR_RED, EMW_CAPTION), SetDataTip(STR_ERROR_MESSAGE_CAPTION_OTHER_COMPANY, STR_NULL),
-	EndContainer(),
-	NWidget(WWT_PANEL, COLOUR_RED),
-		NWidget(NWID_HORIZONTAL), SetPIP(2, 1, 2),
-			NWidget(WWT_EMPTY, COLOUR_RED, EMW_FACE), SetMinimalSize(92, 119), SetFill(0, 1), SetPadding(2, 0, 1, 0),
-			NWidget(WWT_EMPTY, COLOUR_RED, EMW_MESSAGE), SetFill(0, 1), SetMinimalSize(238, 123),
-		EndContainer(),
-	EndContainer(),
-};
-
-static const WindowDesc _errmsg_face_desc(
-	WDP_MANUAL, 0, 0,
-	WC_ERRMSG, WC_NONE,
-	0,
-	_nested_errmsg_face_widgets, lengthof(_nested_errmsg_face_widgets)
-);
-
-/** Window class for displaying an error message window. */
-struct ErrmsgWindow : public Window {
-private:
-	uint duration;                  ///< Length of display of the message. 0 means forever,
-	uint64 decode_params[20];       ///< Parameters of the message strings.
-	uint textref_stack_size;        ///< Number of uint32 values to put on the #TextRefStack for the error message.
-	uint32 textref_stack[16];       ///< Values to put on the #TextRefStack for the error message.
-	StringID summary_msg;           ///< General error message showed in first line. Must be valid.
-	StringID detailed_msg;          ///< Detailed error message showed in second line. Can be #INVALID_STRING_ID.
-	uint height_summary;            ///< Height of the #summary_msg string in pixels in the #EMW_MESSAGE widget.
-	uint height_detailed;           ///< Height of the #detailed_msg string in pixels in the #EMW_MESSAGE widget.
-	Point position;                 ///< Position of the error message window.
-	CompanyID face;                 ///< Company belonging to the face being shown. #INVALID_COMPANY if no face present.
-
-public:
-	ErrmsgWindow(Point pt, StringID summary_msg, StringID detailed_msg, bool no_timeout, uint textref_stack_size, const uint32 *textref_stack) : Window()
-	{
-		this->position = pt;
-		this->duration = no_timeout ? 0 : _settings_client.gui.errmsg_duration;
-		CopyOutDParam(this->decode_params, 0, lengthof(this->decode_params));
-		this->summary_msg  = summary_msg;
-		this->detailed_msg = detailed_msg;
-		this->textref_stack_size = textref_stack_size;
-		if (textref_stack_size > 0) {
-			MemCpyT(this->textref_stack, textref_stack, textref_stack_size);
-		}
-
-		CompanyID company = (CompanyID)GetDParamX(this->decode_params, 2);
-		this->face = (this->detailed_msg == STR_ERROR_OWNED_BY && company < MAX_COMPANIES) ? company : INVALID_COMPANY;
-		const WindowDesc *desc = (face == INVALID_COMPANY) ? &_errmsg_desc : &_errmsg_face_desc;
-
-		assert(summary_msg != INVALID_STRING_ID);
-
-		this->InitNested(desc);
-	}
-
-	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
-	{
-		if (widget != EMW_MESSAGE) return;
-
-		CopyInDParam(0, this->decode_params, lengthof(this->decode_params));
-		if (this->textref_stack_size > 0) StartTextRefStackUsage(this->textref_stack_size, this->textref_stack);
-
-		int text_width = max(0, (int)size->width - WD_FRAMETEXT_LEFT - WD_FRAMETEXT_RIGHT);
-		this->height_summary  = GetStringHeight(this->summary_msg, text_width);
-		this->height_detailed = (this->detailed_msg == INVALID_STRING_ID) ? 0 : GetStringHeight(this->detailed_msg, text_width);
-
-		if (this->textref_stack_size > 0) StopTextRefStackUsage();
-
-		uint panel_height = WD_FRAMERECT_TOP + this->height_summary + WD_FRAMERECT_BOTTOM;
-		if (this->detailed_msg != INVALID_STRING_ID) panel_height += this->height_detailed + WD_PAR_VSEP_WIDE;
-
-		size->height = max(size->height, panel_height);
-	}
-
-	virtual Point OnInitialPosition(const WindowDesc *desc, int16 sm_width, int16 sm_height, int window_number)
-	{
-		/* Position (0, 0) given, center the window. */
-		if (this->position.x == 0 && this->position.y == 0) {
-			Point pt = {(_screen.width - sm_width) >> 1, (_screen.height - sm_height) >> 1};
-			return pt;
-		}
-
-		/* Find the free screen space between the main toolbar at the top, and the statusbar at the bottom.
-		 * Add a fixed distance 20 to make it less cluttered.
-		 */
-		int scr_top = GetMainViewTop() + 20;
-		int scr_bot = GetMainViewBottom() - 20;
-
-		Point pt = RemapCoords2(this->position.x, this->position.y);
-		const ViewPort *vp = FindWindowById(WC_MAIN_WINDOW, 0)->viewport;
-		if (this->face == INVALID_COMPANY) {
-			/* move x pos to opposite corner */
-			pt.x = UnScaleByZoom(pt.x - vp->virtual_left, vp->zoom) + vp->left;
-			pt.x = (pt.x < (_screen.width >> 1)) ? _screen.width - sm_width - 20 : 20; // Stay 20 pixels away from the edge of the screen.
-
-			/* move y pos to opposite corner */
-			pt.y = UnScaleByZoom(pt.y - vp->virtual_top, vp->zoom) + vp->top;
-			pt.y = (pt.y < (_screen.height >> 1)) ? scr_bot - sm_height : scr_top;
-		} else {
-			pt.x = Clamp(UnScaleByZoom(pt.x - vp->virtual_left, vp->zoom) + vp->left - (sm_width / 2),  0, _screen.width  - sm_width);
-			pt.y = Clamp(UnScaleByZoom(pt.y - vp->virtual_top,  vp->zoom) + vp->top  - (sm_height / 2), scr_top, scr_bot - sm_height);
-		}
-		return pt;
-	}
-
-	/**
-	 * Some data on this window has become invalid.
-	 * @param data Information about the changed data.
-	 * @param gui_scope Whether the call is done from GUI scope. You may not do everything when not in GUI scope. See #InvalidateWindowData() for details.
-	 */
-	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
-	{
-		/* If company gets shut down, while displaying an error about it, remove the error message. */
-		if (this->face != INVALID_COMPANY && !Company::IsValidID(this->face)) delete this;
-	}
-
-	virtual void SetStringParameters(int widget) const
-	{
-		if (widget == EMW_CAPTION) CopyInDParam(0, this->decode_params, lengthof(this->decode_params));
-	}
-
-	virtual void DrawWidget(const Rect &r, int widget) const
-	{
-		switch (widget) {
-			case EMW_FACE: {
-				const Company *c = Company::Get(this->face);
-				DrawCompanyManagerFace(c->face, c->colour, r.left, r.top);
-				break;
-			}
-
-			case EMW_MESSAGE:
-				CopyInDParam(0, this->decode_params, lengthof(this->decode_params));
-				if (this->textref_stack_size > 0) StartTextRefStackUsage(this->textref_stack_size, this->textref_stack);
-
-				if (this->detailed_msg == INVALID_STRING_ID) {
-					DrawStringMultiLine(r.left + WD_FRAMETEXT_LEFT, r.right - WD_FRAMETEXT_RIGHT, r.top + WD_FRAMERECT_TOP, r.bottom - WD_FRAMERECT_BOTTOM,
-							this->summary_msg, TC_FROMSTRING, SA_CENTER);
-				} else {
-					int extra = (r.bottom - r.top + 1 - this->height_summary - this->height_detailed - WD_PAR_VSEP_WIDE) / 2;
-
-					/* Note: NewGRF supplied error message often do not start with a colour code, so default to white. */
-					int top = r.top + WD_FRAMERECT_TOP;
-					int bottom = top + this->height_summary + extra;
-					DrawStringMultiLine(r.left + WD_FRAMETEXT_LEFT, r.right - WD_FRAMETEXT_RIGHT, top, bottom, this->summary_msg, TC_WHITE, SA_CENTER);
-
-					bottom = r.bottom - WD_FRAMERECT_BOTTOM;
-					top = bottom - this->height_detailed - extra;
-					DrawStringMultiLine(r.left + WD_FRAMETEXT_LEFT, r.right - WD_FRAMETEXT_RIGHT, top, bottom, this->detailed_msg, TC_WHITE, SA_CENTER);
-				}
-
-				if (this->textref_stack_size > 0) StopTextRefStackUsage();
-				break;
-
-			default:
-				break;
-		}
-	}
-
-	virtual void OnMouseLoop()
-	{
-		/* Disallow closing the window too easily, if timeout is disabled */
-		if (_right_button_down && this->duration != 0) delete this;
-	}
-
-	virtual void OnHundredthTick()
-	{
-		/* Timeout enabled? */
-		if (this->duration != 0) {
-			this->duration--;
-			if (this->duration == 0) delete this;
-		}
-	}
-
-	~ErrmsgWindow()
-	{
-		SetRedErrorSquare(INVALID_TILE);
-	}
-
-	virtual EventState OnKeyPress(uint16 key, uint16 keycode)
-	{
-		if (keycode != WKC_SPACE) return ES_NOT_HANDLED;
-		delete this;
-		return ES_HANDLED;
-	}
-};
-
-/**
- * Display an error message in a window.
- * @param summary_msg  General error message showed in first line. Must be valid.
- * @param detailed_msg Detailed error message showed in second line. Can be INVALID_STRING_ID.
- * @param wl           Message severity.
- * @param x            World X position (TileVirtX) of the error location. Set both x and y to 0 to just center the message when there is no related error tile.
- * @param y            World Y position (TileVirtY) of the error location. Set both x and y to 0 to just center the message when there is no related error tile.
- * @param textref_stack_size Number of uint32 values to put on the #TextRefStack for the error message; 0 if the #TextRefStack shall not be used.
- * @param textref_stack Values to put on the #TextRefStack.
- */
-void ShowErrorMessage(StringID summary_msg, StringID detailed_msg, WarningLevel wl, int x, int y, uint textref_stack_size, const uint32 *textref_stack)
-{
-	assert(textref_stack_size == 0 || textref_stack != NULL);
-	if (summary_msg == STR_NULL) summary_msg = STR_EMPTY;
-
-	if (wl != WL_INFO) {
-		/* Print message to console */
-		char buf[DRAW_STRING_BUFFER];
-
-		if (textref_stack_size > 0) StartTextRefStackUsage(textref_stack_size, textref_stack);
-
-		char *b = GetString(buf, summary_msg, lastof(buf));
-		if (detailed_msg != INVALID_STRING_ID) {
-			b += seprintf(b, lastof(buf), " ");
-			GetString(b, detailed_msg, lastof(buf));
-		}
-
-		if (textref_stack_size > 0) StopTextRefStackUsage();
-
-		switch (wl) {
-			case WL_WARNING: IConsolePrint(CC_WARNING, buf); break;
-			default:         IConsoleError(buf); break;
-		}
-	}
-
-	bool no_timeout = wl == WL_CRITICAL;
-
-	if (_settings_client.gui.errmsg_duration == 0 && !no_timeout) return;
-
-	DeleteWindowById(WC_ERRMSG, 0);
-
-	Point pt = {x, y};
-	new ErrmsgWindow(pt, summary_msg, detailed_msg, no_timeout, textref_stack_size, textref_stack);
 }
 
 /**
@@ -814,17 +544,28 @@ void ShowCostOrIncomeAnimation(int x, int y, int z, Money cost)
 
 /**
  * Display animated feeder income.
- * @param x    World X position of the animation location.
- * @param y    World Y position of the animation location.
- * @param z    World Z position of the animation location.
- * @param cost Estimated feeder income.
+ * @param x        World X position of the animation location.
+ * @param y        World Y position of the animation location.
+ * @param z        World Z position of the animation location.
+ * @param transfer Estimated feeder income.
+ * @param income   Real income from goods being delivered to their final destination.
  */
-void ShowFeederIncomeAnimation(int x, int y, int z, Money cost)
+void ShowFeederIncomeAnimation(int x, int y, int z, Money transfer, Money income)
 {
 	Point pt = RemapCoords(x, y, z);
 
-	SetDParam(0, cost);
-	AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
+	SetDParam(0, transfer);
+	if (income == 0) {
+		AddTextEffect(STR_FEEDER, pt.x, pt.y, DAY_TICKS, TE_RISING);
+	} else {
+		StringID msg = STR_FEEDER_COST;
+		if (income < 0) {
+			income = -income;
+			msg = STR_FEEDER_INCOME;
+		}
+		SetDParam(1, income);
+		AddTextEffect(msg, pt.x, pt.y, DAY_TICKS, TE_RISING);
+	}
 }
 
 /**
@@ -872,11 +613,11 @@ void HideFillingPercent(TextEffectID *te_id)
 }
 
 static const NWidgetPart _nested_tooltips_widgets[] = {
-	NWidget(WWT_PANEL, COLOUR_GREY, 0), SetMinimalSize(200, 32), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_GREY, WID_TT_BACKGROUND), SetMinimalSize(200, 32), EndContainer(),
 };
 
-static const WindowDesc _tool_tips_desc(
-	WDP_MANUAL, 0, 0, // Coordinates and sizes are not used,
+static WindowDesc _tool_tips_desc(
+	WDP_MANUAL, NULL, 0, 0, // Coordinates and sizes are not used,
 	WC_TOOLTIPS, WC_NONE,
 	0,
 	_nested_tooltips_widgets, lengthof(_nested_tooltips_widgets)
@@ -890,7 +631,7 @@ struct TooltipsWindow : public Window
 	uint64 params[5];                 ///< The string parameters.
 	TooltipCloseCondition close_cond; ///< Condition for closing the window.
 
-	TooltipsWindow(Window *parent, StringID str, uint paramcount, const uint64 params[], TooltipCloseCondition close_tooltip) : Window()
+	TooltipsWindow(Window *parent, StringID str, uint paramcount, const uint64 params[], TooltipCloseCondition close_tooltip) : Window(&_tool_tips_desc)
 	{
 		this->parent = parent;
 		this->string_id = str;
@@ -900,12 +641,12 @@ struct TooltipsWindow : public Window
 		this->paramcount = paramcount;
 		this->close_cond = close_tooltip;
 
-		this->InitNested(&_tool_tips_desc);
+		this->InitNested();
 
-		CLRBITS(this->flags4, WF_WHITE_BORDER_MASK); // remove white-border from tooltip
+		CLRBITS(this->flags, WF_WHITE_BORDER);
 	}
 
-	virtual Point OnInitialPosition(const WindowDesc *desc, int16 sm_width, int16 sm_height, int window_number)
+	virtual Point OnInitialPosition(int16 sm_width, int16 sm_height, int window_number)
 	{
 		/* Find the free screen space between the main toolbar at the top, and the statusbar at the bottom.
 		 * Add a fixed distance 2 so the tooltip floats free from both bars.
@@ -974,7 +715,7 @@ struct TooltipsWindow : public Window
  * @param str String to be displayed
  * @param paramcount number of params to deal with
  * @param params (optional) up to 5 pieces of additional information that may be added to a tooltip
- * @param use_left_mouse_button close the tooltip when the left (true) or right (false) mousebutton is released
+ * @param use_left_mouse_button close the tooltip when the left (true) or right (false) mouse button is released
  */
 void GuiShowTooltips(Window *parent, StringID str, uint paramcount, const uint64 params[], TooltipCloseCondition close_tooltip)
 {
@@ -985,335 +726,39 @@ void GuiShowTooltips(Window *parent, StringID str, uint paramcount, const uint64
 	new TooltipsWindow(parent, str, paramcount, params, close_tooltip);
 }
 
-/* Delete a character at the caret position in a text buf.
- * If backspace is set, delete the character before the caret,
- * else delete the character after it. */
-static void DelChar(Textbuf *tb, bool backspace)
-{
-	WChar c;
-	char *s = tb->buf + tb->caretpos;
-
-	if (backspace) s = Utf8PrevChar(s);
-
-	uint16 len = (uint16)Utf8Decode(&c, s);
-	uint width = GetCharacterWidth(FS_NORMAL, c);
-
-	tb->pixels -= width;
-	if (backspace) {
-		tb->caretpos   -= len;
-		tb->caretxoffs -= width;
-	}
-
-	/* Move the remaining characters over the marker */
-	memmove(s, s + len, tb->bytes - (s - tb->buf) - len);
-	tb->bytes -= len;
-	tb->chars--;
-}
-
-/**
- * Delete a character from a textbuffer, either with 'Delete' or 'Backspace'
- * The character is delete from the position the caret is at
- * @param tb Textbuf type to be changed
- * @param delmode Type of deletion, either WKC_BACKSPACE or WKC_DELETE
- * @return Return true on successful change of Textbuf, or false otherwise
- */
-bool DeleteTextBufferChar(Textbuf *tb, int delmode)
-{
-	if (delmode == WKC_BACKSPACE && tb->caretpos != 0) {
-		DelChar(tb, true);
-		return true;
-	} else if (delmode == WKC_DELETE && tb->caretpos < tb->bytes - 1) {
-		DelChar(tb, false);
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * Delete every character in the textbuffer
- * @param tb Textbuf buffer to be emptied
- */
-void DeleteTextBufferAll(Textbuf *tb)
-{
-	memset(tb->buf, 0, tb->max_bytes);
-	tb->bytes = tb->chars = 1;
-	tb->pixels = tb->caretpos = tb->caretxoffs = 0;
-}
-
-/**
- * Insert a character to a textbuffer. If maxwidth of the Textbuf is zero,
- * we don't care about the visual-length but only about the physical
- * length of the string
- * @param tb Textbuf type to be changed
- * @param key Character to be inserted
- * @return Return true on successful change of Textbuf, or false otherwise
- */
-bool InsertTextBufferChar(Textbuf *tb, WChar key)
-{
-	const byte charwidth = GetCharacterWidth(FS_NORMAL, key);
-	uint16 len = (uint16)Utf8CharLen(key);
-	if (tb->bytes + len <= tb->max_bytes && tb->chars + 1 <= tb->max_chars) {
-		memmove(tb->buf + tb->caretpos + len, tb->buf + tb->caretpos, tb->bytes - tb->caretpos);
-		Utf8Encode(tb->buf + tb->caretpos, key);
-		tb->chars++;
-		tb->bytes  += len;
-		tb->pixels += charwidth;
-
-		tb->caretpos   += len;
-		tb->caretxoffs += charwidth;
-		return true;
-	}
-	return false;
-}
-
-/**
- * Insert a chunk of text from the clipboard onto the textbuffer. Get TEXT clipboard
- * and append this up to the maximum length (either absolute or screenlength). If maxlength
- * is zero, we don't care about the screenlength but only about the physical length of the string
- * @param tb Textbuf type to be changed
- * @return true on successful change of Textbuf, or false otherwise
- */
-bool InsertTextBufferClipboard(Textbuf *tb)
-{
-	char utf8_buf[512];
-
-	if (!GetClipboardContents(utf8_buf, lengthof(utf8_buf))) return false;
-
-	uint16 pixels = 0, bytes = 0, chars = 0;
-	WChar c;
-	for (const char *ptr = utf8_buf; (c = Utf8Consume(&ptr)) != '\0';) {
-		if (!IsPrintable(c)) break;
-
-		byte len = Utf8CharLen(c);
-		if (tb->bytes + bytes + len > tb->max_bytes) break;
-		if (tb->chars + chars + 1   > tb->max_chars) break;
-
-		byte char_pixels = GetCharacterWidth(FS_NORMAL, c);
-
-		pixels += char_pixels;
-		bytes += len;
-		chars++;
-	}
-
-	if (bytes == 0) return false;
-
-	memmove(tb->buf + tb->caretpos + bytes, tb->buf + tb->caretpos, tb->bytes - tb->caretpos);
-	memcpy(tb->buf + tb->caretpos, utf8_buf, bytes);
-	tb->pixels += pixels;
-	tb->caretxoffs += pixels;
-
-	tb->bytes += bytes;
-	tb->chars += chars;
-	tb->caretpos += bytes;
-	assert(tb->bytes <= tb->max_bytes);
-	assert(tb->chars <= tb->max_chars);
-	tb->buf[tb->bytes - 1] = '\0'; // terminating zero
-
-	return true;
-}
-
-/**
- * Handle text navigation with arrow keys left/right.
- * This defines where the caret will blink and the next characer interaction will occur
- * @param tb Textbuf type where navigation occurs
- * @param navmode Direction in which navigation occurs WKC_LEFT, WKC_RIGHT, WKC_END, WKC_HOME
- * @return Return true on successful change of Textbuf, or false otherwise
- */
-bool MoveTextBufferPos(Textbuf *tb, int navmode)
-{
-	switch (navmode) {
-		case WKC_LEFT:
-			if (tb->caretpos != 0) {
-				WChar c;
-				const char *s = Utf8PrevChar(tb->buf + tb->caretpos);
-				Utf8Decode(&c, s);
-				tb->caretpos    = s - tb->buf; // -= (tb->buf + tb->caretpos - s)
-				tb->caretxoffs -= GetCharacterWidth(FS_NORMAL, c);
-
-				return true;
-			}
-			break;
-
-		case WKC_RIGHT:
-			if (tb->caretpos < tb->bytes - 1) {
-				WChar c;
-
-				tb->caretpos   += (uint16)Utf8Decode(&c, tb->buf + tb->caretpos);
-				tb->caretxoffs += GetCharacterWidth(FS_NORMAL, c);
-
-				return true;
-			}
-			break;
-
-		case WKC_HOME:
-			tb->caretpos = 0;
-			tb->caretxoffs = 0;
-			return true;
-
-		case WKC_END:
-			tb->caretpos = tb->bytes - 1;
-			tb->caretxoffs = tb->pixels;
-			return true;
-
-		default:
-			break;
-	}
-
-	return false;
-}
-
-/**
- * Initialize the textbuffer by supplying it the buffer to write into
- * and the maximum length of this buffer
- * @param tb Textbuf type which is getting initialized
- * @param buf the buffer that will be holding the data for input
- * @param max_bytes maximum size in bytes, including terminating '\0'
- */
-void InitializeTextBuffer(Textbuf *tb, char *buf, uint16 max_bytes)
-{
-	InitializeTextBuffer(tb, buf, max_bytes, max_bytes);
-}
-
-/**
- * Initialize the textbuffer by supplying it the buffer to write into
- * and the maximum length of this buffer
- * @param tb Textbuf type which is getting initialized
- * @param buf the buffer that will be holding the data for input
- * @param max_bytes maximum size in bytes, including terminating '\0'
- * @param max_chars maximum size in chars, including terminating '\0'
- */
-void InitializeTextBuffer(Textbuf *tb, char *buf, uint16 max_bytes, uint16 max_chars)
-{
-	assert(max_bytes != 0);
-	assert(max_chars != 0);
-
-	tb->buf        = buf;
-	tb->max_bytes  = max_bytes;
-	tb->max_chars  = max_chars;
-	tb->caret      = true;
-	UpdateTextBufferSize(tb);
-}
-
-/**
- * Update Textbuf type with its actual physical character and screenlength
- * Get the count of characters in the string as well as the width in pixels.
- * Useful when copying in a larger amount of text at once
- * @param tb Textbuf type which length is calculated
- */
-void UpdateTextBufferSize(Textbuf *tb)
-{
-	const char *buf = tb->buf;
-
-	tb->pixels = 0;
-	tb->chars = tb->bytes = 1; // terminating zero
-
-	WChar c;
-	while ((c = Utf8Consume(&buf)) != '\0') {
-		tb->pixels += GetCharacterWidth(FS_NORMAL, c);
-		tb->bytes += Utf8CharLen(c);
-		tb->chars++;
-	}
-
-	assert(tb->bytes <= tb->max_bytes);
-	assert(tb->chars <= tb->max_chars);
-
-	tb->caretpos = tb->bytes - 1;
-	tb->caretxoffs = tb->pixels;
-}
-
-/**
- * Handle the flashing of the caret.
- * @param tb The text buffer to handle the caret of.
- * @return True if the caret state changes.
- */
-bool HandleCaret(Textbuf *tb)
-{
-	/* caret changed? */
-	bool b = !!(_caret_timer & 0x20);
-
-	if (b != tb->caret) {
-		tb->caret = b;
-		return true;
-	}
-	return false;
-}
-
-bool QueryString::HasEditBoxFocus(const Window *w, int wid) const
-{
-	if (w->IsWidgetGloballyFocused(wid)) return true;
-	if (w->window_class != WC_OSK || _focused_window != w->parent) return false;
-	return w->parent->nested_focus != NULL && w->parent->nested_focus->type == WWT_EDITBOX;
-}
-
-HandleEditBoxResult QueryString::HandleEditBoxKey(Window *w, int wid, uint16 key, uint16 keycode, EventState &state)
-{
-	if (!QueryString::HasEditBoxFocus(w, wid)) return HEBR_NOT_FOCUSED;
-
-	state = ES_HANDLED;
-
-	switch (keycode) {
-		case WKC_ESC: return HEBR_CANCEL;
-
-		case WKC_RETURN: case WKC_NUM_ENTER: return HEBR_CONFIRM;
-
-#ifdef WITH_COCOA
-		case (WKC_META | 'V'):
-#endif
-		case (WKC_CTRL | 'V'):
-			if (InsertTextBufferClipboard(&this->text)) w->SetWidgetDirty(wid);
-			break;
-
-#ifdef WITH_COCOA
-		case (WKC_META | 'U'):
-#endif
-		case (WKC_CTRL | 'U'):
-			DeleteTextBufferAll(&this->text);
-			w->SetWidgetDirty(wid);
-			break;
-
-		case WKC_BACKSPACE: case WKC_DELETE:
-			if (DeleteTextBufferChar(&this->text, keycode)) w->SetWidgetDirty(wid);
-			break;
-
-		case WKC_LEFT: case WKC_RIGHT: case WKC_END: case WKC_HOME:
-			if (MoveTextBufferPos(&this->text, keycode)) w->SetWidgetDirty(wid);
-			break;
-
-		default:
-			if (IsValidChar(key, this->afilter)) {
-				if (InsertTextBufferChar(&this->text, key)) w->SetWidgetDirty(wid);
-			} else {
-				state = ES_NOT_HANDLED;
-			}
-	}
-
-	return HEBR_EDITING;
-}
-
 void QueryString::HandleEditBox(Window *w, int wid)
 {
-	if (HasEditBoxFocus(w, wid) && HandleCaret(&this->text)) {
+	if (w->IsWidgetGloballyFocused(wid) && this->text.HandleCaret()) {
 		w->SetWidgetDirty(wid);
-		/* When we're not the OSK, notify 'our' OSK to redraw the widget,
-		 * so the caret changes appropriately. */
-		if (w->window_class != WC_OSK) {
-			Window *w_osk = FindWindowById(WC_OSK, 0);
-			if (w_osk != NULL && w_osk->parent == w) w_osk->InvalidateData();
-		}
+
+		/* For the OSK also invalidate the parent window */
+		if (w->window_class == WC_OSK) w->InvalidateData();
 	}
 }
 
-void QueryString::DrawEditBox(Window *w, int wid)
+void QueryString::DrawEditBox(const Window *w, int wid) const
 {
-	const NWidgetBase *wi = w->GetWidget<NWidgetBase>(wid);
+	const NWidgetLeaf *wi = w->GetWidget<NWidgetLeaf>(wid);
 
 	assert((wi->type & WWT_MASK) == WWT_EDITBOX);
-	int left   = wi->pos_x;
-	int right  = wi->pos_x + wi->current_x - 1;
+
+	bool rtl = _current_text_dir == TD_RTL;
+	Dimension sprite_size = GetSpriteSize(rtl ? SPR_IMG_DELETE_RIGHT : SPR_IMG_DELETE_LEFT);
+	int clearbtn_width = sprite_size.width + WD_IMGBTN_LEFT + WD_IMGBTN_RIGHT;
+
+	int clearbtn_left  = wi->pos_x + (rtl ? 0 : wi->current_x - clearbtn_width);
+	int clearbtn_right = wi->pos_x + (rtl ? clearbtn_width : wi->current_x) - 1;
+	int left   = wi->pos_x + (rtl ? clearbtn_width : 0);
+	int right  = wi->pos_x + (rtl ? wi->current_x : wi->current_x - clearbtn_width) - 1;
+
 	int top    = wi->pos_y;
 	int bottom = wi->pos_y + wi->current_y - 1;
 
+	DrawFrameRect(clearbtn_left, top, clearbtn_right, bottom, wi->colour, wi->IsLowered() ? FR_LOWERED : FR_NONE);
+	DrawSprite(rtl ? SPR_IMG_DELETE_RIGHT : SPR_IMG_DELETE_LEFT, PAL_NONE, clearbtn_left + WD_IMGBTN_LEFT + (wi->IsLowered() ? 1 : 0), (top + bottom - sprite_size.height) / 2 + (wi->IsLowered() ? 1 : 0));
+	if (this->text.bytes == 1) GfxFillRect(clearbtn_left + 1, top + 1, clearbtn_right - 1, bottom - 1, _colour_gradient[wi->colour & 0xF][2], FILLRECT_CHECKER);
+
+	DrawFrameRect(left, top, right, bottom, wi->colour, FR_LOWERED | FR_DARKENED);
 	GfxFillRect(left + 1, top + 1, right - 1, bottom - 1, PC_BLACK);
 
 	/* Limit the drawing of the string inside the widget boundaries */
@@ -1331,7 +776,8 @@ void QueryString::DrawEditBox(Window *w, int wid)
 	if (tb->caretxoffs + delta < 0) delta = -tb->caretxoffs;
 
 	DrawString(delta, tb->pixels, 0, tb->buf, TC_YELLOW);
-	if (HasEditBoxFocus(w, wid) && tb->caret) {
+	bool focussed = w->IsWidgetGloballyFocused(wid) || IsOSKOpenedFor(w, wid);
+	if (focussed && tb->caret) {
 		int caret_width = GetStringBoundingBox("_").width;
 		DrawString(tb->caretxoffs + delta, tb->caretxoffs + delta + caret_width, 0, "_", TC_WHITE);
 	}
@@ -1339,70 +785,74 @@ void QueryString::DrawEditBox(Window *w, int wid)
 	_cur_dpi = old_dpi;
 }
 
-HandleEditBoxResult QueryStringBaseWindow::HandleEditBoxKey(int wid, uint16 key, uint16 keycode, EventState &state)
+void QueryString::ClickEditBox(Window *w, Point pt, int wid, int click_count, bool focus_changed)
 {
-	return this->QueryString::HandleEditBoxKey(this, wid, key, keycode, state);
-}
+	const NWidgetLeaf *wi = w->GetWidget<NWidgetLeaf>(wid);
 
-void QueryStringBaseWindow::HandleEditBox(int wid)
-{
-	this->QueryString::HandleEditBox(this, wid);
-}
+	assert((wi->type & WWT_MASK) == WWT_EDITBOX);
 
-void QueryStringBaseWindow::DrawEditBox(int wid)
-{
-	this->QueryString::DrawEditBox(this, wid);
-}
+	bool rtl = _current_text_dir == TD_RTL;
+	int clearbtn_width = GetSpriteSize(rtl ? SPR_IMG_DELETE_RIGHT : SPR_IMG_DELETE_LEFT).width;
 
-void QueryStringBaseWindow::OnOpenOSKWindow(int wid)
-{
-	ShowOnScreenKeyboard(this, wid, 0, 0);
-}
+	int clearbtn_left  = wi->pos_x + (rtl ? 0 : wi->current_x - clearbtn_width);
 
-/** Widget of the string query window. */
-enum QueryStringWidgets {
-	QUERY_STR_WIDGET_CAPTION,
-	QUERY_STR_WIDGET_TEXT,
-	QUERY_STR_WIDGET_DEFAULT,
-	QUERY_STR_WIDGET_CANCEL,
-	QUERY_STR_WIDGET_OK
-};
+	if (IsInsideBS(pt.x, clearbtn_left, clearbtn_width)) {
+		if (this->text.bytes > 1) {
+			this->text.DeleteAll();
+			w->HandleButtonClick(wid);
+			w->OnEditboxChanged(wid);
+		}
+		return;
+	}
+
+	if (w->window_class != WC_OSK && _settings_client.gui.osk_activation != OSKA_DISABLED &&
+		(!focus_changed || _settings_client.gui.osk_activation == OSKA_IMMEDIATELY) &&
+		(click_count == 2 || _settings_client.gui.osk_activation != OSKA_DOUBLE_CLICK)) {
+		/* Open the OSK window */
+		ShowOnScreenKeyboard(w, wid);
+	}
+}
 
 /** Class for the string query window. */
-struct QueryStringWindow : public QueryStringBaseWindow
+struct QueryStringWindow : public Window
 {
+	QueryString editbox;    ///< Editbox.
 	QueryStringFlags flags; ///< Flags controlling behaviour of the window.
 
-	QueryStringWindow(StringID str, StringID caption, uint max_bytes, uint max_chars, const WindowDesc *desc, Window *parent, CharSetFilter afilter, QueryStringFlags flags) :
-			QueryStringBaseWindow(max_bytes, max_chars)
+	QueryStringWindow(StringID str, StringID caption, uint max_bytes, uint max_chars, WindowDesc *desc, Window *parent, CharSetFilter afilter, QueryStringFlags flags) :
+			Window(desc), editbox(max_bytes, max_chars)
 	{
-		GetString(this->edit_str_buf, str, &this->edit_str_buf[max_bytes - 1]);
-		str_validate(this->edit_str_buf, &this->edit_str_buf[max_bytes - 1], false, true);
+		char *last_of = &this->editbox.text.buf[this->editbox.text.max_bytes - 1];
+		GetString(this->editbox.text.buf, str, last_of);
+		str_validate(this->editbox.text.buf, last_of, SVS_NONE);
 
 		/* Make sure the name isn't too long for the text buffer in the number of
 		 * characters (not bytes). max_chars also counts the '\0' characters. */
-		while (Utf8StringLength(this->edit_str_buf) + 1 > max_chars) {
-			*Utf8PrevChar(this->edit_str_buf + strlen(this->edit_str_buf)) = '\0';
+		while (Utf8StringLength(this->editbox.text.buf) + 1 > this->editbox.text.max_chars) {
+			*Utf8PrevChar(this->editbox.text.buf + strlen(this->editbox.text.buf)) = '\0';
 		}
 
-		if ((flags & QSF_ACCEPT_UNCHANGED) == 0) this->orig = strdup(this->edit_str_buf);
+		this->editbox.text.UpdateSize();
 
-		this->caption = caption;
-		this->afilter = afilter;
+		if ((flags & QSF_ACCEPT_UNCHANGED) == 0) this->editbox.orig = strdup(this->editbox.text.buf);
+
+		this->querystrings[WID_QS_TEXT] = &this->editbox;
+		this->editbox.caption = caption;
+		this->editbox.cancel_button = WID_QS_CANCEL;
+		this->editbox.ok_button = WID_QS_OK;
+		this->editbox.text.afilter = afilter;
 		this->flags = flags;
-		InitializeTextBuffer(&this->text, this->edit_str_buf, max_bytes, max_chars);
 
-		this->InitNested(desc);
+		this->InitNested(WN_QUERY_STRING);
 
 		this->parent = parent;
 
-		this->SetFocusedWidget(QUERY_STR_WIDGET_TEXT);
-		this->LowerWidget(QUERY_STR_WIDGET_TEXT);
+		this->SetFocusedWidget(WID_QS_TEXT);
 	}
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget == QUERY_STR_WIDGET_DEFAULT && (this->flags & QSF_ENABLE_DEFAULT) == 0) {
+		if (widget == WID_QS_DEFAULT && (this->flags & QSF_ENABLE_DEFAULT) == 0) {
 			/* We don't want this widget to show! */
 			fill->width = 0;
 			resize->width = 0;
@@ -1410,78 +860,43 @@ struct QueryStringWindow : public QueryStringBaseWindow
 		}
 	}
 
-	virtual void OnPaint()
-	{
-		this->DrawWidgets();
-
-		this->DrawEditBox(QUERY_STR_WIDGET_TEXT);
-	}
-
 	virtual void SetStringParameters(int widget) const
 	{
-		if (widget == QUERY_STR_WIDGET_CAPTION) SetDParam(0, this->caption);
+		if (widget == WID_QS_CAPTION) SetDParam(0, this->editbox.caption);
 	}
 
 	void OnOk()
 	{
-		if (this->orig == NULL || strcmp(this->text.buf, this->orig) != 0) {
+		if (this->editbox.orig == NULL || strcmp(this->editbox.text.buf, this->editbox.orig) != 0) {
 			/* If the parent is NULL, the editbox is handled by general function
 			 * HandleOnEditText */
 			if (this->parent != NULL) {
-				this->parent->OnQueryTextFinished(this->text.buf);
+				this->parent->OnQueryTextFinished(this->editbox.text.buf);
 			} else {
-				HandleOnEditText(this->text.buf);
+				HandleOnEditText(this->editbox.text.buf);
 			}
-			this->handled = true;
+			this->editbox.handled = true;
 		}
 	}
 
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
 		switch (widget) {
-			case QUERY_STR_WIDGET_DEFAULT:
-				this->text.buf[0] = '\0';
+			case WID_QS_DEFAULT:
+				this->editbox.text.DeleteAll();
 				/* FALL THROUGH */
-			case QUERY_STR_WIDGET_OK:
+			case WID_QS_OK:
 				this->OnOk();
 				/* FALL THROUGH */
-			case QUERY_STR_WIDGET_CANCEL:
+			case WID_QS_CANCEL:
 				delete this;
 				break;
 		}
 	}
 
-	virtual void OnMouseLoop()
-	{
-		this->HandleEditBox(QUERY_STR_WIDGET_TEXT);
-	}
-
-	virtual EventState OnKeyPress(uint16 key, uint16 keycode)
-	{
-		EventState state = ES_NOT_HANDLED;
-		switch (this->HandleEditBoxKey(QUERY_STR_WIDGET_TEXT, key, keycode, state)) {
-			default: NOT_REACHED();
-			case HEBR_EDITING: {
-				Window *osk = FindWindowById(WC_OSK, 0);
-				if (osk != NULL && osk->parent == this) osk->InvalidateData();
-				break;
-			}
-			case HEBR_CONFIRM: this->OnOk();
-				/* FALL THROUGH */
-			case HEBR_CANCEL: delete this; break; // close window, abandon changes
-			case HEBR_NOT_FOCUSED: break;
-		}
-		return state;
-	}
-
-	virtual void OnOpenOSKWindow(int wid)
-	{
-		ShowOnScreenKeyboard(this, wid, QUERY_STR_WIDGET_CANCEL, QUERY_STR_WIDGET_OK);
-	}
-
 	~QueryStringWindow()
 	{
-		if (!this->handled && this->parent != NULL) {
+		if (!this->editbox.handled && this->parent != NULL) {
 			Window *parent = this->parent;
 			this->parent = NULL; // so parent doesn't try to delete us again
 			parent->OnQueryTextFinished(NULL);
@@ -1492,20 +907,20 @@ struct QueryStringWindow : public QueryStringBaseWindow
 static const NWidgetPart _nested_query_string_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_GREY),
-		NWidget(WWT_CAPTION, COLOUR_GREY, QUERY_STR_WIDGET_CAPTION), SetDataTip(STR_WHITE_STRING, STR_NULL),
+		NWidget(WWT_CAPTION, COLOUR_GREY, WID_QS_CAPTION), SetDataTip(STR_WHITE_STRING, STR_NULL),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY),
-		NWidget(WWT_EDITBOX, COLOUR_GREY, QUERY_STR_WIDGET_TEXT), SetMinimalSize(256, 12), SetFill(1, 1), SetPadding(2, 2, 2, 2),
+		NWidget(WWT_EDITBOX, COLOUR_GREY, WID_QS_TEXT), SetMinimalSize(256, 12), SetFill(1, 1), SetPadding(2, 2, 2, 2),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL, NC_EQUALSIZE),
-		NWidget(WWT_TEXTBTN, COLOUR_GREY, QUERY_STR_WIDGET_DEFAULT), SetMinimalSize(87, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_DEFAULT, STR_NULL),
-		NWidget(WWT_TEXTBTN, COLOUR_GREY, QUERY_STR_WIDGET_CANCEL), SetMinimalSize(86, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_CANCEL, STR_NULL),
-		NWidget(WWT_TEXTBTN, COLOUR_GREY, QUERY_STR_WIDGET_OK), SetMinimalSize(87, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_OK, STR_NULL),
+		NWidget(WWT_TEXTBTN, COLOUR_GREY, WID_QS_DEFAULT), SetMinimalSize(87, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_DEFAULT, STR_NULL),
+		NWidget(WWT_TEXTBTN, COLOUR_GREY, WID_QS_CANCEL), SetMinimalSize(86, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_CANCEL, STR_NULL),
+		NWidget(WWT_TEXTBTN, COLOUR_GREY, WID_QS_OK), SetMinimalSize(87, 12), SetFill(1, 1), SetDataTip(STR_BUTTON_OK, STR_NULL),
 	EndContainer(),
 };
 
-static const WindowDesc _query_string_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _query_string_desc(
+	WDP_CENTER, "query_string", 0, 0,
 	WC_QUERY_STRING, WC_NONE,
 	0,
 	_nested_query_string_widgets, lengthof(_nested_query_string_widgets)
@@ -1523,17 +938,9 @@ static const WindowDesc _query_string_desc(
  */
 void ShowQueryString(StringID str, StringID caption, uint maxsize, Window *parent, CharSetFilter afilter, QueryStringFlags flags)
 {
-	DeleteWindowById(WC_QUERY_STRING, 0);
+	DeleteWindowByClass(WC_QUERY_STRING);
 	new QueryStringWindow(str, caption, ((flags & QSF_LEN_IN_CHARS) ? MAX_CHAR_LENGTH : 1) * maxsize, maxsize, &_query_string_desc, parent, afilter, flags);
 }
-
-
-enum QueryWidgets {
-	QUERY_WIDGET_CAPTION,
-	QUERY_WIDGET_TEXT,
-	QUERY_WIDGET_NO,
-	QUERY_WIDGET_YES
-};
 
 /**
  * Window used for asking the user a YES/NO question.
@@ -1544,7 +951,7 @@ struct QueryWindow : public Window {
 	StringID message;        ///< message shown for query window
 	StringID caption;        ///< title of window
 
-	QueryWindow(const WindowDesc *desc, StringID caption, StringID message, Window *parent, QueryCallbackProc *callback) : Window()
+	QueryWindow(WindowDesc *desc, StringID caption, StringID message, Window *parent, QueryCallbackProc *callback) : Window(desc)
 	{
 		/* Create a backup of the variadic arguments to strings because it will be
 		 * overridden pretty often. We will copy these back for drawing */
@@ -1553,7 +960,7 @@ struct QueryWindow : public Window {
 		this->message = message;
 		this->proc    = callback;
 
-		this->InitNested(desc);
+		this->InitNested(WN_CONFIRM_POPUP_QUERY);
 
 		this->parent = parent;
 		this->left = parent->left + (parent->width / 2) - (this->width / 2);
@@ -1568,12 +975,12 @@ struct QueryWindow : public Window {
 	virtual void SetStringParameters(int widget) const
 	{
 		switch (widget) {
-			case QUERY_WIDGET_CAPTION:
+			case WID_Q_CAPTION:
 				CopyInDParam(1, this->params, lengthof(this->params));
 				SetDParam(0, this->caption);
 				break;
 
-			case QUERY_WIDGET_TEXT:
+			case WID_Q_TEXT:
 				CopyInDParam(0, this->params, lengthof(this->params));
 				break;
 		}
@@ -1581,25 +988,26 @@ struct QueryWindow : public Window {
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget != QUERY_WIDGET_TEXT) return;
+		if (widget != WID_Q_TEXT) return;
 
 		Dimension d = GetStringMultiLineBoundingBox(this->message, *size);
-		d.width += padding.width;
-		d.height += padding.height;
+		d.width += WD_FRAMETEXT_LEFT + WD_FRAMETEXT_RIGHT;
+		d.height += WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM;
 		*size = d;
 	}
 
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
-		if (widget != QUERY_WIDGET_TEXT) return;
+		if (widget != WID_Q_TEXT) return;
 
-		DrawStringMultiLine(r.left, r.right, r.top, r.bottom, this->message, TC_FROMSTRING, SA_CENTER);
+		DrawStringMultiLine(r.left + WD_FRAMETEXT_LEFT, r.right - WD_FRAMETEXT_RIGHT, r.top + WD_FRAMERECT_TOP, r.bottom - WD_FRAMERECT_BOTTOM,
+				this->message, TC_FROMSTRING, SA_CENTER);
 	}
 
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
 		switch (widget) {
-			case QUERY_WIDGET_YES: {
+			case WID_Q_YES: {
 				/* in the Generate New World window, clicking 'Yes' causes
 				 * DeleteNonVitalWindows() to be called - we shouldn't be in a window then */
 				QueryCallbackProc *proc = this->proc;
@@ -1613,7 +1021,7 @@ struct QueryWindow : public Window {
 				}
 				break;
 			}
-			case QUERY_WIDGET_NO:
+			case WID_Q_NO:
 				delete this;
 				break;
 		}
@@ -1641,21 +1049,21 @@ struct QueryWindow : public Window {
 static const NWidgetPart _nested_query_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_RED),
-		NWidget(WWT_CAPTION, COLOUR_RED, QUERY_WIDGET_CAPTION), SetDataTip(STR_JUST_STRING, STR_NULL),
+		NWidget(WWT_CAPTION, COLOUR_RED, WID_Q_CAPTION), SetDataTip(STR_JUST_STRING, STR_NULL),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_RED), SetPIP(8, 15, 8),
-		NWidget(WWT_TEXT, COLOUR_RED, QUERY_WIDGET_TEXT), SetMinimalSize(200, 12),
+		NWidget(WWT_TEXT, COLOUR_RED, WID_Q_TEXT), SetMinimalSize(200, 12),
 		NWidget(NWID_HORIZONTAL, NC_EQUALSIZE), SetPIP(20, 29, 20),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_YELLOW, QUERY_WIDGET_NO), SetMinimalSize(71, 12), SetDataTip(STR_QUIT_NO, STR_NULL),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_YELLOW, QUERY_WIDGET_YES), SetMinimalSize(71, 12), SetDataTip(STR_QUIT_YES, STR_NULL),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_YELLOW, WID_Q_NO), SetMinimalSize(71, 12), SetDataTip(STR_QUIT_NO, STR_NULL),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_YELLOW, WID_Q_YES), SetMinimalSize(71, 12), SetDataTip(STR_QUIT_YES, STR_NULL),
 		EndContainer(),
 	EndContainer(),
 };
 
-static const WindowDesc _query_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _query_desc(
+	WDP_CENTER, NULL, 0, 0,
 	WC_CONFIRM_POPUP_QUERY, WC_NONE,
-	WDF_UNCLICK_BUTTONS | WDF_MODAL,
+	WDF_MODAL,
 	_nested_query_widgets, lengthof(_nested_query_widgets)
 );
 

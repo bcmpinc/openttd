@@ -14,6 +14,7 @@
 
 #include "strings_type.h"
 #include "string_type.h"
+#include "gfx_type.h"
 
 class StringParameters {
 	StringParameters *parent; ///< If not NULL, this instance references data from this parent instance.
@@ -72,19 +73,7 @@ public:
 
 	void ClearTypeInformation();
 
-	/**
-	 * Read an int64 from the argument array. The offset is increased
-	 * so the next time GetInt64 is called the next value is read.
-	 */
-	int64 GetInt64(WChar type = 0)
-	{
-		assert(this->offset < this->num_param);
-		if (this->type != NULL) {
-			assert(this->type[this->offset] == 0 || this->type[this->offset] == type);
-			this->type[this->offset] = type;
-		}
-		return this->data[this->offset++];
-	}
+	int64 GetInt64(WChar type = 0);
 
 	/** Read an int32 from the argument array. @see GetInt64. */
 	int32 GetInt32(WChar type = 0)
@@ -137,8 +126,11 @@ extern StringParameters _global_string_params;
 
 char *InlineString(char *buf, StringID string);
 char *GetString(char *buffr, StringID string, const char *last);
-char *GetStringWithArgs(char *buffr, uint string, StringParameters *args, const char *last);
+char *GetStringWithArgs(char *buffr, StringID string, StringParameters *args, const char *last, uint case_index = 0, bool game_script = false);
 const char *GetStringPtr(StringID string);
+
+uint ConvertKmhishSpeedToDisplaySpeed(uint speed);
+uint ConvertDisplaySpeedToKmhishSpeed(uint speed);
 
 void InjectDParam(uint amount);
 
@@ -163,10 +155,14 @@ static inline void SetDParam(uint n, uint64 v)
 	_global_string_params.SetParam(n, v);
 }
 
+void SetDParamMaxValue(uint n, uint64 max_value, uint min_count = 0, FontSize size = FS_NORMAL);
+void SetDParamMaxDigits(uint n, uint count, FontSize size = FS_NORMAL);
+
 void SetDParamStr(uint n, const char *str);
 
 void CopyInDParam(int offs, const uint64 *src, int num);
 void CopyOutDParam(uint64 *dst, int offs, int num);
+void CopyOutDParam(uint64 *dst, const char **strings, StringID string, int num);
 
 /**
  * Get the current string parameter at index \a n from parameter array \a s.
@@ -196,6 +192,47 @@ const char *GetCurrentLanguageIsoCode();
 
 int CDECL StringIDSorter(const StringID *a, const StringID *b);
 
-void CheckForMissingGlyphsInLoadedLanguagePack();
+/**
+ * A searcher for missing glyphs.
+ */
+class MissingGlyphSearcher {
+public:
+	/** Make sure everything gets destructed right. */
+	virtual ~MissingGlyphSearcher() {}
+
+	/**
+	 * Get the next string to search through.
+	 * @return The next string or NULL if there is none.
+	 */
+	virtual const char *NextString() = 0;
+
+	/**
+	 * Get the default (font) size of the string.
+	 * @return The font size.
+	 */
+	virtual FontSize DefaultSize() = 0;
+
+	/**
+	 * Reset the search, i.e. begin from the beginning again.
+	 */
+	virtual void Reset() = 0;
+
+	/**
+	 * Whether to search for a monospace font or not.
+	 * @return True if searching for monospace.
+	 */
+	virtual bool Monospace() = 0;
+
+	/**
+	 * Set the right font names.
+	 * @param settings  The settings to modify.
+	 * @param font_name The new font name.
+	 */
+	virtual void SetFontNames(struct FreeTypeSettings *settings, const char *font_name) = 0;
+
+	bool FindMissingGlyphs(const char **str);
+};
+
+void CheckForMissingGlyphs(bool base_font = true, MissingGlyphSearcher *search = NULL);
 
 #endif /* STRINGS_FUNC_H */

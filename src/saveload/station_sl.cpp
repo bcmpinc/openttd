@@ -15,7 +15,6 @@
 #include "../roadstop_base.h"
 #include "../vehicle_base.h"
 #include "../newgrf_station.h"
-#include "../newgrf.h"
 
 #include "saveload.h"
 #include "table/strings.h"
@@ -124,7 +123,7 @@ void AfterLoadStations()
 			for (const RoadStop *rs = sta->truck_stops; rs != NULL; rs = rs->next) sta->truck_station.Add(rs->xy);
 		}
 
-		StationUpdateAnimTriggers(st);
+		StationUpdateCachedTriggers(st);
 	}
 }
 
@@ -182,7 +181,7 @@ static const SaveLoad _old_station_desc[] = {
 	SLE_CONDNULL(1, 0, 3),  ///< alpha_order
 
 	    SLE_VAR(Station, string_id,                  SLE_STRINGID),
-	SLE_CONDSTR(Station, name,                       SLE_STR, 0,                 84, SL_MAX_VERSION),
+	SLE_CONDSTR(Station, name,                       SLE_STR | SLF_ALLOW_CONTROL, 0, 84, SL_MAX_VERSION),
 	SLE_CONDVAR(Station, indtype,                    SLE_UINT8,                 103, SL_MAX_VERSION),
 	SLE_CONDVAR(Station, had_vehicle_of_type,        SLE_FILE_U16 | SLE_VAR_U8,   0, 121),
 	SLE_CONDVAR(Station, had_vehicle_of_type,        SLE_UINT8,                 122, SL_MAX_VERSION),
@@ -225,15 +224,33 @@ static const SaveLoad _old_station_desc[] = {
 };
 
 static uint16 _waiting_acceptance;
+static uint32 _num_flows;
 static uint16 _cargo_source;
 static uint32 _cargo_source_xy;
-static uint16 _cargo_days;
+static uint8  _cargo_days;
 static Money  _cargo_feeder_share;
 
 static const SaveLoad _station_speclist_desc[] = {
 	SLE_CONDVAR(StationSpecList, grfid,    SLE_UINT32, 27, SL_MAX_VERSION),
 	SLE_CONDVAR(StationSpecList, localidx, SLE_UINT8,  27, SL_MAX_VERSION),
 
+	SLE_END()
+};
+
+std::list<CargoPacket *> _packets;
+uint32 _num_dests;
+
+struct FlowSaveLoad {
+	FlowSaveLoad() : via(0), share(0) {}
+	StationID source;
+	StationID via;
+	uint32 share;
+};
+
+static const SaveLoad _flow_desc[] = {
+	SLE_VAR(FlowSaveLoad, source, SLE_UINT16),
+	SLE_VAR(FlowSaveLoad, via,    SLE_UINT16),
+	SLE_VAR(FlowSaveLoad, share,  SLE_UINT32),
 	SLE_END()
 };
 
@@ -245,28 +262,62 @@ static const SaveLoad _station_speclist_desc[] = {
 const SaveLoad *GetGoodsDesc()
 {
 	static const SaveLoad goods_desc[] = {
-		SLEG_CONDVAR(            _waiting_acceptance, SLE_UINT16,                  0, 67),
-		 SLE_CONDVAR(GoodsEntry, acceptance_pickup,   SLE_UINT8,                  68, SL_MAX_VERSION),
-		SLE_CONDNULL(2,                                                           51, 67),
-		     SLE_VAR(GoodsEntry, days_since_pickup,   SLE_UINT8),
-		     SLE_VAR(GoodsEntry, rating,              SLE_UINT8),
-		SLEG_CONDVAR(            _cargo_source,       SLE_FILE_U8 | SLE_VAR_U16,   0, 6),
-		SLEG_CONDVAR(            _cargo_source,       SLE_UINT16,                  7, 67),
-		SLEG_CONDVAR(            _cargo_source_xy,    SLE_UINT32,                 44, 67),
-		SLEG_CONDVAR(            _cargo_days,         SLE_UINT8,                   0, 67),
-		     SLE_VAR(GoodsEntry, last_speed,          SLE_UINT8),
-		     SLE_VAR(GoodsEntry, last_age,            SLE_UINT8),
-		SLEG_CONDVAR(            _cargo_feeder_share, SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
-		SLEG_CONDVAR(            _cargo_feeder_share, SLE_INT64,                  65, 67),
-		 SLE_CONDVAR(GoodsEntry, amount_fract,        SLE_UINT8,                 150, SL_MAX_VERSION),
-		 SLE_CONDLST(GoodsEntry, cargo.packets,       REF_CARGO_PACKET,           68, SL_MAX_VERSION),
-
+		SLEG_CONDVAR(            _waiting_acceptance,  SLE_UINT16,                  0, 67),
+		 SLE_CONDVAR(GoodsEntry, acceptance_pickup,    SLE_UINT8,                  68, SL_MAX_VERSION),
+		SLE_CONDNULL(2,                                                            51, 67),
+		     SLE_VAR(GoodsEntry, time_since_pickup,    SLE_UINT8),
+		     SLE_VAR(GoodsEntry, rating,               SLE_UINT8),
+		SLEG_CONDVAR(            _cargo_source,        SLE_FILE_U8 | SLE_VAR_U16,   0, 6),
+		SLEG_CONDVAR(            _cargo_source,        SLE_UINT16,                  7, 67),
+		SLEG_CONDVAR(            _cargo_source_xy,     SLE_UINT32,                 44, 67),
+		SLEG_CONDVAR(            _cargo_days,          SLE_UINT8,                   0, 67),
+		     SLE_VAR(GoodsEntry, last_speed,           SLE_UINT8),
+		     SLE_VAR(GoodsEntry, last_age,             SLE_UINT8),
+		SLEG_CONDVAR(            _cargo_feeder_share,  SLE_FILE_U32 | SLE_VAR_I64, 14, 64),
+		SLEG_CONDVAR(            _cargo_feeder_share,  SLE_INT64,                  65, 67),
+		 SLE_CONDVAR(GoodsEntry, amount_fract,         SLE_UINT8,                 150, SL_MAX_VERSION),
+		SLEG_CONDLST(            _packets,             REF_CARGO_PACKET,           68, 182),
+		SLEG_CONDVAR(            _num_dests,           SLE_UINT32,                183, SL_MAX_VERSION),
+		 SLE_CONDVAR(GoodsEntry, cargo.reserved_count, SLE_UINT,                  181, SL_MAX_VERSION),
+		 SLE_CONDVAR(GoodsEntry, link_graph,           SLE_UINT16,                183, SL_MAX_VERSION),
+		 SLE_CONDVAR(GoodsEntry, node,                 SLE_UINT16,                183, SL_MAX_VERSION),
+		SLEG_CONDVAR(            _num_flows,           SLE_UINT32,                183, SL_MAX_VERSION),
+		 SLE_CONDVAR(GoodsEntry, max_waiting_cargo,    SLE_UINT32,                183, SL_MAX_VERSION),
 		SLE_END()
 	};
 
 	return goods_desc;
 }
 
+typedef std::pair<const StationID, std::list<CargoPacket *> > StationCargoPair;
+
+static const SaveLoad _cargo_list_desc[] = {
+	SLE_VAR(StationCargoPair, first,  SLE_UINT16),
+	SLE_LST(StationCargoPair, second, REF_CARGO_PACKET),
+	SLE_END()
+};
+
+/**
+ * Swap the temporary packets with the packets without specific destination in
+ * the given goods entry. Assert that at least one of those is empty.
+ * @param ge Goods entry to swap with.
+ */
+static void SwapPackets(GoodsEntry *ge)
+{
+	StationCargoPacketMap &ge_packets = const_cast<StationCargoPacketMap &>(*ge->cargo.Packets());
+
+	if (_packets.empty()) {
+		std::map<StationID, std::list<CargoPacket *> >::iterator it(ge_packets.find(INVALID_STATION));
+		if (it == ge_packets.end()) {
+			return;
+		} else {
+			it->second.swap(_packets);
+		}
+	} else {
+		assert(ge_packets[INVALID_STATION].empty());
+		ge_packets[INVALID_STATION].swap(_packets);
+	}
+}
 
 static void Load_STNS()
 {
@@ -282,6 +333,7 @@ static void Load_STNS()
 		for (CargoID i = 0; i < num_cargo; i++) {
 			GoodsEntry *ge = &st->goods[i];
 			SlObject(ge, GetGoodsDesc());
+			SwapPackets(ge);
 			if (IsSavegameVersionBefore(68)) {
 				SB(ge->acceptance_pickup, GoodsEntry::GES_ACCEPTANCE, 1, HasBit(_waiting_acceptance, 15));
 				if (GB(_waiting_acceptance, 0, 12) != 0) {
@@ -289,11 +341,14 @@ static void Load_STNS()
 					StationID source = (IsSavegameVersionBefore(7) && _cargo_source == 0xFF) ? INVALID_STATION : _cargo_source;
 
 					/* Make sure we can allocate the CargoPacket. This is safe
-					 * as there can only be ~64k stations and 32 cargos in these
+					 * as there can only be ~64k stations and 32 cargoes in these
 					 * savegame versions. As the CargoPacketPool has more than
 					 * 16 million entries; it fits by an order of magnitude. */
 					assert(CargoPacket::CanAllocateItem());
-					ge->cargo.Append(new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, source, _cargo_source_xy, _cargo_source_xy, _cargo_feeder_share));
+
+					/* Don't construct the packet with station here, because that'll fail with old savegames */
+					CargoPacket *cp = new CargoPacket(GB(_waiting_acceptance, 0, 12), _cargo_days, source, _cargo_source_xy, _cargo_source_xy, _cargo_feeder_share);
+					ge->cargo.Append(cp, INVALID_STATION);
 					SB(ge->acceptance_pickup, GoodsEntry::GES_PICKUP, 1, 1);
 				}
 			}
@@ -319,7 +374,9 @@ static void Ptrs_STNS()
 		if (!IsSavegameVersionBefore(68)) {
 			for (CargoID i = 0; i < NUM_CARGO; i++) {
 				GoodsEntry *ge = &st->goods[i];
+				SwapPackets(ge);
 				SlObject(ge, GetGoodsDesc());
+				SwapPackets(ge);
 			}
 		}
 		SlObject(st, _old_station_desc);
@@ -331,7 +388,7 @@ static const SaveLoad _base_station_desc[] = {
 	      SLE_VAR(BaseStation, xy,                     SLE_UINT32),
 	      SLE_REF(BaseStation, town,                   REF_TOWN),
 	      SLE_VAR(BaseStation, string_id,              SLE_STRINGID),
-	      SLE_STR(BaseStation, name,                   SLE_STR, 0),
+	      SLE_STR(BaseStation, name,                   SLE_STR | SLF_ALLOW_CONTROL, 0),
 	      SLE_VAR(BaseStation, delete_ctr,             SLE_UINT8),
 	      SLE_VAR(BaseStation, owner,                  SLE_UINT8),
 	      SLE_VAR(BaseStation, facilities,             SLE_UINT8),
@@ -410,7 +467,28 @@ static void RealSave_STNN(BaseStation *bst)
 	if (!waypoint) {
 		Station *st = Station::From(bst);
 		for (CargoID i = 0; i < NUM_CARGO; i++) {
+			_num_dests = (uint32)st->goods[i].cargo.Packets()->MapSize();
+			_num_flows = 0;
+			for (FlowStatMap::const_iterator it(st->goods[i].flows.begin()); it != st->goods[i].flows.end(); ++it) {
+				_num_flows += (uint32)it->second.GetShares()->size();
+			}
 			SlObject(&st->goods[i], GetGoodsDesc());
+			for (FlowStatMap::const_iterator outer_it(st->goods[i].flows.begin()); outer_it != st->goods[i].flows.end(); ++outer_it) {
+				const FlowStat::SharesMap *shares = outer_it->second.GetShares();
+				uint32 sum_shares = 0;
+				FlowSaveLoad flow;
+				flow.source = outer_it->first;
+				for (FlowStat::SharesMap::const_iterator inner_it(shares->begin()); inner_it != shares->end(); ++inner_it) {
+					flow.via = inner_it->second;
+					flow.share = inner_it->first - sum_shares;
+					sum_shares = inner_it->first;
+					assert(flow.share > 0);
+					SlObject(&flow, _flow_desc);
+				}
+			}
+			for (StationCargoPacketMap::ConstMapIterator it(st->goods[i].cargo.Packets()->begin()); it != st->goods[i].cargo.Packets()->end(); ++it) {
+				SlObject(const_cast<StationCargoPacketMap::value_type *>(&(*it)), _cargo_list_desc);
+			}
 		}
 	}
 
@@ -452,6 +530,28 @@ static void Load_STNN()
 
 			for (CargoID i = 0; i < NUM_CARGO; i++) {
 				SlObject(&st->goods[i], GetGoodsDesc());
+				FlowSaveLoad flow;
+				FlowStat *fs = NULL;
+				StationID prev_source = INVALID_STATION;
+				for (uint32 j = 0; j < _num_flows; ++j) {
+					SlObject(&flow, _flow_desc);
+					if (fs == NULL || prev_source != flow.source) {
+						fs = &(st->goods[i].flows.insert(std::make_pair(flow.source, FlowStat(flow.via, flow.share))).first->second);
+					} else {
+						fs->AppendShare(flow.via, flow.share);
+					}
+					prev_source = flow.source;
+				}
+				if (IsSavegameVersionBefore(183)) {
+					SwapPackets(&st->goods[i]);
+				} else {
+					StationCargoPair pair;
+					for (uint j = 0; j < _num_dests; ++j) {
+						SlObject(&pair, _cargo_list_desc);
+						const_cast<StationCargoPacketMap &>(*(st->goods[i].cargo.Packets()))[pair.first].swap(pair.second);
+						assert(pair.second.empty());
+					}
+				}
 			}
 		}
 
@@ -474,7 +574,16 @@ static void Ptrs_STNN()
 	FOR_ALL_STATIONS(st) {
 		for (CargoID i = 0; i < NUM_CARGO; i++) {
 			GoodsEntry *ge = &st->goods[i];
-			SlObject(ge, GetGoodsDesc());
+			if (IsSavegameVersionBefore(183)) {
+				SwapPackets(ge);
+				SlObject(ge, GetGoodsDesc());
+				SwapPackets(ge);
+			} else {
+				SlObject(ge, GetGoodsDesc());
+				for (StationCargoPacketMap::ConstMapIterator it = ge->cargo.Packets()->begin(); it != ge->cargo.Packets()->end(); ++it) {
+					SlObject(const_cast<StationCargoPair *>(&(*it)), _cargo_list_desc);
+				}
+			}
 		}
 		SlObject(st, _station_desc);
 	}

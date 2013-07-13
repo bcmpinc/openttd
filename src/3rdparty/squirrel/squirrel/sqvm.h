@@ -84,7 +84,7 @@ public:
 
 	void Raise_Error(const SQChar *s, ...);
 	void Raise_Error(SQObjectPtr &desc);
-	void Raise_IdxError(SQObject &o);
+	void Raise_IdxError(const SQObject &o);
 	void Raise_CompareError(const SQObject &o1, const SQObject &o2);
 	void Raise_ParamTypeError(SQInteger nparam,SQInteger typemask,SQInteger type);
 
@@ -170,6 +170,7 @@ public:
 
 	SQBool _can_suspend;
 	SQInteger _ops_till_suspend;
+	SQBool _in_stackoverflow;
 
 	bool ShouldSuspend()
 	{
@@ -200,6 +201,12 @@ inline SQObjectPtr &stack_get(HSQUIRRELVM v,SQInteger idx){return ((idx>=0)?(v->
 
 #define PUSH_CALLINFO(v,nci){ \
 	if(v->_callsstacksize == v->_alloccallsstacksize) { \
+		if (v->_callsstacksize > 65535 && !v->_in_stackoverflow) {\
+			v->_in_stackoverflow = true; \
+			v->Raise_Error(_SC("stack overflow"));\
+			v->CallErrorHandler(v->_lasterror);\
+			return false;\
+		}\
 		v->GrowCallStack(); \
 	} \
 	v->ci = &v->_callsstack[v->_callsstacksize]; \

@@ -159,8 +159,17 @@ static void StartSound(SoundID sound_id, float pan, uint volume)
 {
 	if (volume == 0) return;
 
-	const SoundEntry *sound = GetSound(sound_id);
+	SoundEntry *sound = GetSound(sound_id);
 	if (sound == NULL) return;
+
+	/* NewGRF sound that wasn't loaded yet? */
+	if (sound->rate == 0 && sound->file_slot != 0) {
+		if (!LoadNewGRFSound(sound)) {
+			/* Mark as invalid. */
+			sound->file_slot = 0;
+			return;
+		}
+	}
 
 	/* Empty sound? */
 	if (sound->rate == 0) return;
@@ -178,7 +187,7 @@ static void StartSound(SoundID sound_id, float pan, uint volume)
 }
 
 
-static const byte _vol_factor_by_zoom[] = {255, 190, 134, 87};
+static const byte _vol_factor_by_zoom[] = {255, 255, 255, 190, 134, 87};
 assert_compile(lengthof(_vol_factor_by_zoom) == ZOOM_LVL_COUNT);
 
 static const byte _sound_base_vol[] = {
@@ -209,11 +218,11 @@ static const byte _sound_idx[] = {
 
 void SndCopyToPool()
 {
+	SoundEntry *sound = AllocateSound(ORIGINAL_SAMPLE_COUNT);
 	for (uint i = 0; i < ORIGINAL_SAMPLE_COUNT; i++) {
-		SoundEntry *sound = AllocateSound();
-		*sound = _original_sounds[_sound_idx[i]];
-		sound->volume = _sound_base_vol[i];
-		sound->priority = 0;
+		sound[i] = _original_sounds[_sound_idx[i]];
+		sound[i].volume = _sound_base_vol[i];
+		sound[i].priority = 0;
 	}
 }
 
@@ -255,10 +264,10 @@ void SndPlayTileFx(SoundID sound, TileIndex tile)
 	/* emits sound from center of the tile */
 	int x = min(MapMaxX() - 1, TileX(tile)) * TILE_SIZE + TILE_SIZE / 2;
 	int y = min(MapMaxY() - 1, TileY(tile)) * TILE_SIZE - TILE_SIZE / 2;
-	uint z = (y < 0 ? 0 : GetSlopeZ(x, y));
+	int z = (y < 0 ? 0 : GetSlopePixelZ(x, y));
 	Point pt = RemapCoords(x, y, z);
 	y += 2 * TILE_SIZE;
-	Point pt2 = RemapCoords(x, y, GetSlopeZ(x, y));
+	Point pt2 = RemapCoords(x, y, GetSlopePixelZ(x, y));
 	SndPlayScreenCoordFx(sound, pt.x, pt2.x, pt.y, pt2.y);
 }
 
@@ -281,8 +290,8 @@ INSTANTIATE_BASE_MEDIA_METHODS(BaseMedia<SoundsSet>, SoundsSet)
 static const char * const _sound_file_names[] = { "samples" };
 
 
-template <class T, size_t Tnum_files, Subdirectory Tsubdir>
-/* static */ const char * const *BaseSet<T, Tnum_files, Tsubdir>::file_names = _sound_file_names;
+template <class T, size_t Tnum_files, bool Tsearch_in_tars>
+/* static */ const char * const *BaseSet<T, Tnum_files, Tsearch_in_tars>::file_names = _sound_file_names;
 
 template <class Tbase_set>
 /* static */ const char *BaseMedia<Tbase_set>::GetExtension()
@@ -297,7 +306,7 @@ template <class Tbase_set>
 
 	const Tbase_set *best = NULL;
 	for (const Tbase_set *c = BaseMedia<Tbase_set>::available_sets; c != NULL; c = c->next) {
-		/* Skip unuseable sets */
+		/* Skip unusable sets */
 		if (c->GetNumMissing() != 0) continue;
 
 		if (best == NULL ||

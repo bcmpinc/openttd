@@ -13,6 +13,7 @@
 #include "engine_base.h"
 #include "engine_func.h"
 #include "station_base.h"
+#include "network/network.h"
 #include "articulated_vehicles.h"
 #include "textbuf_gui.h"
 #include "command_func.h"
@@ -30,6 +31,9 @@
 #include "engine_gui.h"
 #include "cargotype.h"
 #include "core/geometry_func.hpp"
+#include "autoreplace_func.h"
+
+#include "widgets/build_vehicle_widget.h"
 
 #include "table/strings.h"
 
@@ -40,55 +44,42 @@
  */
 uint GetEngineListHeight(VehicleType type)
 {
-	return max<uint>(FONT_HEIGHT_NORMAL + WD_MATRIX_TOP + WD_MATRIX_BOTTOM, GetVehicleHeight(type));
+	return max<uint>(FONT_HEIGHT_NORMAL + WD_MATRIX_TOP + WD_MATRIX_BOTTOM, GetVehicleImageCellSize(type, EIT_PURCHASE).height);
 }
-
-enum BuildVehicleWidgets {
-	BUILD_VEHICLE_WIDGET_CAPTION,
-	BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING,
-	BUILD_VEHICLE_WIDGET_SORT_DROPDOWN,
-	BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN,
-	BUILD_VEHICLE_WIDGET_LIST,
-	BUILD_VEHICLE_WIDGET_SCROLLBAR,
-	BUILD_VEHICLE_WIDGET_PANEL,
-	BUILD_VEHICLE_WIDGET_BUILD,
-	BUILD_VEHICLE_WIDGET_BUILD_SEL,
-	BUILD_VEHICLE_WIDGET_RENAME,
-	BUILD_VEHICLE_WIDGET_END
-};
 
 static const NWidgetPart _nested_build_vehicle_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_GREY),
-		NWidget(WWT_CAPTION, COLOUR_GREY, BUILD_VEHICLE_WIDGET_CAPTION), SetDataTip(STR_WHITE_STRING, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_CAPTION, COLOUR_GREY, WID_BV_CAPTION), SetDataTip(STR_WHITE_STRING, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY),
 		NWidget(NWID_HORIZONTAL),
 			NWidget(NWID_VERTICAL),
-				NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER), SetFill(1, 0),
+				NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_BV_SORT_ASSENDING_DESCENDING), SetDataTip(STR_BUTTON_SORT_BY, STR_TOOLTIP_SORT_ORDER), SetFill(1, 0),
 				NWidget(NWID_SPACER), SetFill(1, 1),
 			EndContainer(),
 			NWidget(NWID_VERTICAL),
-				NWidget(WWT_DROPDOWN, COLOUR_GREY, BUILD_VEHICLE_WIDGET_SORT_DROPDOWN), SetResize(1, 0), SetFill(1, 0), SetDataTip(STR_JUST_STRING, STR_TOOLTIP_SORT_CRITERIA),
-				NWidget(WWT_DROPDOWN, COLOUR_GREY, BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN), SetResize(1, 0), SetFill(1, 0), SetDataTip(STR_JUST_STRING, STR_TOOLTIP_FILTER_CRITERIA),
+				NWidget(WWT_DROPDOWN, COLOUR_GREY, WID_BV_SORT_DROPDOWN), SetResize(1, 0), SetFill(1, 0), SetDataTip(STR_JUST_STRING, STR_TOOLTIP_SORT_CRITERIA),
+				NWidget(WWT_DROPDOWN, COLOUR_GREY, WID_BV_CARGO_FILTER_DROPDOWN), SetResize(1, 0), SetFill(1, 0), SetDataTip(STR_JUST_STRING, STR_TOOLTIP_FILTER_CRITERIA),
 			EndContainer(),
 		EndContainer(),
 	EndContainer(),
 	/* Vehicle list. */
 	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_MATRIX, COLOUR_GREY, BUILD_VEHICLE_WIDGET_LIST), SetResize(1, 1), SetFill(1, 0), SetDataTip(0x101, STR_NULL), SetScrollbar(BUILD_VEHICLE_WIDGET_SCROLLBAR),
-		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, BUILD_VEHICLE_WIDGET_SCROLLBAR),
+		NWidget(WWT_MATRIX, COLOUR_GREY, WID_BV_LIST), SetResize(1, 1), SetFill(1, 0), SetMatrixDataTip(1, 0, STR_NULL), SetScrollbar(WID_BV_SCROLLBAR),
+		NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_BV_SCROLLBAR),
 	EndContainer(),
 	/* Panel with details. */
-	NWidget(WWT_PANEL, COLOUR_GREY, BUILD_VEHICLE_WIDGET_PANEL), SetMinimalSize(240, 122), SetResize(1, 0), EndContainer(),
+	NWidget(WWT_PANEL, COLOUR_GREY, WID_BV_PANEL), SetMinimalSize(240, 122), SetResize(1, 0), EndContainer(),
 	/* Build/rename buttons, resize button. */
 	NWidget(NWID_HORIZONTAL),
-		NWidget(NWID_SELECTION, INVALID_COLOUR, BUILD_VEHICLE_WIDGET_BUILD_SEL),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, BUILD_VEHICLE_WIDGET_BUILD), SetResize(1, 0), SetFill(1, 0),
+		NWidget(NWID_SELECTION, INVALID_COLOUR, WID_BV_BUILD_SEL),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_BV_BUILD), SetResize(1, 0), SetFill(1, 0),
 		EndContainer(),
-		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, BUILD_VEHICLE_WIDGET_RENAME), SetResize(1, 0), SetFill(1, 0),
+		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_BV_RENAME), SetResize(1, 0), SetFill(1, 0),
 		NWidget(WWT_RESIZEBOX, COLOUR_GREY),
 	EndContainer(),
 };
@@ -110,7 +101,7 @@ static CargoID _last_filter_criteria[] = {CF_ANY, CF_ANY, CF_ANY, CF_ANY};
  */
 static int CDECL EngineNumberSorter(const EngineID *a, const EngineID *b)
 {
-	int r = ListPositionOfEngine(*a) - ListPositionOfEngine(*b);
+	int r = Engine::Get(*a)->list_position - Engine::Get(*b)->list_position;
 
 	return _internal_sort_order ? -r : r;
 }
@@ -283,7 +274,7 @@ static int CDECL EnginePowerVsRunningCostSorter(const EngineID *a, const EngineI
 	 * we will actually calculate cunning cost/power (to make it more than 1).
 	 * Because of this, the return value have to be reversed as well and we return b - a instead of a - b.
 	 * Another thing is that both power and running costs should be doubled for multiheaded engines.
-	 * Since it would be multipling with 2 in both numerator and denumerator, it will even themselves out and we skip checking for multiheaded. */
+	 * Since it would be multiplying with 2 in both numerator and denominator, it will even themselves out and we skip checking for multiheaded. */
 	Money va = (e_a->GetRunningCost()) / max(1U, (uint)e_a->GetPower());
 	Money vb = (e_b->GetRunningCost()) / max(1U, (uint)e_b->GetPower());
 	int r = ClampToI32(vb - va);
@@ -403,6 +394,24 @@ static int CDECL AircraftEngineCargoSorter(const EngineID *a, const EngineID *b)
 	return _internal_sort_order ? -r : r;
 }
 
+/**
+ * Determines order of aircraft by range.
+ * @param *a first engine to compare.
+ * @param *b second engine to compare.
+ * @return for descending order: returns < 0 if a < b and > 0 for a > b. Vice versa for ascending order and 0 for equal.
+ */
+static int CDECL AircraftRangeSorter(const EngineID *a, const EngineID *b)
+{
+	uint16 r_a = Engine::Get(*a)->GetRange();
+	uint16 r_b = Engine::Get(*b)->GetRange();
+
+	int r = r_a - r_b;
+
+	/* Use EngineID to sort instead since we want consistent sorting */
+	if (r == 0) return EngineNumberSorter(a, b);
+	return _internal_sort_order ? -r : r;
+}
+
 static EngList_SortTypeFunction * const _sorter[][11] = {{
 	/* Trains */
 	&EngineNumberSorter,
@@ -449,6 +458,7 @@ static EngList_SortTypeFunction * const _sorter[][11] = {{
 	&EngineRunningCostSorter,
 	&EngineReliabilitySorter,
 	&AircraftEngineCargoSorter,
+	&AircraftRangeSorter,
 }};
 
 static const StringID _sort_listing[][12] = {{
@@ -500,6 +510,7 @@ static const StringID _sort_listing[][12] = {{
 	STR_SORT_BY_RUNNING_COST,
 	STR_SORT_BY_RELIABILITY,
 	STR_SORT_BY_CARGO_CAPACITY,
+	STR_SORT_BY_RANGE,
 	INVALID_STRING_ID
 }};
 
@@ -507,7 +518,7 @@ static const StringID _sort_listing[][12] = {{
 static bool CDECL CargoFilter(const EngineID *eid, const CargoID cid)
 {
 	if (cid == CF_ANY) return true;
-	uint32 refit_mask = GetUnionOfArticulatedRefitMasks(*eid, true);
+	uint32 refit_mask = GetUnionOfArticulatedRefitMasks(*eid, true) & _standard_cargo_mask;
 	return (cid == CF_NONE ? refit_mask == 0 : HasBit(refit_mask, cid));
 }
 
@@ -548,7 +559,7 @@ static int DrawRailWagonPurchaseInfo(int left, int right, int y, EngineID engine
 	/* Wagon weight - (including cargo) */
 	uint weight = e->GetDisplayWeight();
 	SetDParam(0, weight);
-	uint cargo_weight = (e->CanCarryCargo() ? CargoSpec::Get(e->GetDefaultCargoType())->weight * e->GetDisplayDefaultCapacity() >> 4 : 0);
+	uint cargo_weight = (e->CanCarryCargo() ? CargoSpec::Get(e->GetDefaultCargoType())->weight * GetTotalCapacityOfArticulatedParts(engine_number) / 16 : 0);
 	SetDParam(1, cargo_weight + weight);
 	DrawString(left, right, y, STR_PURCHASE_INFO_WEIGHT_CWEIGHT);
 	y += FONT_HEIGHT_NORMAL;
@@ -629,7 +640,7 @@ static int DrawRoadVehPurchaseInfo(int left, int right, int y, EngineID engine_n
 		/* Road vehicle weight - (including cargo) */
 		int16 weight = e->GetDisplayWeight();
 		SetDParam(0, weight);
-		uint cargo_weight = CargoSpec::Get(e->GetDefaultCargoType())->weight * GetTotalCapacityOfArticulatedParts(engine_number) / 16;
+		uint cargo_weight = (e->CanCarryCargo() ? CargoSpec::Get(e->GetDefaultCargoType())->weight * GetTotalCapacityOfArticulatedParts(engine_number) / 16 : 0);
 		SetDParam(1, cargo_weight + weight);
 		DrawString(left, right, y, STR_PURCHASE_INFO_WEIGHT_CWEIGHT);
 		y += FONT_HEIGHT_NORMAL;
@@ -739,6 +750,13 @@ static int DrawAircraftPurchaseInfo(int left, int right, int y, EngineID engine_
 	DrawString(left, right, y, STR_PURCHASE_INFO_RUNNINGCOST);
 	y += FONT_HEIGHT_NORMAL;
 
+	uint16 range = e->GetRange();
+	if (range != 0) {
+		SetDParam(0, range);
+		DrawString(left, right, y, STR_PURCHASE_INFO_AIRCRAFT_RANGE);
+		y += FONT_HEIGHT_NORMAL;
+	}
+
 	return y;
 }
 
@@ -753,12 +771,14 @@ static int DrawAircraftPurchaseInfo(int left, int right, int y, EngineID engine_
 static uint ShowAdditionalText(int left, int right, int y, EngineID engine)
 {
 	uint16 callback = GetVehicleCallback(CBID_VEHICLE_ADDITIONAL_TEXT, 0, 0, engine, NULL);
-	if (callback == CALLBACK_FAILED) return y;
+	if (callback == CALLBACK_FAILED || callback == 0x400) return y;
+	if (callback > 0x400) {
+		ErrorUnknownCallbackResult(Engine::Get(engine)->GetGRFID(), CBID_VEHICLE_ADDITIONAL_TEXT, callback);
+		return y;
+	}
 
-	/* STR_BLACK_STRING is used to start the string with {BLACK} */
-	SetDParam(0, GetGRFStringID(GetEngineGRFID(engine), 0xD000 + callback));
-	StartTextRefStackUsage(0);
-	uint result = DrawStringMultiLine(left, right, y, INT32_MAX, STR_BLACK_STRING);
+	StartTextRefStackUsage(6);
+	uint result = DrawStringMultiLine(left, right, y, INT32_MAX, GetGRFStringID(Engine::Get(engine)->GetGRFID(), 0xD000 + callback), TC_BLACK);
 	StopTextRefStackUsage();
 	return result;
 }
@@ -830,9 +850,10 @@ int DrawVehiclePurchaseInfo(int left, int right, int y, EngineID engine_number)
 		y += FONT_HEIGHT_NORMAL;
 	}
 
+	if (refittable) y = ShowRefitOptionsList(left, right, y, engine_number);
+
 	/* Additional text from NewGRF */
 	y = ShowAdditionalText(left, right, y, engine_number);
-	if (refittable) y = ShowRefitOptionsList(left, right, y, engine_number);
 
 	return y;
 }
@@ -852,26 +873,37 @@ int DrawVehiclePurchaseInfo(int left, int right, int y, EngineID engine_number)
  */
 void DrawEngineList(VehicleType type, int l, int r, int y, const GUIEngineList *eng_list, uint16 min, uint16 max, EngineID selected_id, bool show_count, GroupID selected_group)
 {
-	static const int sprite_widths[]  = { 60, 60, 76, 67 };
 	static const int sprite_y_offsets[] = { -1, -1, -2, -2 };
 
 	/* Obligatory sanity checks! */
-	assert((uint)type < lengthof(sprite_widths));
-	assert_compile(lengthof(sprite_y_offsets) == lengthof(sprite_widths));
 	assert(max <= eng_list->Length());
 
 	bool rtl = _current_text_dir == TD_RTL;
 	int step_size = GetEngineListHeight(type);
-	int sprite_width = sprite_widths[type];
+	int sprite_left  = GetVehicleImageCellSize(type, EIT_PURCHASE).extend_left;
+	int sprite_right = GetVehicleImageCellSize(type, EIT_PURCHASE).extend_right;
+	int sprite_width = sprite_left + sprite_right;
 
-	int sprite_x        = (rtl ? r - sprite_width / 2 : l + sprite_width / 2) - 1;
+	int sprite_x        = rtl ? r - sprite_right - 1 : l + sprite_left + 1;
 	int sprite_y_offset = sprite_y_offsets[type] + step_size / 2;
 
-	int text_left  = l + (rtl ? WD_FRAMERECT_LEFT : sprite_width);
-	int text_right = r - (rtl ? sprite_width : WD_FRAMERECT_RIGHT);
+	Dimension replace_icon = {0, 0};
+	int count_width = 0;
+	if (show_count) {
+		replace_icon = GetSpriteSize(SPR_GROUP_REPLACE_ACTIVE);
+		SetDParamMaxDigits(0, 3, FS_SMALL);
+		count_width = GetStringBoundingBox(STR_TINY_BLACK_COMA).width;
+	}
+
+	int text_left  = l + (rtl ? WD_FRAMERECT_LEFT + replace_icon.width + 8 + count_width : sprite_width + WD_FRAMETEXT_LEFT);
+	int text_right = r - (rtl ? sprite_width + WD_FRAMETEXT_RIGHT : WD_FRAMERECT_RIGHT + replace_icon.width + 8 + count_width);
+	int replace_icon_left = rtl ? l + WD_FRAMERECT_LEFT : r - WD_FRAMERECT_RIGHT - replace_icon.width;
+	int count_left = l;
+	int count_right = rtl ? text_left : r - WD_FRAMERECT_RIGHT - replace_icon.width - 8;
 
 	int normal_text_y_offset = (step_size - FONT_HEIGHT_NORMAL) / 2;
 	int small_text_y_offset  = step_size - FONT_HEIGHT_SMALL - WD_FRAMERECT_BOTTOM - 1;
+	int replace_icon_y_offset = (step_size - replace_icon.height) / 2 - 1;
 
 	for (; min < max; min++, y += step_size) {
 		const EngineID engine = (*eng_list)[min];
@@ -879,11 +911,12 @@ void DrawEngineList(VehicleType type, int l, int r, int y, const GUIEngineList *
 		const uint num_engines = GetGroupNumEngines(_local_company, selected_group, engine);
 
 		SetDParam(0, engine);
-		DrawString(text_left, text_right, y + normal_text_y_offset, STR_ENGINE_NAME, engine == selected_id ? TC_WHITE : TC_BLACK);
-		DrawVehicleEngine(l, r, sprite_x, y + sprite_y_offset, engine, (show_count && num_engines == 0) ? PALETTE_CRASH : GetEnginePalette(engine, _local_company));
+		DrawString(text_left, text_right, y + normal_text_y_offset, STR_ENGINE_NAME, engine == selected_id ? TC_WHITE : TC_BLACK, (rtl ? SA_RIGHT : SA_LEFT));
+		DrawVehicleEngine(l, r, sprite_x, y + sprite_y_offset, engine, (show_count && num_engines == 0) ? PALETTE_CRASH : GetEnginePalette(engine, _local_company), EIT_PURCHASE);
 		if (show_count) {
 			SetDParam(0, num_engines);
-			DrawString(text_left, text_right, y + small_text_y_offset, STR_TINY_BLACK_COMA, TC_FROMSTRING, SA_RIGHT);
+			DrawString(count_left, count_right, y + small_text_y_offset, STR_TINY_BLACK_COMA, TC_FROMSTRING, SA_RIGHT | SA_FORCE);
+			if (EngineHasReplacementForCompany(Company::Get(_local_company), engine, selected_group)) DrawSprite(SPR_GROUP_REPLACE_ACTIVE, num_engines == 0 ? PALETTE_CRASH : PAL_NONE, replace_icon_left, y + replace_icon_y_offset);
 		}
 	}
 }
@@ -907,7 +940,7 @@ struct BuildVehicleWindow : Window {
 	int details_height;                         ///< Minimal needed height of the details panels (found so far).
 	Scrollbar *vscroll;
 
-	BuildVehicleWindow(const WindowDesc *desc, TileIndex tile, VehicleType type) : Window()
+	BuildVehicleWindow(WindowDesc *desc, TileIndex tile, VehicleType type) : Window(desc)
 	{
 		this->vehicle_type = type;
 		this->window_number = tile == INVALID_TILE ? (int)type : tile;
@@ -931,28 +964,31 @@ struct BuildVehicleWindow : Window {
 
 		this->listview_mode = (this->window_number <= VEH_END);
 
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 
-		this->vscroll = this->GetScrollbar(BUILD_VEHICLE_WIDGET_SCROLLBAR);
+		this->vscroll = this->GetScrollbar(WID_BV_SCROLLBAR);
 
 		/* If we are just viewing the list of vehicles, we do not need the Build button.
-		 * So we just hide it, and enlarge the Rename buton by the now vacant place. */
-		if (this->listview_mode) this->GetWidget<NWidgetStacked>(BUILD_VEHICLE_WIDGET_BUILD_SEL)->SetDisplayedPlane(SZSP_NONE);
+		 * So we just hide it, and enlarge the Rename button by the now vacant place. */
+		if (this->listview_mode) this->GetWidget<NWidgetStacked>(WID_BV_BUILD_SEL)->SetDisplayedPlane(SZSP_NONE);
 
-		NWidgetCore *widget = this->GetWidget<NWidgetCore>(BUILD_VEHICLE_WIDGET_LIST);
+		/* disable renaming engines in network games if you are not the server */
+		this->SetWidgetDisabledState(WID_BV_RENAME, _networking && !_network_server);
+
+		NWidgetCore *widget = this->GetWidget<NWidgetCore>(WID_BV_LIST);
 		widget->tool_tip = STR_BUY_VEHICLE_TRAIN_LIST_TOOLTIP + type;
 
-		widget = this->GetWidget<NWidgetCore>(BUILD_VEHICLE_WIDGET_BUILD);
+		widget = this->GetWidget<NWidgetCore>(WID_BV_BUILD);
 		widget->widget_data = STR_BUY_VEHICLE_TRAIN_BUY_VEHICLE_BUTTON + type;
 		widget->tool_tip    = STR_BUY_VEHICLE_TRAIN_BUY_VEHICLE_TOOLTIP + type;
 
-		widget = this->GetWidget<NWidgetCore>(BUILD_VEHICLE_WIDGET_RENAME);
+		widget = this->GetWidget<NWidgetCore>(WID_BV_RENAME);
 		widget->widget_data = STR_BUY_VEHICLE_TRAIN_RENAME_BUTTON + type;
 		widget->tool_tip    = STR_BUY_VEHICLE_TRAIN_RENAME_TOOLTIP + type;
 
 		this->details_height = ((this->vehicle_type == VEH_TRAIN) ? 10 : 9) * FONT_HEIGHT_NORMAL + WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM;
 
-		this->FinishInitNested(desc, tile == INVALID_TILE ? (int)type : tile);
+		this->FinishInitNested(tile == INVALID_TILE ? (int)type : tile);
 
 		this->owner = (tile != INVALID_TILE) ? GetTileOwner(tile) : _local_company;
 
@@ -991,7 +1027,7 @@ struct BuildVehicleWindow : Window {
 		/* Terminate the filter list. */
 		this->cargo_filter_texts[filter_items] = INVALID_STRING_ID;
 
-		/* If not found, the cargo criteria will be set to all cargos. */
+		/* If not found, the cargo criteria will be set to all cargoes. */
 		this->cargo_filter_criteria = 0;
 
 		/* Find the last cargo filter criteria. */
@@ -1068,7 +1104,7 @@ struct BuildVehicleWindow : Window {
 
 		this->sel_engine = sel_id;
 
-		/* make engines first, and then wagons, sorted by ListPositionOfEngine() */
+		/* make engines first, and then wagons, sorted by selected sort_criteria */
 		_internal_sort_order = false;
 		EngList_Sort(&this->eng_list, TrainEnginesThenWagonsSorter);
 
@@ -1177,23 +1213,23 @@ struct BuildVehicleWindow : Window {
 	void OnClick(Point pt, int widget, int click_count)
 	{
 		switch (widget) {
-			case BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING:
+			case WID_BV_SORT_ASSENDING_DESCENDING:
 				this->descending_sort_order ^= true;
 				_last_sort_order[this->vehicle_type] = this->descending_sort_order;
 				this->eng_list.ForceRebuild();
 				this->SetDirty();
 				break;
 
-			case BUILD_VEHICLE_WIDGET_LIST: {
-				uint i = this->vscroll->GetScrolledRowFromWidget(pt.y, this, BUILD_VEHICLE_WIDGET_LIST);
+			case WID_BV_LIST: {
+				uint i = this->vscroll->GetScrolledRowFromWidget(pt.y, this, WID_BV_LIST);
 				size_t num_items = this->eng_list.Length();
 				this->sel_engine = (i < num_items) ? this->eng_list[i] : INVALID_ENGINE;
 				this->SetDirty();
-				if (click_count > 1 && !this->listview_mode) this->OnClick(pt, BUILD_VEHICLE_WIDGET_BUILD, 1);
+				if (click_count > 1 && !this->listview_mode) this->OnClick(pt, WID_BV_BUILD, 1);
 				break;
 			}
 
-			case BUILD_VEHICLE_WIDGET_SORT_DROPDOWN: { // Select sorting criteria dropdown menu
+			case WID_BV_SORT_DROPDOWN: { // Select sorting criteria dropdown menu
 				uint32 hidden_mask = 0;
 				/* Disable sorting by power or tractive effort when the original acceleration model for road vehicles is being used. */
 				if (this->vehicle_type == VEH_ROAD &&
@@ -1207,15 +1243,15 @@ struct BuildVehicleWindow : Window {
 						_settings_game.vehicle.train_acceleration_model == AM_ORIGINAL) {
 					SetBit(hidden_mask, 4); // tractive effort
 				}
-				ShowDropDownMenu(this, _sort_listing[this->vehicle_type], this->sort_criteria, BUILD_VEHICLE_WIDGET_SORT_DROPDOWN, 0, hidden_mask);
+				ShowDropDownMenu(this, _sort_listing[this->vehicle_type], this->sort_criteria, WID_BV_SORT_DROPDOWN, 0, hidden_mask);
 				break;
 			}
 
-			case BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN: // Select cargo filtering criteria dropdown menu
-				ShowDropDownMenu(this, this->cargo_filter_texts, this->cargo_filter_criteria, BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN, 0, 0);
+			case WID_BV_CARGO_FILTER_DROPDOWN: // Select cargo filtering criteria dropdown menu
+				ShowDropDownMenu(this, this->cargo_filter_texts, this->cargo_filter_criteria, WID_BV_CARGO_FILTER_DROPDOWN, 0, 0);
 				break;
 
-			case BUILD_VEHICLE_WIDGET_BUILD: {
+			case WID_BV_BUILD: {
 				EngineID sel_eng = this->sel_engine;
 				if (sel_eng != INVALID_ENGINE) {
 					CommandCallback *callback = (this->vehicle_type == VEH_TRAIN && RailVehInfo(sel_eng)->railveh_type == RAILVEH_WAGON) ? CcBuildWagon : CcBuildPrimaryVehicle;
@@ -1224,7 +1260,7 @@ struct BuildVehicleWindow : Window {
 				break;
 			}
 
-			case BUILD_VEHICLE_WIDGET_RENAME: {
+			case WID_BV_RENAME: {
 				EngineID sel_eng = this->sel_engine;
 				if (sel_eng != INVALID_ENGINE) {
 					this->rename_engine = sel_eng;
@@ -1257,7 +1293,7 @@ struct BuildVehicleWindow : Window {
 	virtual void SetStringParameters(int widget) const
 	{
 		switch (widget) {
-			case BUILD_VEHICLE_WIDGET_CAPTION:
+			case WID_BV_CAPTION:
 				if (this->vehicle_type == VEH_TRAIN && !this->listview_mode) {
 					const RailtypeInfo *rti = GetRailTypeInfo(this->filter.railtype);
 					SetDParam(0, rti->strings.build_caption);
@@ -1266,11 +1302,11 @@ struct BuildVehicleWindow : Window {
 				}
 				break;
 
-			case BUILD_VEHICLE_WIDGET_SORT_DROPDOWN:
+			case WID_BV_SORT_DROPDOWN:
 				SetDParam(0, _sort_listing[this->vehicle_type][this->sort_criteria]);
 				break;
 
-			case BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN:
+			case WID_BV_CARGO_FILTER_DROPDOWN:
 				SetDParam(0, this->cargo_filter_texts[this->cargo_filter_criteria]);
 		}
 	}
@@ -1278,16 +1314,16 @@ struct BuildVehicleWindow : Window {
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
 		switch (widget) {
-			case BUILD_VEHICLE_WIDGET_LIST:
+			case WID_BV_LIST:
 				resize->height = GetEngineListHeight(this->vehicle_type);
 				size->height = 3 * resize->height;
 				break;
 
-			case BUILD_VEHICLE_WIDGET_PANEL:
+			case WID_BV_PANEL:
 				size->height = this->details_height;
 				break;
 
-			case BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING: {
+			case WID_BV_SORT_ASSENDING_DESCENDING: {
 				Dimension d = GetStringBoundingBox(this->GetWidget<NWidgetCore>(widget)->widget_data);
 				d.width += padding.width + WD_SORTBUTTON_ARROW_WIDTH * 2; // Doubled since the string is centred and it also looks better.
 				d.height += padding.height;
@@ -1300,12 +1336,12 @@ struct BuildVehicleWindow : Window {
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
 		switch (widget) {
-			case BUILD_VEHICLE_WIDGET_LIST:
+			case WID_BV_LIST:
 				DrawEngineList(this->vehicle_type, r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, r.top + WD_FRAMERECT_TOP, &this->eng_list, this->vscroll->GetPosition(), min(this->vscroll->GetPosition() + this->vscroll->GetCapacity(), this->eng_list.Length()), this->sel_engine, false, DEFAULT_GROUP);
 				break;
 
-			case BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING:
-				this->DrawSortButtonState(BUILD_VEHICLE_WIDGET_SORT_ASSENDING_DESCENDING, this->descending_sort_order ? SBS_DOWN : SBS_UP);
+			case WID_BV_SORT_ASSENDING_DESCENDING:
+				this->DrawSortButtonState(WID_BV_SORT_ASSENDING_DESCENDING, this->descending_sort_order ? SBS_DOWN : SBS_UP);
 				break;
 		}
 	}
@@ -1321,7 +1357,7 @@ struct BuildVehicleWindow : Window {
 			int needed_height = this->details_height;
 			/* Draw details panels. */
 			if (this->sel_engine != INVALID_ENGINE) {
-				NWidgetBase *nwi = this->GetWidget<NWidgetBase>(BUILD_VEHICLE_WIDGET_PANEL);
+				NWidgetBase *nwi = this->GetWidget<NWidgetBase>(WID_BV_PANEL);
 				int text_end = DrawVehiclePurchaseInfo(nwi->pos_x + WD_FRAMETEXT_LEFT, nwi->pos_x + nwi->current_x - WD_FRAMETEXT_RIGHT,
 						nwi->pos_y + WD_FRAMERECT_TOP, this->sel_engine);
 				needed_height = max(needed_height, text_end - (int)nwi->pos_y + WD_FRAMERECT_BOTTOM);
@@ -1345,7 +1381,7 @@ struct BuildVehicleWindow : Window {
 	virtual void OnDropdownSelect(int widget, int index)
 	{
 		switch (widget) {
-			case BUILD_VEHICLE_WIDGET_SORT_DROPDOWN:
+			case WID_BV_SORT_DROPDOWN:
 				if (this->sort_criteria != index) {
 					this->sort_criteria = index;
 					_last_sort_criteria[this->vehicle_type] = this->sort_criteria;
@@ -1353,7 +1389,7 @@ struct BuildVehicleWindow : Window {
 				}
 				break;
 
-			case BUILD_VEHICLE_WIDGET_CARGO_FILTER_DROPDOWN: // Select a cargo filter criteria
+			case WID_BV_CARGO_FILTER_DROPDOWN: // Select a cargo filter criteria
 				if (this->cargo_filter_criteria != index) {
 					this->cargo_filter_criteria = index;
 					_last_filter_criteria[this->vehicle_type] = this->cargo_filter[this->cargo_filter_criteria];
@@ -1368,15 +1404,14 @@ struct BuildVehicleWindow : Window {
 
 	virtual void OnResize()
 	{
-		this->vscroll->SetCapacityFromWidget(this, BUILD_VEHICLE_WIDGET_LIST);
-		this->GetWidget<NWidgetCore>(BUILD_VEHICLE_WIDGET_LIST)->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
+		this->vscroll->SetCapacityFromWidget(this, WID_BV_LIST);
 	}
 };
 
-static const WindowDesc _build_vehicle_desc(
-	WDP_AUTO, 240, 268,
+static WindowDesc _build_vehicle_desc(
+	WDP_AUTO, "build_vehicle", 240, 268,
 	WC_BUILD_VEHICLE, WC_NONE,
-	WDF_UNCLICK_BUTTONS | WDF_CONSTRUCTION,
+	WDF_CONSTRUCTION,
 	_nested_build_vehicle_widgets, lengthof(_nested_build_vehicle_widgets)
 );
 

@@ -13,7 +13,7 @@
 #define WIN32_H
 
 #include <windows.h>
-bool MyShowCursor(bool show);
+bool MyShowCursor(bool show, bool toggle = false);
 
 typedef void (*Function)(int);
 bool LoadLibraryList(Function proc[], const char *dll);
@@ -39,12 +39,6 @@ extern uint _codepage; // local code-page in the system @see win32_v.cpp:WM_INPU
 # define WIDE_TO_MB(str) (str)
 # define WIDE_TO_MB_BUFFER(str, buffer, buflen) (str)
 #endif
-
-/* Override SHGetFolderPath with our custom implementation */
-#if defined(SHGetFolderPath)
-#undef SHGetFolderPath
-#endif
-#define SHGetFolderPath OTTDSHGetFolderPath
 
 HRESULT OTTDSHGetFolderPath(HWND, int, HANDLE, DWORD, LPTSTR);
 

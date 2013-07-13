@@ -16,7 +16,6 @@
 #include "ai/ai_gui.hpp"
 #include "newgrf.h"
 #include "newgrf_house.h"
-#include "group.h"
 #include "economy_func.h"
 #include "date_func.h"
 #include "texteff.hpp"
@@ -27,6 +26,8 @@
 #include "network/network_func.h"
 #include "window_func.h"
 #include "core/pool_type.hpp"
+#include "game/game.hpp"
+#include "linkgraph/linkgraphschedule.h"
 
 
 extern TileIndex _cur_tileloop_tile;
@@ -35,7 +36,6 @@ extern void MakeNewgameSettingsLive();
 void InitializeSound();
 void InitializeMusic();
 void InitializeVehicles();
-void InitializeClearLand();
 void InitializeRailGui();
 void InitializeRoadGui();
 void InitializeAirportGui();
@@ -60,7 +60,7 @@ void InitializeGame(uint size_x, uint size_y, bool reset_date, bool reset_settin
 	_pause_mode = PM_UNPAUSED;
 	_fast_forward = 0;
 	_tick_counter = 0;
-	_cur_tileloop_tile = 0;
+	_cur_tileloop_tile = 1;
 	_thd.redsq = INVALID_TILE;
 	if (reset_settings) MakeNewgameSettingsLive();
 
@@ -69,6 +69,7 @@ void InitializeGame(uint size_x, uint size_y, bool reset_date, bool reset_settin
 		InitializeOldNames();
 	}
 
+	LinkGraphSchedule::Clear();
 	PoolBase::Clean(PT_NORMAL);
 
 	ResetPersistentNewGRFData();
@@ -80,7 +81,6 @@ void InitializeGame(uint size_x, uint size_y, bool reset_date, bool reset_settin
 
 	InitNewsItemStructs();
 	InitializeLandscape();
-	InitializeClearLand();
 	InitializeRailGui();
 	InitializeRoadGui();
 	InitializeAirportGui();
@@ -96,6 +96,7 @@ void InitializeGame(uint size_x, uint size_y, bool reset_date, bool reset_settin
 
 	InitializeCompanies();
 	AI::Initialize();
+	Game::Initialize();
 	InitializeCheats();
 
 	InitTextEffects();

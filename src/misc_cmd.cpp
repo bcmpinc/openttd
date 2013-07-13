@@ -148,6 +148,7 @@ CommandCost CmdPause(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, 
 		case PM_PAUSED_SAVELOAD:
 		case PM_PAUSED_ERROR:
 		case PM_PAUSED_NORMAL:
+		case PM_PAUSED_GAME_SCRIPT:
 			break;
 
 #ifdef ENABLE_NETWORK
@@ -177,7 +178,6 @@ CommandCost CmdPause(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, 
 			} else {
 				_pause_mode = _pause_mode | p1;
 			}
-			InvalidateWindowClassesData(WC_AI_DEBUG, -2);
 
 #ifdef ENABLE_NETWORK
 			NetworkHandlePauseChange(prev_mode, (PauseMode)p1);
@@ -207,7 +207,7 @@ CommandCost CmdMoneyCheat(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32
 /**
  * Transfer funds (money) from one company to another.
  * To prevent abuse in multiplayer games you can only send money to other
- * companies if you have paid off your loan (either explicitely, or implicitely
+ * companies if you have paid off your loan (either explicitly, or implicitly
  * given the fact that you have more money than loan).
  * @param tile unused
  * @param flags operation to perform

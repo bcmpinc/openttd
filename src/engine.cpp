@@ -16,7 +16,6 @@
 #include "aircraft.h"
 #include "newgrf.h"
 #include "newgrf_engine.h"
-#include "group.h"
 #include "strings_func.h"
 #include "core/random_func.hpp"
 #include "window_func.h"
@@ -30,6 +29,8 @@
 #include "engine_base.h"
 #include "company_base.h"
 #include "vehicle_func.h"
+#include "articulated_vehicles.h"
+#include "error.h"
 
 #include "table/strings.h"
 #include "table/engines.h"
@@ -147,17 +148,28 @@ Engine::~Engine()
 }
 
 /**
- * Checks whether the engine spec is properly initialised.
+ * Checks whether the engine is a valid (non-articulated part of an) engine.
  * @return true if enabled
  */
 bool Engine::IsEnabled() const
 {
-	return this->info.string_id != STR_NEWGRF_INVALID_ENGINE;
+	return this->info.string_id != STR_NEWGRF_INVALID_ENGINE && HasBit(this->info.climates, _settings_game.game_creation.landscape);
+}
+
+/**
+ * Retrieve the GRF ID of the NewGRF the engine is tied to.
+ * This is the GRF providing the Action 3.
+ * @return GRF ID of the associated NewGRF.
+ */
+uint32 Engine::GetGRFID() const
+{
+	const GRFFile *file = this->GetGRF();
+	return file == NULL ? 0 : file->grfid;
 }
 
 /**
  * Determines whether an engine can carry something.
- * A vehicle cannot carry anything if its capacity is zero, or none of the possible cargos is available in the climate.
+ * A vehicle cannot carry anything if its capacity is zero, or none of the possible cargoes is available in the climate.
  * @return true if the vehicle can carry something.
  */
 bool Engine::CanCarryCargo() const
@@ -185,50 +197,86 @@ bool Engine::CanCarryCargo() const
 	return this->GetDefaultCargoType() != CT_INVALID;
 }
 
+
 /**
- * Determines the default cargo capacity of an engine for display purposes.
- *
- * For planes carrying both passenger and mail this is the passenger capacity.
- * For multiheaded engines this is the capacity of both heads.
- * For articulated engines use GetCapacityOfArticulatedParts
- *
- * @note Keep this function consistent with GetVehicleCapacity().
+ * Determines capacity of a given vehicle from scratch.
+ * For aircraft the main capacity is determined. Mail might be present as well.
+ * @param v Vehicle of interest; NULL in purchase list
  * @param mail_capacity returns secondary cargo (mail) capacity of aircraft
- * @return The default capacity
- * @see GetDefaultCargoType
+ * @return Capacity
  */
-uint Engine::GetDisplayDefaultCapacity(uint16 *mail_capacity) const
+uint Engine::DetermineCapacity(const Vehicle *v, uint16 *mail_capacity) const
 {
+	assert(v == NULL || this->index == v->engine_type);
 	if (mail_capacity != NULL) *mail_capacity = 0;
+
 	if (!this->CanCarryCargo()) return 0;
-	switch (type) {
+
+	bool new_multipliers = HasBit(this->info.misc_flags, EF_NO_DEFAULT_CARGO_MULTIPLIER);
+	CargoID default_cargo = this->GetDefaultCargoType();
+	CargoID cargo_type = (v != NULL) ? v->cargo_type : default_cargo;
+
+	if (mail_capacity != NULL && this->type == VEH_AIRCRAFT && IsCargoInClass(cargo_type, CC_PASSENGERS)) {
+		*mail_capacity = GetEngineProperty(this->index, PROP_AIRCRAFT_MAIL_CAPACITY, this->u.air.mail_capacity, v);
+	}
+
+	/* Check the refit capacity callback if we are not in the default configuration, or if we are using the new multiplier algorithm. */
+	if (HasBit(this->info.callback_mask, CBM_VEHICLE_REFIT_CAPACITY) &&
+			(new_multipliers || default_cargo != cargo_type || (v != NULL && v->cargo_subtype != 0))) {
+		uint16 callback = GetVehicleCallback(CBID_VEHICLE_REFIT_CAPACITY, 0, 0, this->index, v);
+		if (callback != CALLBACK_FAILED) return callback;
+	}
+
+	/* Get capacity according to property resp. CB */
+	uint capacity;
+	uint extra_mail_cap = 0;
+	switch (this->type) {
 		case VEH_TRAIN:
-			return GetEngineProperty(this->index, PROP_TRAIN_CARGO_CAPACITY, this->u.rail.capacity) + (this->u.rail.railveh_type == RAILVEH_MULTIHEAD ? this->u.rail.capacity : 0);
+			capacity = GetEngineProperty(this->index, PROP_TRAIN_CARGO_CAPACITY,        this->u.rail.capacity, v);
+
+			/* In purchase list add the capacity of the second head. Always use the plain property for this. */
+			if (v == NULL && this->u.rail.railveh_type == RAILVEH_MULTIHEAD) capacity += this->u.rail.capacity;
+			break;
 
 		case VEH_ROAD:
-			return GetEngineProperty(this->index, PROP_ROADVEH_CARGO_CAPACITY, this->u.road.capacity);
+			capacity = GetEngineProperty(this->index, PROP_ROADVEH_CARGO_CAPACITY,      this->u.road.capacity, v);
+			break;
 
 		case VEH_SHIP:
-			return GetEngineProperty(this->index, PROP_SHIP_CARGO_CAPACITY, this->u.ship.capacity);
+			capacity = GetEngineProperty(this->index, PROP_SHIP_CARGO_CAPACITY,         this->u.ship.capacity, v);
+			break;
 
-		case VEH_AIRCRAFT: {
-			uint capacity = GetEngineProperty(this->index, PROP_AIRCRAFT_PASSENGER_CAPACITY, this->u.air.passenger_capacity);
-			CargoID cargo = this->GetDefaultCargoType();
-			if (IsCargoInClass(cargo, CC_PASSENGERS)) {
-				if (mail_capacity != NULL) *mail_capacity = GetEngineProperty(this->index, PROP_AIRCRAFT_MAIL_CAPACITY, this->u.air.mail_capacity);
-			} else {
-				capacity += GetEngineProperty(this->index, PROP_AIRCRAFT_MAIL_CAPACITY, this->u.air.mail_capacity);
+		case VEH_AIRCRAFT:
+			capacity = GetEngineProperty(this->index, PROP_AIRCRAFT_PASSENGER_CAPACITY, this->u.air.passenger_capacity, v);
+			if (!IsCargoInClass(cargo_type, CC_PASSENGERS)) {
+				extra_mail_cap = GetEngineProperty(this->index, PROP_AIRCRAFT_MAIL_CAPACITY, this->u.air.mail_capacity, v);
 			}
-			switch (cargo) {
-				case CT_PASSENGERS:
-				case CT_MAIL:       return capacity;
-				case CT_GOODS:      return capacity / 2;
-				default:            return capacity / 4;
-			}
-		}
+			if (!new_multipliers && cargo_type == CT_MAIL) return capacity + extra_mail_cap;
+			default_cargo = CT_PASSENGERS; // Always use 'passengers' wrt. cargo multipliers
+			break;
 
 		default: NOT_REACHED();
 	}
+
+	if (!new_multipliers) {
+		/* Use the passenger multiplier for mail as well */
+		capacity += extra_mail_cap;
+		extra_mail_cap = 0;
+	}
+
+	/* Apply multipliers depending on cargo- and vehicletype. */
+	if (new_multipliers || (this->type != VEH_SHIP && default_cargo != cargo_type)) {
+		uint16 default_multiplier = new_multipliers ? 0x100 : CargoSpec::Get(default_cargo)->multiplier;
+		uint16 cargo_multiplier = CargoSpec::Get(cargo_type)->multiplier;
+		capacity *= cargo_multiplier;
+		if (extra_mail_cap > 0) {
+			uint mail_multiplier = CargoSpec::Get(CT_MAIL)->multiplier;
+			capacity += (default_multiplier * extra_mail_cap * cargo_multiplier + mail_multiplier / 2) / mail_multiplier;
+		}
+		capacity = (capacity + default_multiplier / 2) / default_multiplier;
+	}
+
+	return capacity;
 }
 
 /**
@@ -265,7 +313,7 @@ Money Engine::GetRunningCost() const
 		default: NOT_REACHED();
 	}
 
-	return GetPrice(base_price, cost_factor, this->grf_prop.grffile, -8);
+	return GetPrice(base_price, cost_factor, this->GetGRF(), -8);
 }
 
 /**
@@ -305,7 +353,7 @@ Money Engine::GetCost() const
 		default: NOT_REACHED();
 	}
 
-	return GetPrice(base_price, cost_factor, this->grf_prop.grffile, -8);
+	return GetPrice(base_price, cost_factor, this->GetGRF(), -8);
 }
 
 /**
@@ -404,6 +452,20 @@ Date Engine::GetLifeLengthInDays() const
 }
 
 /**
+ * Get the range of an aircraft type.
+ * @return Range of the aircraft type in tiles or 0 if unlimited range.
+ */
+uint16 Engine::GetRange() const
+{
+	switch (this->type) {
+		case VEH_AIRCRAFT:
+			return GetEngineProperty(this->index, PROP_AIRCRAFT_RANGE, this->u.air.max_range);
+
+		default: NOT_REACHED();
+	}
+}
+
+/**
  * Initializes the EngineOverrideManager with the default engines.
  */
 void EngineOverrideManager::ResetToDefaultMapping()
@@ -458,45 +520,6 @@ bool EngineOverrideManager::ResetToCurrentNewGRFConfig()
 	ReloadNewGRFData();
 
 	return true;
-}
-
-/**
- * Sets cached values in Company::num_vehicles and Group::num_vehicles
- */
-void SetCachedEngineCounts()
-{
-	size_t engines = Engine::GetPoolSize();
-
-	/* Set up the engine count for all companies */
-	Company *c;
-	FOR_ALL_COMPANIES(c) {
-		free(c->num_engines);
-		c->num_engines = CallocT<EngineID>(engines);
-	}
-
-	/* Recalculate */
-	Group *g;
-	FOR_ALL_GROUPS(g) {
-		free(g->num_engines);
-		g->num_engines = CallocT<EngineID>(engines);
-	}
-
-	const Vehicle *v;
-	FOR_ALL_VEHICLES(v) {
-		if (!v->IsEngineCountable()) continue;
-
-		assert(v->engine_type < engines);
-
-		Company::Get(v->owner)->num_engines[v->engine_type]++;
-
-		if (v->group_id == DEFAULT_GROUP) continue;
-
-		g = Group::Get(v->group_id);
-		assert(v->type == g->vehicle_type);
-		assert(v->owner == g->owner);
-
-		g->num_engines[v->engine_type]++;
-	}
 }
 
 /**
@@ -663,7 +686,10 @@ void StartupOneEngine(Engine *e, Date aging_date)
 	}
 }
 
-/** Start/initialise all our engines. */
+/**
+ * Start/initialise all our engines. Must be called whenever there are changes
+ * to the NewGRF config.
+ */
 void StartupEngines()
 {
 	Engine *e;
@@ -716,7 +742,8 @@ static void AcceptEnginePreview(EngineID eid, CompanyID company)
 		SetBit(c->avail_roadtypes, HasBit(e->info.misc_flags, EF_ROAD_TRAM) ? ROADTYPE_TRAM : ROADTYPE_ROAD);
 	}
 
-	e->preview_company_rank = 0xFF;
+	e->preview_company = INVALID_COMPANY;
+	e->preview_asked = (CompanyMask)-1;
 	if (company == _local_company) {
 		AddRemoveEngineFromAutoreplaceAndBuildWindows(e->type);
 	}
@@ -724,37 +751,66 @@ static void AcceptEnginePreview(EngineID eid, CompanyID company)
 	/* Update the toolbar. */
 	if (e->type == VEH_ROAD) InvalidateWindowData(WC_BUILD_TOOLBAR, TRANSPORT_ROAD);
 	if (e->type == VEH_SHIP) InvalidateWindowData(WC_BUILD_TOOLBAR, TRANSPORT_WATER);
+
+	/* Notify preview window, that it might want to close.
+	 * Note: We cannot directly close the window.
+	 *       In singleplayer this function is called from the preview window, so
+	 *       we have to use the GUI-scope scheduling of InvalidateWindowData.
+	 */
+	InvalidateWindowData(WC_ENGINE_PREVIEW, eid);
 }
 
 /**
- * Get the N-th best company.
- * @param pp Value N, 1 means best, 2 means second best, etc.
- * @return N-th best company if it exists, #INVALID_COMPANY otherwise.
+ * Get the best company for an engine preview.
+ * @param e Engine to preview.
+ * @return Best company if it exists, #INVALID_COMPANY otherwise.
  */
-static CompanyID GetBestCompany(uint8 pp)
+static CompanyID GetPreviewCompany(Engine *e)
 {
-	CompanyID best_company;
-	CompanyMask mask = 0;
+	CompanyID best_company = INVALID_COMPANY;
 
-	do {
-		int32 best_hist = -1;
-		best_company = INVALID_COMPANY;
+	/* For trains the cargomask has no useful meaning, since you can attach other wagons */
+	uint32 cargomask = e->type != VEH_TRAIN ? GetUnionOfArticulatedRefitMasks(e->index, true) : (uint32)-1;
 
-		const Company *c;
-		FOR_ALL_COMPANIES(c) {
-			if (c->block_preview == 0 && !HasBit(mask, c->index) &&
-					c->old_economy[0].performance_history > best_hist) {
+	int32 best_hist = -1;
+	const Company *c;
+	FOR_ALL_COMPANIES(c) {
+		if (c->block_preview == 0 && !HasBit(e->preview_asked, c->index) &&
+				c->old_economy[0].performance_history > best_hist) {
+
+			/* Check whether the company uses similar vehicles */
+			Vehicle *v;
+			FOR_ALL_VEHICLES(v) {
+				if (v->owner != c->index || v->type != e->type) continue;
+				if (!v->GetEngine()->CanCarryCargo() || !HasBit(cargomask, v->cargo_type)) continue;
+
 				best_hist = c->old_economy[0].performance_history;
 				best_company = c->index;
+				break;
 			}
 		}
-
-		if (best_company == INVALID_COMPANY) return INVALID_COMPANY;
-
-		SetBit(mask, best_company);
-	} while (--pp != 0);
+	}
 
 	return best_company;
+}
+
+/**
+ * Checks if a vehicle type is disabled for all/ai companies.
+ * @param type The vehicle type which shall be checked.
+ * @param ai If true, check if the type is disabled for AI companies, otherwise check if
+ *           the vehicle type is disabled for human companies.
+ * @return Whether or not a vehicle type is disabled.
+ */
+static bool IsVehicleTypeDisabled(VehicleType type, bool ai)
+{
+	switch (type) {
+		case VEH_TRAIN:    return _settings_game.vehicle.max_trains == 0   || (ai && _settings_game.ai.ai_disable_veh_train);
+		case VEH_ROAD:     return _settings_game.vehicle.max_roadveh == 0  || (ai && _settings_game.ai.ai_disable_veh_roadveh);
+		case VEH_SHIP:     return _settings_game.vehicle.max_ships == 0    || (ai && _settings_game.ai.ai_disable_veh_ship);
+		case VEH_AIRCRAFT: return _settings_game.vehicle.max_aircraft == 0 || (ai && _settings_game.ai.ai_disable_veh_aircraft);
+
+		default: NOT_REACHED();
+	}
 }
 
 /** Daily check to offer an exclusive engine preview to the companies. */
@@ -768,24 +824,28 @@ void EnginesDailyLoop()
 	FOR_ALL_ENGINES(e) {
 		EngineID i = e->index;
 		if (e->flags & ENGINE_EXCLUSIVE_PREVIEW) {
-			if (e->flags & ENGINE_OFFER_WINDOW_OPEN) {
-				if (e->preview_company_rank != 0xFF && !--e->preview_wait) {
-					e->flags &= ~ENGINE_OFFER_WINDOW_OPEN;
+			if (e->preview_company != INVALID_COMPANY) {
+				if (!--e->preview_wait) {
 					DeleteWindowById(WC_ENGINE_PREVIEW, i);
-					e->preview_company_rank++;
+					e->preview_company = INVALID_COMPANY;
 				}
-			} else if (e->preview_company_rank != 0xFF) {
-				CompanyID best_company = GetBestCompany(e->preview_company_rank);
+			} else if (CountBits(e->preview_asked) < MAX_COMPANIES) {
+				e->preview_company = GetPreviewCompany(e);
 
-				if (best_company == INVALID_COMPANY) {
-					e->preview_company_rank = 0xFF;
+				if (e->preview_company == INVALID_COMPANY) {
+					e->preview_asked = (CompanyMask)-1;
 					continue;
 				}
 
-				e->flags |= ENGINE_OFFER_WINDOW_OPEN;
+				SetBit(e->preview_asked, e->preview_company);
 				e->preview_wait = 20;
-				AI::NewEvent(best_company, new AIEventEnginePreview(i));
-				if (IsInteractiveCompany(best_company)) ShowEnginePreviewWindow(i);
+				/* AIs are intentionally not skipped for preview even if they cannot build a certain
+				 * vehicle type. This is done to not give poor performing human companies an "unfair"
+				 * boost that they wouldn't have gotten against other human companies. The check on
+				 * the line below is just to make AIs not notice that they have a preview if they
+				 * cannot build the vehicle. */
+				if (!IsVehicleTypeDisabled(e->type, true)) AI::NewEvent(e->preview_company, new ScriptEventEnginePreview(i));
+				if (IsInteractiveCompany(e->preview_company)) ShowEnginePreviewWindow(i);
 			}
 		}
 	}
@@ -795,7 +855,7 @@ void EnginesDailyLoop()
  * Accept an engine prototype. XXX - it is possible that the top-company
  * changes while you are waiting to accept the offer? Then it becomes invalid
  * @param tile unused
- * @param flags operation to perfom
+ * @param flags operation to perform
  * @param p1 engine-prototype offered
  * @param p2 unused
  * @param text unused
@@ -804,7 +864,7 @@ void EnginesDailyLoop()
 CommandCost CmdWantEnginePreview(TileIndex tile, DoCommandFlag flags, uint32 p1, uint32 p2, const char *text)
 {
 	Engine *e = Engine::GetIfValid(p1);
-	if (e == NULL || GetBestCompany(e->preview_company_rank) != _current_company) return CMD_ERROR;
+	if (e == NULL || e->preview_company != _current_company) return CMD_ERROR;
 
 	if (flags & DC_EXEC) AcceptEnginePreview(p1, _current_company);
 
@@ -865,17 +925,25 @@ static void NewVehicleAvailable(Engine *e)
 		FOR_ALL_COMPANIES(c) SetBit(c->avail_roadtypes, HasBit(e->info.misc_flags, EF_ROAD_TRAM) ? ROADTYPE_TRAM : ROADTYPE_ROAD);
 	}
 
-	AI::BroadcastNewEvent(new AIEventEngineAvailable(index));
+	/* Only broadcast event if AIs are able to build this vehicle type. */
+	if (!IsVehicleTypeDisabled(e->type, true)) AI::BroadcastNewEvent(new ScriptEventEngineAvailable(index));
 
-	SetDParam(0, GetEngineCategoryName(index));
-	SetDParam(1, index);
-	AddNewsItem(STR_NEWS_NEW_VEHICLE_NOW_AVAILABLE_WITH_TYPE, NS_NEW_VEHICLES, NR_ENGINE, index);
+	/* Only provide the "New Vehicle available" news paper entry, if engine can be built. */
+	if (!IsVehicleTypeDisabled(e->type, false)) {
+		SetDParam(0, GetEngineCategoryName(index));
+		SetDParam(1, index);
+		AddNewsItem(STR_NEWS_NEW_VEHICLE_NOW_AVAILABLE_WITH_TYPE, NT_NEW_VEHICLES, NF_VEHICLE, NR_ENGINE, index);
+	}
 
 	/* Update the toolbar. */
 	if (e->type == VEH_ROAD) InvalidateWindowData(WC_BUILD_TOOLBAR, TRANSPORT_ROAD);
 	if (e->type == VEH_SHIP) InvalidateWindowData(WC_BUILD_TOOLBAR, TRANSPORT_WATER);
+
+	/* Close pending preview windows */
+	DeleteWindowById(WC_ENGINE_PREVIEW, index);
 }
 
+/** Monthly update of the availability, reliability, and preview offers of the engines. */
 void EnginesMonthlyLoop()
 {
 	if (_cur_year < _year_engine_aging_stops) {
@@ -894,18 +962,31 @@ void EnginesMonthlyLoop()
 				/* Introduce it to all companies */
 				NewVehicleAvailable(e);
 			} else if (!(e->flags & (ENGINE_AVAILABLE | ENGINE_EXCLUSIVE_PREVIEW)) && _date >= e->intro_date) {
-				/* Introduction date has passed.. show introducing dialog to one companies. */
-				e->flags |= ENGINE_EXCLUSIVE_PREVIEW;
+				/* Introduction date has passed...
+				 * Check if it is allowed to build this vehicle type at all
+				 * based on the current game settings. If not, it does not
+				 * make sense to show the preview dialog to any company. */
+				if (IsVehicleTypeDisabled(e->type, false)) continue;
 
 				/* Do not introduce new rail wagons */
-				if (!IsWagon(e->index)) {
-					e->preview_company_rank = 1; // Give to the company with the highest rating.
-				}
+				if (IsWagon(e->index)) continue;
+
+				/* Show preview dialog to one of the companies. */
+				e->flags |= ENGINE_EXCLUSIVE_PREVIEW;
+				e->preview_company = INVALID_COMPANY;
+				e->preview_asked = 0;
 			}
 		}
+
+		InvalidateWindowClassesData(WC_BUILD_VEHICLE); // rebuild the purchase list (esp. when sorted by reliability)
 	}
 }
 
+/**
+ * Is \a name still free as name for an engine?
+ * @param name New name of an engine.
+ * @return \c false if the name is being used already, else \c true.
+ */
 static bool IsUniqueEngineName(const char *name)
 {
 	const Engine *e;
@@ -920,7 +1001,7 @@ static bool IsUniqueEngineName(const char *name)
 /**
  * Rename an engine.
  * @param tile unused
- * @param flags operation to perfom
+ * @param flags operation to perform
  * @param p1 engine ID to rename
  * @param p2 unused
  * @param text the new name or an empty string when resetting to the default
@@ -972,12 +1053,18 @@ bool IsEngineBuildable(EngineID engine, VehicleType type, CompanyID company)
 	/* check if it's an engine of specified type */
 	if (e->type != type) return false;
 
-	/* check if it's available */
-	if (!HasBit(e->company_avail, company)) return false;
+	/* check if it's available ... */
+	if (company == OWNER_DEITY) {
+		/* ... for any company (preview does not count) */
+		if (!(e->flags & ENGINE_AVAILABLE) || e->company_avail == 0) return false;
+	} else {
+		/* ... for this company */
+		if (!HasBit(e->company_avail, company)) return false;
+	}
 
 	if (!e->IsEnabled()) return false;
 
-	if (type == VEH_TRAIN) {
+	if (type == VEH_TRAIN && company != OWNER_DEITY) {
 		/* Check if the rail type is available to this company */
 		const Company *c = Company::Get(company);
 		if (((GetRailTypeInfo(e->u.rail.railtype))->compatible_railtypes & c->avail_railtypes) == 0) return false;
@@ -1011,4 +1098,26 @@ bool IsEngineRefittable(EngineID engine)
 	/* Is there any cargo except the default cargo? */
 	CargoID default_cargo = e->GetDefaultCargoType();
 	return default_cargo != CT_INVALID && ei->refit_mask != 1U << default_cargo;
+}
+
+/**
+ * Check for engines that have an appropriate availability.
+ */
+void CheckEngines()
+{
+	const Engine *e;
+	Date min_date = INT32_MAX;
+
+	FOR_ALL_ENGINES(e) {
+		if (!e->IsEnabled()) continue;
+
+		/* We have an available engine... yay! */
+		if (e->flags & ENGINE_AVAILABLE && e->company_avail != 0) return;
+
+		/* Okay, try to find the earliest date. */
+		min_date = min(min_date, e->info.base_intro);
+	}
+
+	SetDParam(0, min_date);
+	ShowErrorMessage(STR_ERROR_NO_VEHICLES_AVAILABLE, STR_ERROR_NO_VEHICLES_AVAILABLE_EXPLANATION, WL_WARNING);
 }

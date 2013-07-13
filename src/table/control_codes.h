@@ -23,9 +23,10 @@ enum StringControlCode {
 	SCC_SPRITE_START  = 0xE200,
 	SCC_SPRITE_END    = SCC_SPRITE_START + 0xFF,
 
+	/* This must be the first entry. It's encoded in strings that are saved. */
+	SCC_ENCODED = SCC_CONTROL_START,
+
 	/* Display control codes */
-	SCC_SETX = SCC_CONTROL_START,
-	SCC_SETXY,
 	SCC_TINYFONT,  ///< Switch to small font
 	SCC_BIGFONT,   ///< Switch to large font
 
@@ -45,15 +46,17 @@ enum StringControlCode {
 	SCC_PRESIDENT_NAME,
 	SCC_ENGINE_NAME,
 
-	SCC_CURRENCY_COMPACT,
-	SCC_CURRENCY,
+	SCC_CURRENCY_SHORT,
+	SCC_CURRENCY_LONG,
 
-	SCC_CARGO,
+	SCC_CARGO_LONG,
 	SCC_CARGO_SHORT,
+	SCC_CARGO_TINY,
+	SCC_CARGO_LIST,
 	SCC_POWER,
-	SCC_VOLUME,
+	SCC_VOLUME_LONG,
 	SCC_VOLUME_SHORT,
-	SCC_WEIGHT,
+	SCC_WEIGHT_LONG,
 	SCC_WEIGHT_SHORT,
 	SCC_FORCE,
 	SCC_VELOCITY,
@@ -64,11 +67,15 @@ enum StringControlCode {
 	SCC_DATE_LONG,
 	SCC_DATE_ISO,
 
+	/* Must be consecutive */
 	SCC_STRING1,
 	SCC_STRING2,
 	SCC_STRING3,
 	SCC_STRING4,
 	SCC_STRING5,
+	SCC_STRING6,
+	SCC_STRING7,
+
 
 	SCC_STRING,
 	SCC_COMMA,
@@ -84,7 +91,7 @@ enum StringControlCode {
 	SCC_GENDER_LIST,
 	SCC_GENDER_INDEX,
 	SCC_ARG_INDEX,
-	SCC_SETCASE,
+	SCC_SET_CASE,
 	SCC_SWITCH_CASE,
 
 	/* Colour codes */
@@ -121,8 +128,8 @@ enum StringControlCode {
 	SCC_NEWGRF_PRINT_WORD_DATE_LONG,                  ///< Read 2 bytes from the stack as base 1920 date
 	SCC_NEWGRF_PRINT_WORD_DATE_SHORT,                 ///< Read 2 bytes from the stack as base 1920 date
 	SCC_NEWGRF_PRINT_WORD_SPEED,                      ///< Read 2 bytes from the stack as signed speed
-	SCC_NEWGRF_PRINT_WORD_VOLUME,                     ///< Read 2 bytes from the stack as signed volume
-	SCC_NEWGRF_PRINT_WORD_WEIGHT,                     ///< Read 2 bytes from the stack as unsigned weight
+	SCC_NEWGRF_PRINT_WORD_VOLUME_LONG,                ///< Read 2 bytes from the stack as long signed volume
+	SCC_NEWGRF_PRINT_WORD_WEIGHT_LONG,                ///< Read 2 bytes from the stack as long unsigned weight
 	SCC_NEWGRF_PRINT_WORD_STATION_NAME,               ///< Read 2 bytes from the stack as station name
 	SCC_NEWGRF_PRINT_QWORD_CURRENCY,                  ///< Read 8 bytes from the stack as currency
 	SCC_NEWGRF_PRINT_BYTE_HEX,                        ///< Read 1 byte from the stack and print it as hex
@@ -132,6 +139,8 @@ enum StringControlCode {
 	SCC_NEWGRF_PRINT_DWORD_DATE_LONG,                 ///< Read 4 bytes from the stack as base 0 date
 	SCC_NEWGRF_PRINT_DWORD_DATE_SHORT,                ///< Read 4 bytes from the stack as base 0 date
 	SCC_NEWGRF_PRINT_WORD_POWER,                      ///< Read 2 bytes from the stack as unsigned power
+	SCC_NEWGRF_PRINT_WORD_VOLUME_SHORT,               ///< Read 2 bytes from the stack as short signed volume
+	SCC_NEWGRF_PRINT_WORD_WEIGHT_SHORT,               ///< Read 2 bytes from the stack as short unsigned weight
 	SCC_NEWGRF_PUSH_WORD,                             ///< Pushes 2 bytes onto the stack
 	SCC_NEWGRF_UNPRINT,                               ///< "Unprints" the given number of bytes from the string
 	SCC_NEWGRF_DISCARD_WORD,                          ///< Discard the next two bytes
@@ -142,21 +151,21 @@ enum StringControlCode {
 
 	/* Special printable symbols.
 	 * These are mapped to the original glyphs */
-	SCC_LESSTHAN       = SCC_SPRITE_START + 0x3C,
-	SCC_GREATERTHAN    = SCC_SPRITE_START + 0x3E,
-	SCC_UPARROW        = SCC_SPRITE_START + 0xA0,
-	SCC_DOWNARROW      = SCC_SPRITE_START + 0xAA,
-	SCC_CHECKMARK      = SCC_SPRITE_START + 0xAC,
-	SCC_CROSS          = SCC_SPRITE_START + 0xAD,
-	SCC_RIGHTARROW     = SCC_SPRITE_START + 0xAF,
-	SCC_TRAIN          = SCC_SPRITE_START + 0xB4,
-	SCC_LORRY          = SCC_SPRITE_START + 0xB5,
-	SCC_BUS            = SCC_SPRITE_START + 0xB6,
-	SCC_PLANE          = SCC_SPRITE_START + 0xB7,
-	SCC_SHIP           = SCC_SPRITE_START + 0xB8,
-	SCC_SUPERSCRIPT_M1 = SCC_SPRITE_START + 0xB9,
-	SCC_SMALLUPARROW   = SCC_SPRITE_START + 0xBC,
-	SCC_SMALLDOWNARROW = SCC_SPRITE_START + 0xBD,
+	SCC_LESS_THAN        = SCC_SPRITE_START + 0x3C,
+	SCC_GREATER_THAN     = SCC_SPRITE_START + 0x3E,
+	SCC_UP_ARROW         = SCC_SPRITE_START + 0xA0,
+	SCC_DOWN_ARROW       = SCC_SPRITE_START + 0xAA,
+	SCC_CHECKMARK        = SCC_SPRITE_START + 0xAC,
+	SCC_CROSS            = SCC_SPRITE_START + 0xAD,
+	SCC_RIGHT_ARROW      = SCC_SPRITE_START + 0xAF,
+	SCC_TRAIN            = SCC_SPRITE_START + 0xB4,
+	SCC_LORRY            = SCC_SPRITE_START + 0xB5,
+	SCC_BUS              = SCC_SPRITE_START + 0xB6,
+	SCC_PLANE            = SCC_SPRITE_START + 0xB7,
+	SCC_SHIP             = SCC_SPRITE_START + 0xB8,
+	SCC_SUPERSCRIPT_M1   = SCC_SPRITE_START + 0xB9,
+	SCC_SMALL_UP_ARROW   = SCC_SPRITE_START + 0xBC,
+	SCC_SMALL_DOWN_ARROW = SCC_SPRITE_START + 0xBD,
 };
 
 #endif /* CONTROL_CODES_H */

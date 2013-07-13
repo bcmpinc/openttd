@@ -16,6 +16,8 @@
 #include "network/network_func.h"
 #include "order_backup.h"
 #include "vehicle_base.h"
+#include "window_func.h"
+#include "station_map.h"
 
 OrderBackupPool _order_backup_pool("BackupOrder");
 INSTANTIATE_POOL_METHODS(OrderBackup)
@@ -23,8 +25,6 @@ INSTANTIATE_POOL_METHODS(OrderBackup)
 /** Free everything that is allocated. */
 OrderBackup::~OrderBackup()
 {
-	free(this->name);
-
 	if (CleaningPool()) return;
 
 	Order *o = this->orders;
@@ -44,11 +44,9 @@ OrderBackup::OrderBackup(const Vehicle *v, uint32 user)
 {
 	this->user             = user;
 	this->tile             = v->tile;
-	this->orderindex       = v->cur_implicit_order_index;
 	this->group            = v->group_id;
-	this->service_interval = v->service_interval;
 
-	if (v->name != NULL) this->name = strdup(v->name);
+	this->CopyConsistPropertiesFrom(v);
 
 	/* If we have shared orders, store the vehicle we share the order with. */
 	if (v->IsOrderListShared()) {
@@ -74,24 +72,21 @@ OrderBackup::OrderBackup(const Vehicle *v, uint32 user)
  */
 void OrderBackup::DoRestore(Vehicle *v)
 {
-	/* If we have a custom name, process that */
-	v->name = this->name;
-	this->name = NULL;
-
 	/* If we had shared orders, recover that */
 	if (this->clone != NULL) {
 		DoCommand(0, v->index | CO_SHARE << 30, this->clone->index, DC_EXEC, CMD_CLONE_ORDER);
 	} else if (this->orders != NULL && OrderList::CanAllocateItem()) {
 		v->orders.list = new OrderList(this->orders, v);
 		this->orders = NULL;
+		/* Make sure buoys/oil rigs are updated in the station list. */
+		InvalidateWindowClassesData(WC_STATION_LIST, 0);
 	}
 
-	uint num_orders = v->GetNumOrders();
-	if (num_orders != 0) {
-		v->cur_real_order_index = v->cur_implicit_order_index = this->orderindex % num_orders;
-		v->UpdateRealOrderIndex();
-	}
-	v->service_interval = this->service_interval;
+	v->CopyConsistPropertiesFrom(this);
+
+	/* Make sure orders are in range */
+	v->UpdateRealOrderIndex();
+	if (v->cur_implicit_order_index >= v->GetNumOrders()) v->cur_implicit_order_index = v->cur_real_order_index;
 
 	/* Restore vehicle group */
 	DoCommand(0, this->group, v->index, DC_EXEC, CMD_ADD_VEHICLE_GROUP);
@@ -251,6 +246,28 @@ CommandCost CmdClearOrderBackup(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 			ob->clone = (v->FirstShared() == v) ? v->NextShared() : v->FirstShared();
 			/* But if that isn't there, remove it. */
 			if (ob->clone == NULL) delete ob;
+		}
+	}
+}
+
+/**
+ * Removes an order from all vehicles. Triggers when, say, a station is removed.
+ * @param type The type of the order (OT_GOTO_[STATION|DEPOT|WAYPOINT]).
+ * @param destination The destination. Can be a StationID, DepotID or WaypointID.
+ */
+/* static */ void OrderBackup::RemoveOrder(OrderType type, DestinationID destination)
+{
+	OrderBackup *ob;
+	FOR_ALL_ORDER_BACKUPS(ob) {
+		for (Order *order = ob->orders; order != NULL; order = order->next) {
+			OrderType ot = order->GetType();
+			if (ot == OT_GOTO_DEPOT && (order->GetDepotActionType() & ODATFB_NEAREST_DEPOT) != 0) continue;
+			if (ot == OT_IMPLICIT || (IsHangarTile(ob->tile) && ot == OT_GOTO_DEPOT)) ot = OT_GOTO_STATION;
+			if (ot == type && order->GetDestination() == destination) {
+				/* Remove the order backup! If a station/depot gets removed, we can't/shouldn't restore those broken orders. */
+				delete ob;
+				break;
+			}
 		}
 	}
 }

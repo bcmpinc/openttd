@@ -87,7 +87,7 @@ public:
 	 * @param y How much you want to scroll to the bottom.
 	 * @return A new destination pointer moved the the requested place.
 	 */
-	virtual void *MoveTo(const void *video, int x, int y) = 0;
+	virtual void *MoveTo(void *video, int x, int y) = 0;
 
 	/**
 	 * Draw a pixel with a given colour on the video-buffer.
@@ -123,7 +123,7 @@ public:
 
 	/**
 	 * Copy from a buffer to the screen.
-	 * @param video The destionation pointer (video-buffer).
+	 * @param video The destination pointer (video-buffer).
 	 * @param src The buffer from which the data will be read.
 	 * @param width The width of the buffer.
 	 * @param height The height of the buffer.
@@ -173,11 +173,10 @@ public:
 
 	/**
 	 * Called when the 8bpp palette is changed; you should redraw all pixels on the screen that
-	 *  are equal to the 8bpp palette indexes 'start' to 'start + count'.
-	 * @param start The start index in the 8bpp palette.
-	 * @param count The amount of indexes that are (possible) changed.
+	 *  are equal to the 8bpp palette indexes 'first_dirty' to 'first_dirty + count_dirty'.
+	 * @param palette The new palette.
 	 */
-	virtual void PaletteAnimate(uint start, uint count) = 0;
+	virtual void PaletteAnimate(const Palette &palette) = 0;
 
 	/**
 	 * Check if the blitter uses palette animation at all.

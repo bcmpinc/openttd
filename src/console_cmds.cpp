@@ -37,10 +37,8 @@
 #include "newgrf.h"
 #include "console_func.h"
 #include "engine_base.h"
-
-#ifdef ENABLE_NETWORK
-	#include "table/strings.h"
-#endif /* ENABLE_NETWORK */
+#include "game/game.hpp"
+#include "table/strings.h"
 
 /* scriptfile handling */
 static bool _script_running; ///< Script is running (used to abort execution when #ConReturn is encountered).
@@ -620,7 +618,7 @@ DEF_CONSOLE_CMD(ConPauseGame)
 	return true;
 }
 
-DEF_CONSOLE_CMD(ConUnPauseGame)
+DEF_CONSOLE_CMD(ConUnpauseGame)
 {
 	if (argc == 0) {
 		IConsoleHelp("Unpause a network game. Usage: 'unpause'");
@@ -836,7 +834,7 @@ DEF_CONSOLE_CMD(ConResetCompany)
 	}
 
 	/* It is safe to remove this company */
-	DoCommandP(0, 2 | index << 16, 0, CMD_COMPANY_CTRL);
+	DoCommandP(0, 2 | index << 16, CRR_MANUAL, CMD_COMPANY_CTRL);
 	IConsolePrint(CC_DEFAULT, "Company deleted.");
 
 	return true;
@@ -1049,8 +1047,6 @@ DEF_CONSOLE_CMD(ConNewGame)
 	return true;
 }
 
-extern void SwitchToMode(SwitchMode new_mode);
-
 DEF_CONSOLE_CMD(ConRestart)
 {
 	if (argc == 0) {
@@ -1069,9 +1065,8 @@ DEF_CONSOLE_CMD(ConRestart)
 	return true;
 }
 
-#ifdef ENABLE_AI
 /**
- * Print a text buffer line by line to the console. Lines are seperated by '\n'.
+ * Print a text buffer line by line to the console. Lines are separated by '\n'.
  * @param buf The buffer to print.
  * @note All newlines are replace by '\0' characters.
  */
@@ -1102,6 +1097,26 @@ DEF_CONSOLE_CMD(ConListAI)
 {
 	char buf[4096];
 	AI::GetConsoleList(buf, lastof(buf));
+
+	PrintLineByLine(buf);
+
+	return true;
+}
+
+DEF_CONSOLE_CMD(ConListGameLibs)
+{
+	char buf[4096];
+	Game::GetConsoleLibraryList(buf, lastof(buf));
+
+	PrintLineByLine(buf);
+
+	return true;
+}
+
+DEF_CONSOLE_CMD(ConListGame)
+{
+	char buf[4096];
+	Game::GetConsoleList(buf, lastof(buf));
 
 	PrintLineByLine(buf);
 
@@ -1150,8 +1165,8 @@ DEF_CONSOLE_CMD(ConStartAI)
 
 	AIConfig *config = AIConfig::GetConfig((CompanyID)n);
 	if (argc >= 2) {
-		config->ChangeAI(argv[1], -1, true);
-		if (!config->HasAI()) {
+		config->Change(argv[1], -1, true);
+		if (!config->HasScript()) {
 			IConsoleWarning("Failed to load the specified AI");
 			return true;
 		}
@@ -1196,7 +1211,7 @@ DEF_CONSOLE_CMD(ConReloadAI)
 	}
 
 	/* First kill the company of the AI, then start a new one. This should start the current AI again */
-	DoCommandP(0, 2 | company_id << 16, 0, CMD_COMPANY_CTRL);
+	DoCommandP(0, 2 | company_id << 16, CRR_MANUAL, CMD_COMPANY_CTRL);
 	DoCommandP(0, 1 | company_id << 16, 0, CMD_COMPANY_CTRL);
 	IConsolePrint(CC_DEFAULT, "AI reloaded.");
 
@@ -1227,13 +1242,13 @@ DEF_CONSOLE_CMD(ConStopAI)
 		return true;
 	}
 
-	if (Company::IsHumanID(company_id)) {
+	if (Company::IsHumanID(company_id) || company_id == _local_company) {
 		IConsoleWarning("Company is not controlled by an AI.");
 		return true;
 	}
 
 	/* Now kill the company of the AI. */
-	DoCommandP(0, 2 | company_id << 16, 0, CMD_COMPANY_CTRL);
+	DoCommandP(0, 2 | company_id << 16, CRR_MANUAL, CMD_COMPANY_CTRL);
 	IConsolePrint(CC_DEFAULT, "AI stopped, company deleted.");
 
 	return true;
@@ -1251,12 +1266,27 @@ DEF_CONSOLE_CMD(ConRescanAI)
 		return true;
 	}
 
-	TarScanner::DoScan();
 	AI::Rescan();
 
 	return true;
 }
-#endif /* ENABLE_AI */
+
+DEF_CONSOLE_CMD(ConRescanGame)
+{
+	if (argc == 0) {
+		IConsoleHelp("Rescan the Game Script dir for scripts. Usage: 'rescan_game'");
+		return true;
+	}
+
+	if (_networking && !_network_server) {
+		IConsoleWarning("Only the server can rescan the Game Script dir for scripts.");
+		return true;
+	}
+
+	Game::Rescan();
+
+	return true;
+}
 
 DEF_CONSOLE_CMD(ConRescanNewGRF)
 {
@@ -1265,7 +1295,6 @@ DEF_CONSOLE_CMD(ConRescanNewGRF)
 		return true;
 	}
 
-	TarScanner::DoScan();
 	ScanNewGRFFiles(NULL);
 
 	return true;
@@ -1499,6 +1528,45 @@ DEF_CONSOLE_CMD(ConListAliases)
 	return true;
 }
 
+DEF_CONSOLE_CMD(ConCompanies)
+{
+	if (argc == 0) {
+		IConsoleHelp("List the details of all companies in the game. Usage 'companies'");
+		return true;
+	}
+
+	Company *c;
+	FOR_ALL_COMPANIES(c) {
+		/* Grab the company name */
+		char company_name[512];
+		SetDParam(0, c->index);
+		GetString(company_name, STR_COMPANY_NAME, lastof(company_name));
+
+		const char *password_state = "";
+		if (c->is_ai) {
+			password_state = "AI";
+		}
+#ifdef ENABLE_NETWORK
+		else if (_network_server) {
+				password_state = StrEmpty(_network_company_states[c->index].password) ? "unprotected" : "protected";
+		}
+#endif
+
+		char colour[512];
+		GetString(colour, STR_COLOUR_DARK_BLUE + _company_colours[c->index], lastof(colour));
+		IConsolePrintF(CC_INFO, "#:%d(%s) Company Name: '%s'  Year Founded: %d  Money: " OTTD_PRINTF64 "  Loan: " OTTD_PRINTF64 "  Value: " OTTD_PRINTF64 "  (T:%d, R:%d, P:%d, S:%d) %s",
+			c->index + 1, colour, company_name,
+			c->inaugurated_year, (int64)c->money, (int64)c->current_loan, (int64)CalculateCompanyValue(c),
+			c->group_all[VEH_TRAIN].num_vehicle,
+			c->group_all[VEH_ROAD].num_vehicle,
+			c->group_all[VEH_AIRCRAFT].num_vehicle,
+			c->group_all[VEH_SHIP].num_vehicle,
+			password_state);
+	}
+
+	return true;
+}
+
 #ifdef ENABLE_NETWORK
 
 DEF_CONSOLE_CMD(ConSay)
@@ -1515,38 +1583,6 @@ DEF_CONSOLE_CMD(ConSay)
 	} else {
 		bool from_admin = (_redirect_console_to_admin < INVALID_ADMIN_ID);
 		NetworkServerSendChat(NETWORK_ACTION_CHAT, DESTTYPE_BROADCAST, 0, argv[1], CLIENT_ID_SERVER, from_admin);
-	}
-
-	return true;
-}
-
-DEF_CONSOLE_CMD(ConCompanies)
-{
-	if (argc == 0) {
-		IConsoleHelp("List the in-game details of all clients connected to the server. Usage 'companies'");
-		return true;
-	}
-	NetworkCompanyStats company_stats[MAX_COMPANIES];
-	NetworkPopulateCompanyStats(company_stats);
-
-	Company *c;
-	FOR_ALL_COMPANIES(c) {
-		/* Grab the company name */
-		char company_name[NETWORK_COMPANY_NAME_LENGTH];
-		SetDParam(0, c->index);
-		GetString(company_name, STR_COMPANY_NAME, lastof(company_name));
-
-		char buffer[512];
-		const NetworkCompanyStats *stats = &company_stats[c->index];
-
-		GetString(buffer, STR_COLOUR_DARK_BLUE + _company_colours[c->index], lastof(buffer));
-		IConsolePrintF(CC_INFO, "#:%d(%s) Company Name: '%s'  Year Founded: %d  Money: " OTTD_PRINTF64 "  Loan: " OTTD_PRINTF64 "  Value: " OTTD_PRINTF64 "  (T:%d, R:%d, P:%d, S:%d) %sprotected",
-			c->index + 1, buffer, company_name, c->inaugurated_year, (int64)c->money, (int64)c->current_loan, (int64)CalculateCompanyValue(c),
-			/* trains      */ stats->num_vehicle[0],
-			/* lorry + bus */ stats->num_vehicle[1] + stats->num_vehicle[2],
-			/* planes      */ stats->num_vehicle[3],
-			/* ships       */ stats->num_vehicle[4],
-			/* protected   */ StrEmpty(_network_company_states[c->index].password) ? "un" : "");
 	}
 
 	return true;
@@ -1738,13 +1774,15 @@ DEF_CONSOLE_CMD(ConContent)
 	if (strcasecmp(argv[1], "state") == 0) {
 		IConsolePrintF(CC_WHITE, "id, type, state, name");
 		for (ConstContentIterator iter = _network_content_client.Begin(); iter != _network_content_client.End(); iter++) {
-			static const char * const types[] = { "Base graphics", "NewGRF", "AI", "AI library", "Scenario", "Heightmap", "Base sound", "Base music" };
+			static const char * const types[] = { "Base graphics", "NewGRF", "AI", "AI library", "Scenario", "Heightmap", "Base sound", "Base music", "Game script", "GS library" };
 			assert_compile(lengthof(types) == CONTENT_TYPE_END - CONTENT_TYPE_BEGIN);
 			static const char * const states[] = { "Not selected", "Selected", "Dep Selected", "Installed", "Unknown" };
 			static const TextColour state_to_colour[] = { CC_COMMAND, CC_INFO, CC_INFO, CC_WHITE, CC_ERROR };
 
 			const ContentInfo *ci = *iter;
-			IConsolePrintF(state_to_colour[ci->state], "%d, %s, %s, %s", ci->id, types[ci->type - 1], states[ci->state], ci->name);
+			char buf[sizeof(ci->md5sum) * 2 + 1];
+			md5sumToString(buf, lastof(buf), ci->md5sum);
+			IConsolePrintF(state_to_colour[ci->state], "%d, %s, %s, %s, %08X, %s", ci->id, types[ci->type - 1], states[ci->state], ci->name, ci->unique_id, buf);
 		}
 		return true;
 	}
@@ -1894,14 +1932,19 @@ void IConsoleStdLibRegister()
 	IConsoleAliasRegister("list_patches", "list_settings %+");
 	IConsoleAliasRegister("developer",    "setting developer %+");
 
-#ifdef ENABLE_AI
 	IConsoleCmdRegister("list_ai_libs", ConListAILibs);
 	IConsoleCmdRegister("list_ai",      ConListAI);
 	IConsoleCmdRegister("reload_ai",    ConReloadAI);
 	IConsoleCmdRegister("rescan_ai",    ConRescanAI);
 	IConsoleCmdRegister("start_ai",     ConStartAI);
 	IConsoleCmdRegister("stop_ai",      ConStopAI);
-#endif /* ENABLE_AI */
+
+	IConsoleCmdRegister("list_game",    ConListGame);
+	IConsoleCmdRegister("list_game_libs", ConListGameLibs);
+	IConsoleCmdRegister("rescan_game",    ConRescanGame);
+
+	IConsoleCmdRegister("companies",       ConCompanies);
+	IConsoleAliasRegister("players",       "companies");
 
 	/* networking functions */
 #ifdef ENABLE_NETWORK
@@ -1912,8 +1955,6 @@ void IConsoleStdLibRegister()
 
 	/*** Networking commands ***/
 	IConsoleCmdRegister("say",             ConSay, ConHookNeedNetwork);
-	IConsoleCmdRegister("companies",       ConCompanies, ConHookServerOnly);
-	IConsoleAliasRegister("players",       "companies");
 	IConsoleCmdRegister("say_company",     ConSayCompany, ConHookNeedNetwork);
 	IConsoleAliasRegister("say_player",    "say_company %+");
 	IConsoleCmdRegister("say_client",      ConSayClient, ConHookNeedNetwork);
@@ -1938,7 +1979,7 @@ void IConsoleStdLibRegister()
 	IConsoleCmdRegister("banlist",         ConBanList, ConHookServerOnly);
 
 	IConsoleCmdRegister("pause",           ConPauseGame, ConHookServerOnly);
-	IConsoleCmdRegister("unpause",         ConUnPauseGame, ConHookServerOnly);
+	IConsoleCmdRegister("unpause",         ConUnpauseGame, ConHookServerOnly);
 
 	IConsoleCmdRegister("company_pw",      ConCompanyPassword, ConHookNeedNetwork);
 	IConsoleAliasRegister("company_password",      "company_pw %+");

@@ -33,7 +33,8 @@ static const RailtypeInfo _original_railtypes[] = {
 			SPR_IMG_AUTORAIL,
 			SPR_IMG_DEPOT_RAIL,
 			SPR_IMG_TUNNEL_RAIL,
-			SPR_IMG_CONVERT_RAIL
+			SPR_IMG_CONVERT_RAIL,
+			{}
 		},
 
 		{
@@ -49,6 +50,7 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* strings */
 		{
+			STR_RAIL_NAME_RAILROAD,
 			STR_RAIL_TOOLBAR_RAILROAD_CONSTRUCTION_CAPTION,
 			STR_RAIL_MENU_RAILROAD_CONSTRUCTION,
 			STR_BUY_VEHICLE_TRAIN_RAIL_CAPTION,
@@ -80,6 +82,9 @@ static const RailtypeInfo _original_railtypes[] = {
 		/* cost multiplier */
 		8,
 
+		/* maintenance cost multiplier */
+		8,
+
 		/* acceleration type */
 		0,
 
@@ -88,6 +93,9 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* rail type label */
 		'RAIL',
+
+		/* alternate labels */
+		RailTypeLabelList(),
 
 		/* map colour */
 		0x0A,
@@ -126,7 +134,8 @@ static const RailtypeInfo _original_railtypes[] = {
 			SPR_IMG_AUTOELRAIL,
 			SPR_IMG_DEPOT_ELRAIL,
 			SPR_BUILD_TUNNEL_ELRAIL,
-			SPR_IMG_CONVERT_ELRAIL
+			SPR_IMG_CONVERT_ELRAIL,
+			{}
 		},
 
 		{
@@ -142,6 +151,7 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* strings */
 		{
+			STR_RAIL_NAME_ELRAIL,
 			STR_RAIL_TOOLBAR_ELRAIL_CONSTRUCTION_CAPTION,
 			STR_RAIL_MENU_ELRAIL_CONSTRUCTION,
 			STR_BUY_VEHICLE_TRAIN_ELRAIL_CAPTION,
@@ -173,6 +183,9 @@ static const RailtypeInfo _original_railtypes[] = {
 		/* cost multiplier */
 		12,
 
+		/* maintenance cost multiplier */
+		12,
+
 		/* acceleration type */
 		0,
 
@@ -181,6 +194,9 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* rail type label */
 		'ELRL',
+
+		/* alternate labels */
+		RailTypeLabelList(),
 
 		/* map colour */
 		0x0A,
@@ -215,7 +231,8 @@ static const RailtypeInfo _original_railtypes[] = {
 			SPR_IMG_AUTOMONO,
 			SPR_IMG_DEPOT_MONO,
 			SPR_IMG_TUNNEL_MONO,
-			SPR_IMG_CONVERT_MONO
+			SPR_IMG_CONVERT_MONO,
+			{}
 		},
 
 		{
@@ -231,6 +248,7 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* strings */
 		{
+			STR_RAIL_NAME_MONORAIL,
 			STR_RAIL_TOOLBAR_MONORAIL_CONSTRUCTION_CAPTION,
 			STR_RAIL_MENU_MONORAIL_CONSTRUCTION,
 			STR_BUY_VEHICLE_TRAIN_MONORAIL_CAPTION,
@@ -262,6 +280,9 @@ static const RailtypeInfo _original_railtypes[] = {
 		/* cost multiplier */
 		16,
 
+		/* maintenance cost multiplier */
+		16,
+
 		/* acceleration type */
 		1,
 
@@ -270,6 +291,9 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* rail type label */
 		'MONO',
+
+		/* alternate labels */
+		RailTypeLabelList(),
 
 		/* map colour */
 		0x0A,
@@ -304,7 +328,8 @@ static const RailtypeInfo _original_railtypes[] = {
 			SPR_IMG_AUTOMAGLEV,
 			SPR_IMG_DEPOT_MAGLEV,
 			SPR_IMG_TUNNEL_MAGLEV,
-			SPR_IMG_CONVERT_MAGLEV
+			SPR_IMG_CONVERT_MAGLEV,
+			{}
 		},
 
 		{
@@ -320,6 +345,7 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* strings */
 		{
+			STR_RAIL_NAME_MAGLEV,
 			STR_RAIL_TOOLBAR_MAGLEV_CONSTRUCTION_CAPTION,
 			STR_RAIL_MENU_MAGLEV_CONSTRUCTION,
 			STR_BUY_VEHICLE_TRAIN_MAGLEV_CAPTION,
@@ -351,6 +377,9 @@ static const RailtypeInfo _original_railtypes[] = {
 		/* cost multiplier */
 		24,
 
+		/* maintenance cost multiplier */
+		24,
+
 		/* acceleration type */
 		2,
 
@@ -359,6 +388,9 @@ static const RailtypeInfo _original_railtypes[] = {
 
 		/* rail type label */
 		'MGLV',
+
+		/* alternate labels */
+		RailTypeLabelList(),
 
 		/* map colour */
 		0x0A,

@@ -12,12 +12,12 @@
 #ifndef TOWN_H
 #define TOWN_H
 
-#include "core/pool_type.hpp"
 #include "viewport_type.h"
-#include "command_type.h"
 #include "town_map.h"
 #include "subsidy_type.h"
 #include "newgrf_storage.h"
+#include "cargotype.h"
+#include "tilematrix_type.hpp"
 #include <list>
 
 template <typename T>
@@ -26,28 +26,41 @@ struct BuildingCounts {
 	T class_count[HOUSE_CLASS_MAX];
 };
 
+typedef TileMatrix<uint32, 4> AcceptanceMatrix;
+
 static const uint CUSTOM_TOWN_NUMBER_DIFFICULTY  = 4; ///< value for custom town number in difficulty settings
 static const uint CUSTOM_TOWN_MAX_NUMBER = 5000;  ///< this is the maximum number of towns a user can specify in customisation
 
 static const uint INVALID_TOWN = 0xFFFF;
 
+static const uint TOWN_GROWTH_WINTER = 0xFFFFFFFE; ///< The town only needs this cargo in the winter (any amount)
+static const uint TOWN_GROWTH_DESERT = 0xFFFFFFFF; ///< The town needs the cargo for growth when on desert (any amount)
+static const uint16 TOWN_GROW_RATE_CUSTOM = 0x8000; ///< If this mask is applied to Town::grow_counter, the grow_counter will not be calculated by the system (but assumed to be set by scripts)
+
 typedef Pool<Town, TownID, 64, 64000> TownPool;
 extern TownPool _town_pool;
+
+/** Data structure with cached data of towns. */
+struct TownCache {
+	uint32 num_houses;                        ///< Amount of houses
+	uint32 population;                        ///< Current population of people
+	ViewportSign sign;                        ///< Location of name sign, UpdateVirtCoord updates this
+	PartOfSubsidyByte part_of_subsidy;        ///< Is this town a source/destination of a subsidy?
+	uint32 squared_town_zone_radius[HZB_END]; ///< UpdateTownRadius updates this given the house count
+	BuildingCounts<uint16> building_counts;   ///< The number of each type of building in the town
+};
 
 /** Town data structure. */
 struct Town : TownPool::PoolItem<&_town_pool> {
 	TileIndex xy;                  ///< town center tile
 
-	uint32 num_houses;             ///< amount of houses
-	uint32 population;             ///< current population of people
+	TownCache cache; ///< Container for all cacheable data.
 
 	/* Town name */
 	uint32 townnamegrfid;
 	uint16 townnametype;
 	uint32 townnameparts;
 	char *name;
-
-	ViewportSign sign;             ///< NOSAVE: Location of name sign, UpdateVirtCoord updates this
 
 	/* Makes sure we don't build certain house types twice.
 	 * bit 0 = Building funds received
@@ -66,30 +79,23 @@ struct Town : TownPool::PoolItem<&_town_pool> {
 	uint8 exclusive_counter;       ///< months till the exclusivity expires
 	int16 ratings[MAX_COMPANIES];  ///< ratings of each company for this town
 
-	uint32 max_pass;               ///< maximum amount of passengers that can be transported
-	uint32 max_mail;               ///< maximum amount of mail that can be transported
-	uint32 new_max_pass;
-	uint32 new_max_mail;
-	uint32 act_pass;
-	uint32 act_mail;
-	uint32 new_act_pass;
-	uint32 new_act_mail;
+	TransportedCargoStat<uint32> supplied[NUM_CARGO]; ///< Cargo statistics about supplied cargo.
+	TransportedCargoStat<uint16> received[NUM_TE];    ///< Cargo statistics about received cargotypes.
+	uint32 goal[NUM_TE];                              ///< Amount of cargo required for the town to grow.
 
-	/** Percentage of passengers transported last month (0xFF=100%) */
-	inline byte GetPercentPassTransported() const { return this->act_pass * 256 / (this->max_pass + 1); }
+	char *text; ///< General text with additional information.
 
-	/** Percentage of mail transported last month (0xFF=100%) */
-	inline byte GetPercentMailTransported() const { return this->act_mail * 256 / (this->max_mail + 1); }
+	inline byte GetPercentTransported(CargoID cid) const { return this->supplied[cid].old_act * 256 / (this->supplied[cid].old_max + 1); }
 
-	uint16 act_food;               ///< amount of food that was transported
-	uint16 act_water;              ///< amount of water that was transported
-	uint16 new_act_food;
-	uint16 new_act_water;
+	/* Cargo production and acceptance stats. */
+	uint32 cargo_produced;           ///< Bitmap of all cargoes produced by houses in this town.
+	AcceptanceMatrix cargo_accepted; ///< Bitmap of cargoes accepted by houses for each 4*4 map square of the town.
+	uint32 cargo_accepted_total;     ///< NOSAVE: Bitmap of all cargoes accepted by houses in this town.
 
 	uint16 time_until_rebuild;     ///< time until we rebuild a house
 
 	uint16 grow_counter;           ///< counter to count when to grow
-	int16 growth_rate;             ///< town growth rate
+	uint16 growth_rate;            ///< town growth rate
 
 	byte fund_buildings_months;    ///< fund buildings program in action?
 	byte road_build_months;        ///< fund road reconstruction in action?
@@ -98,12 +104,6 @@ struct Town : TownPool::PoolItem<&_town_pool> {
 	TownLayoutByte layout;         ///< town specific road layout
 
 	std::list<PersistentStorage *> psa_list;
-
-	PartOfSubsidyByte part_of_subsidy; ///< NOSAVE: is this town a source/destination of a subsidy?
-
-	uint32 squared_town_zone_radius[HZB_END]; ///< NOSAVE: UpdateTownRadius updates this given the house count
-
-	BuildingCounts<uint16> building_counts; ///< NOSAVE: the number of each type of building in the town
 
 	/**
 	 * Creates a new town.
@@ -124,15 +124,15 @@ struct Town : TownPool::PoolItem<&_town_pool> {
 	 */
 	inline uint16 MaxTownNoise() const
 	{
-		if (this->population == 0) return 0; // no population? no noise
+		if (this->cache.population == 0) return 0; // no population? no noise
 
 		/* 3 is added (the noise of the lowest airport), so the  user can at least build a small airfield. */
-		return (this->population / _settings_game.economy.town_noise_population[_settings_game.difficulty.town_council_tolerance]) + 3;
+		return (this->cache.population / _settings_game.economy.town_noise_population[_settings_game.difficulty.town_council_tolerance]) + 3;
 	}
 
 	void UpdateVirtCoord();
 
-	static FORCEINLINE Town *GetByTile(TileIndex tile)
+	static inline Town *GetByTile(TileIndex tile)
 	{
 		return Town::Get(GetTownIndex(tile));
 	}
@@ -167,7 +167,7 @@ enum TownRatingCheckType {
 enum TownFlags {
 	TOWN_IS_FUNDED      = 0,   ///< Town has received some funds for
 	TOWN_HAS_CHURCH     = 1,   ///< There can be only one church by town.
-	TOWN_HAS_STADIUM    = 2    ///< There can be only one stadium by town.
+	TOWN_HAS_STADIUM    = 2,   ///< There can be only one stadium by town.
 };
 
 CommandCost CheckforTownRating(DoCommandFlag flags, Town *t, TownRatingCheckType type);
@@ -185,6 +185,9 @@ void ResetHouses();
 void ClearTownHouse(Town *t, TileIndex tile);
 void UpdateTownMaxPass(Town *t);
 void UpdateTownRadius(Town *t);
+void UpdateTownCargoes(Town *t);
+void UpdateTownCargoTotal(Town *t);
+void UpdateTownCargoBitmap();
 CommandCost CheckIfAuthorityAllowsNewStation(TileIndex tile, DoCommandFlag flags);
 Town *ClosestTownFromTile(TileIndex tile, uint threshold);
 void ChangeTownRating(Town *t, int add, int max, DoCommandFlag flags);
@@ -192,6 +195,7 @@ HouseZonesBits GetTownRadiusGroup(const Town *t, TileIndex tile);
 void SetTownRatingTestMode(bool mode);
 uint GetMaskOfTownActions(int *nump, CompanyID cid, const Town *t);
 bool GenerateTowns(TownLayout layout);
+const CargoSpec *FindFirstCargoWithTownEffect(TownEffect effect);
 
 
 /** Town actions of a company. */
@@ -203,14 +207,14 @@ enum TownActions {
 	TACT_ADVERTISE_LARGE  = 0x04, ///< Large advertising campaign.
 	TACT_ROAD_REBUILD     = 0x08, ///< Rebuild the roads.
 	TACT_BUILD_STATUE     = 0x10, ///< Build a statue.
-	TACT_FOUND_BUILDINGS  = 0x20, ///< Found new buildings.
+	TACT_FUND_BUILDINGS   = 0x20, ///< Fund new buildings.
 	TACT_BUY_RIGHTS       = 0x40, ///< Buy exclusive transport rights.
-	TACT_BRIBE            = 0x80, ///< Try to bribe the counsil.
+	TACT_BRIBE            = 0x80, ///< Try to bribe the council.
 
 	TACT_COUNT            = 8,    ///< Number of available town actions.
 
 	TACT_ADVERTISE        = TACT_ADVERTISE_SMALL | TACT_ADVERTISE_MEDIUM | TACT_ADVERTISE_LARGE, ///< All possible advertising actions.
-	TACT_CONSTRUCTION     = TACT_ROAD_REBUILD | TACT_BUILD_STATUE | TACT_FOUND_BUILDINGS,        ///< All possible construction actions.
+	TACT_CONSTRUCTION     = TACT_ROAD_REBUILD | TACT_BUILD_STATUE | TACT_FUND_BUILDINGS,         ///< All possible construction actions.
 	TACT_FUNDS            = TACT_BUY_RIGHTS | TACT_BRIBE,                                        ///< All possible funding actions.
 	TACT_ALL              = TACT_ADVERTISE | TACT_CONSTRUCTION | TACT_FUNDS,                     ///< All possible actions.
 };
@@ -282,5 +286,7 @@ void MakeDefaultName(T *obj)
 
 	obj->town_cn = (uint16)next; // set index...
 }
+
+extern uint32 _town_cargoes_accepted;
 
 #endif /* TOWN_H */

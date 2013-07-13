@@ -24,7 +24,6 @@
 SOCKET _debug_socket = INVALID_SOCKET;
 #endif /* ENABLE_NETWORK */
 
-int _debug_ai_level;
 int _debug_driver_level;
 int _debug_grf_level;
 int _debug_map_level;
@@ -35,10 +34,14 @@ int _debug_oldloader_level;
 int _debug_npf_level;
 int _debug_yapf_level;
 int _debug_freetype_level;
+int _debug_script_level;
 int _debug_sl_level;
 int _debug_gamelog_level;
 int _debug_desync_level;
 int _debug_console_level;
+#ifdef RANDOM_DEBUG
+int _debug_random_level;
+#endif
 
 uint32 _realtime_tick = 0;
 
@@ -49,7 +52,6 @@ struct DebugLevel {
 
 #define DEBUG_LEVEL(x) { #x, &_debug_##x##_level }
 	static const DebugLevel debug_level[] = {
-	DEBUG_LEVEL(ai),
 	DEBUG_LEVEL(driver),
 	DEBUG_LEVEL(grf),
 	DEBUG_LEVEL(map),
@@ -60,12 +62,41 @@ struct DebugLevel {
 	DEBUG_LEVEL(npf),
 	DEBUG_LEVEL(yapf),
 	DEBUG_LEVEL(freetype),
+	DEBUG_LEVEL(script),
 	DEBUG_LEVEL(sl),
 	DEBUG_LEVEL(gamelog),
 	DEBUG_LEVEL(desync),
 	DEBUG_LEVEL(console),
+#ifdef RANDOM_DEBUG
+	DEBUG_LEVEL(random),
+#endif
 	};
 #undef DEBUG_LEVEL
+
+/**
+ * Dump the available debug facility names in the help text.
+ * @param buf Start address for storing the output.
+ * @param last Last valid address for storing the output.
+ * @return Next free position in the output.
+ */
+char *DumpDebugFacilityNames(char *buf, char *last)
+{
+	size_t length = 0;
+	for (const DebugLevel *i = debug_level; i != endof(debug_level); ++i) {
+		if (length == 0) {
+			buf = strecpy(buf, "List of debug facility names:\n", last);
+		} else {
+			buf = strecpy(buf, ", ", last);
+			length += 2;
+		}
+		buf = strecpy(buf, i->name, last);
+		length += strlen(i->name);
+	}
+	if (length > 0) {
+		buf = strecpy(buf, "\n\n", last);
+	}
+	return buf;
+}
 
 #if !defined(NO_DEBUG_MESSAGES)
 
@@ -85,7 +116,21 @@ static void debug_print(const char *dbg, const char *buf)
 		return;
 	}
 #endif /* ENABLE_NETWORK */
-	if (strcmp(dbg, "desync") != 0) {
+	if (strcmp(dbg, "desync") == 0) {
+		static FILE *f = FioFOpenFile("commands-out.log", "wb", AUTOSAVE_DIR);
+		if (f == NULL) return;
+
+		fprintf(f, "%s%s\n", GetLogPrefix(), buf);
+		fflush(f);
+#ifdef RANDOM_DEBUG
+	} else if (strcmp(dbg, "random") == 0) {
+		static FILE *f = FioFOpenFile("random-out.log", "wb", AUTOSAVE_DIR);
+		if (f == NULL) return;
+
+		fprintf(f, "%s\n", buf);
+		fflush(f);
+#endif
+	} else {
 #if defined(WINCE)
 		/* We need to do OTTD2FS twice, but as it uses a static buffer, we need to store one temporary */
 		TCHAR tbuf[512];
@@ -98,12 +143,6 @@ static void debug_print(const char *dbg, const char *buf)
 		NetworkAdminConsole(dbg, buf);
 #endif /* ENABLE_NETWORK */
 		IConsoleDebug(dbg, buf);
-	} else {
-		static FILE *f = FioFOpenFile("commands-out.log", "wb", AUTOSAVE_DIR);
-		if (f == NULL) return;
-
-		fprintf(f, "%s%s\n", GetLogPrefix(), buf);
-		fflush(f);
 	}
 }
 

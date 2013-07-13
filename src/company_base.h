@@ -12,21 +12,37 @@
 #ifndef COMPANY_BASE_H
 #define COMPANY_BASE_H
 
-#include "core/pool_type.hpp"
 #include "road_type.h"
-#include "rail_type.h"
 #include "livery.h"
 #include "autoreplace_type.h"
-#include "economy_type.h"
 #include "tile_type.h"
 #include "settings_type.h"
+#include "group.h"
 
+/** Statistics about the economy. */
 struct CompanyEconomyEntry {
-	Money income;
-	Money expenses;
-	int32 delivered_cargo;
-	int32 performance_history; ///< company score (scale 0-1000)
-	Money company_value;
+	Money income;               ///< The amount of income.
+	Money expenses;             ///< The amount of expenses.
+	CargoArray delivered_cargo; ///< The amount of delivered cargo.
+	int32 performance_history;  ///< Company score (scale 0-1000)
+	Money company_value;        ///< The value of the company.
+};
+
+struct CompanyInfrastructure {
+	uint32 road[ROADTYPE_END]; ///< Count of company owned track bits for each road type.
+	uint32 signal;             ///< Count of company owned signals.
+	uint32 rail[RAILTYPE_END]; ///< Count of company owned track bits for each rail type.
+	uint32 water;              ///< Count of company owned track bits for canals.
+	uint32 station;            ///< Count of company owned station tiles.
+	uint32 airport;            ///< Count of company owned airports.
+
+	/** Get total sum of all owned track bits. */
+	uint32 GetRailTotal() const
+	{
+		uint32 total = 0;
+		for (RailType rt =  RAILTYPE_BEGIN; rt < RAILTYPE_END; rt++) total += this->rail[rt];
+		return total;
+	}
 };
 
 typedef Pool<Company, CompanyByte, 1, MAX_COMPANIES> CompanyPool;
@@ -55,8 +71,6 @@ struct CompanyProperties {
 
 	byte block_preview;              ///< Number of quarters that the company is not allowed to get new exclusive engine previews (see CompaniesGenStatistics).
 
-	uint32 cargo_types;              ///< Which cargo types were transported the last year.
-
 	TileIndex location_of_HQ;        ///< Northern tile of HQ; #INVALID_TILE when there is none.
 	TileIndex last_build_coordinate; ///< Coordinate of the last build thing by this company.
 
@@ -64,13 +78,14 @@ struct CompanyProperties {
 
 	Year inaugurated_year;           ///< Year of starting the company.
 
-	byte quarters_of_bankruptcy;     ///< Number of quarters (a quarter is 3 months) that the company has a negative balance.
+	byte months_of_bankruptcy;       ///< Number of months that the company is unable to pay its debts
 	CompanyMask bankrupt_asked;      ///< which companies were asked about buying it?
 	int16 bankrupt_timeout;          ///< If bigger than \c 0, amount of time to wait for an answer on an offer to buy this company.
 	Money bankrupt_value;
 
 	uint32 terraform_limit;          ///< Amount of tileheights we can (still) terraform (times 65536).
 	uint32 clear_limit;              ///< Amount of tiles we can (still) clear (times 65536).
+	uint32 tree_limit;               ///< Amount of trees we can (still) plant (times 65536).
 
 	/**
 	 * If \c true, the company is (also) controlled by the computer (a NoAI program).
@@ -104,14 +119,17 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 
 	EngineRenewList engine_renew_list; ///< Engine renewals of this company.
 	CompanySettings settings;          ///< settings specific for each company
-	uint16 *num_engines;               ///< caches the number of engines of each type the company owns (no need to save this)
+	GroupStatistics group_all[VEH_COMPANY_END];      ///< NOSAVE: Statistics for the ALL_GROUP group.
+	GroupStatistics group_default[VEH_COMPANY_END];  ///< NOSAVE: Statistics for the DEFAULT_GROUP group.
+
+	CompanyInfrastructure infrastructure; ///< NOSAVE: Counts of company owned infrastructure.
 
 	/**
 	 * Is this company a valid company, controlled by the computer (a NoAI program)?
 	 * @param index Index in the pool.
 	 * @return \c true if it is a valid, computer controlled company, else \c false.
 	 */
-	static FORCEINLINE bool IsValidAiID(size_t index)
+	static inline bool IsValidAiID(size_t index)
 	{
 		const Company *c = Company::GetIfValid(index);
 		return c != NULL && c->is_ai;
@@ -123,7 +141,7 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 	 * @return \c true if it is a valid, human controlled company, else \c false.
 	 * @note If you know that \a index refers to a valid company, you can use #IsHumanID() instead.
 	 */
-	static FORCEINLINE bool IsValidHumanID(size_t index)
+	static inline bool IsValidHumanID(size_t index)
 	{
 		const Company *c = Company::GetIfValid(index);
 		return c != NULL && !c->is_ai;
@@ -136,7 +154,7 @@ struct Company : CompanyPool::PoolItem<&_company_pool>, CompanyProperties {
 	 * @pre \a index must be a valid CompanyID.
 	 * @note If you don't know whether \a index refers to a valid company, you should use #IsValidHumanID() instead.
 	 */
-	static FORCEINLINE bool IsHumanID(size_t index)
+	static inline bool IsHumanID(size_t index)
 	{
 		return !Company::Get(index)->is_ai;
 	}

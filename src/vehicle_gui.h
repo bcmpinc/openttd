@@ -19,24 +19,7 @@
 #include "engine_type.h"
 #include "company_type.h"
 
-void ShowVehicleRefitWindow(const Vehicle *v, VehicleOrderID order, Window *parent);
-
-/** Constants of vehicle view widget indices */
-enum VehicleViewWindowWidgets {
-	VVW_WIDGET_CAPTION,
-	VVW_WIDGET_VIEWPORT,           ///< Viewport widget.
-	VVW_WIDGET_START_STOP_VEH,
-	VVW_WIDGET_CENTER_MAIN_VIEH,
-	VVW_WIDGET_GOTO_DEPOT,
-	VVW_WIDGET_REFIT_VEH,
-	VVW_WIDGET_SHOW_ORDERS,
-	VVW_WIDGET_SHOW_DETAILS,
-	VVW_WIDGET_CLONE_VEH,
-	VVW_WIDGET_SELECT_DEPOT_CLONE, ///< Selection widget between 'goto depot', and 'clone vehicle' buttons.
-	VVW_WIDGET_SELECT_REFIT_TURN,  ///< Selection widget between 'refit' and 'turn around' buttons.
-	VVW_WIDGET_TURN_AROUND,
-	VVW_WIDGET_FORCE_PROCEED,
-};
+void ShowVehicleRefitWindow(const Vehicle *v, VehicleOrderID order, Window *parent, bool auto_refit = false);
 
 /** The tabs in the train details window */
 enum TrainDetailsWindowTabs {
@@ -46,12 +29,20 @@ enum TrainDetailsWindowTabs {
 	TDW_TAB_TOTALS,    ///< Tab with sum of total cargo transported
 };
 
+/** Special values for vehicle-related windows for the data parameter of #InvalidateWindowData. */
+enum VehicleInvalidateWindowData {
+	VIWD_REMOVE_ALL_ORDERS = -1, ///< Removed / replaced all orders (after deleting / sharing).
+	VIWD_MODIFY_ORDERS     = -2, ///< Other order modifications.
+	VIWD_CONSIST_CHANGED   = -3, ///< Vehicle composition was changed.
+	VIWD_AUTOREPLACE       = -4, ///< Autoreplace replaced the vehicle.
+};
+
 int DrawVehiclePurchaseInfo(int left, int right, int y, EngineID engine_number);
 
-void DrawTrainImage(const Train *v, int left, int right, int y, VehicleID selection, int skip, VehicleID drag_dest = INVALID_VEHICLE);
-void DrawRoadVehImage(const Vehicle *v, int left, int right, int y, VehicleID selection, int skip = 0);
-void DrawShipImage(const Vehicle *v, int left, int right, int y, VehicleID selection);
-void DrawAircraftImage(const Vehicle *v, int left, int right, int y, VehicleID selection);
+void DrawTrainImage(const Train *v, int left, int right, int y, VehicleID selection, EngineImageType image_type, int skip, VehicleID drag_dest = INVALID_VEHICLE);
+void DrawRoadVehImage(const Vehicle *v, int left, int right, int y, VehicleID selection, EngineImageType image_type, int skip = 0);
+void DrawShipImage(const Vehicle *v, int left, int right, int y, VehicleID selection, EngineImageType image_type);
+void DrawAircraftImage(const Vehicle *v, int left, int right, int y, VehicleID selection, EngineImageType image_type);
 
 void ShowBuildVehicleWindow(TileIndex tile, VehicleType type);
 
@@ -73,7 +64,16 @@ static inline uint GetVehicleHeight(VehicleType type)
 	return (type == VEH_TRAIN || type == VEH_ROAD) ? 14 : 24;
 }
 
-int GetVehicleWidth(Vehicle *v);
+int GetVehicleWidth(Vehicle *v, EngineImageType image_type);
+
+/** Dimensions of a cell in the purchase/depot windows. */
+struct VehicleCellSize {
+	uint height;       ///< Vehicle cell height.
+	uint extend_left;  ///< Extend of the cell to the left.
+	uint extend_right; ///< Extend of the cell to the right.
+};
+
+VehicleCellSize GetVehicleImageCellSize(VehicleType type, EngineImageType image_type);
 
 /**
  * Get WindowClass for vehicle list of given vehicle type
@@ -99,6 +99,6 @@ void StartStopVehicle(const Vehicle *v, bool texteffect);
 
 Vehicle *CheckClickOnVehicle(const struct ViewPort *vp, int x, int y);
 
-void DrawVehicleImage(const Vehicle *v, int left, int right, int y, VehicleID selection, int skip);
+void DrawVehicleImage(const Vehicle *v, int left, int right, int y, VehicleID selection, EngineImageType image_type, int skip);
 
 #endif /* VEHICLE_GUI_H */

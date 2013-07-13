@@ -12,22 +12,22 @@
 #include "../stdafx.h"
 #include "32bpp_base.hpp"
 
-void *Blitter_32bppBase::MoveTo(const void *video, int x, int y)
+void *Blitter_32bppBase::MoveTo(void *video, int x, int y)
 {
 	return (uint32 *)video + x + y * _screen.pitch;
 }
 
 void Blitter_32bppBase::SetPixel(void *video, int x, int y, uint8 colour)
 {
-	*((uint32 *)video + x + y * _screen.pitch) = LookupColourInPalette(colour);
+	*((Colour *)video + x + y * _screen.pitch) = LookupColourInPalette(colour);
 }
 
 void Blitter_32bppBase::DrawRect(void *video, int width, int height, uint8 colour)
 {
-	uint32 colour32 = LookupColourInPalette(colour);
+	Colour colour32 = LookupColourInPalette(colour);
 
 	do {
-		uint32 *dst = (uint32 *)video;
+		Colour *dst = (Colour *)video;
 		for (int i = width; i > 0; i--) {
 			*dst = colour32;
 			dst++;
@@ -39,7 +39,7 @@ void Blitter_32bppBase::DrawRect(void *video, int width, int height, uint8 colou
 void Blitter_32bppBase::CopyFromBuffer(void *video, const void *src, int width, int height)
 {
 	uint32 *dst = (uint32 *)video;
-	uint32 *usrc = (uint32 *)src;
+	const uint32 *usrc = (const uint32 *)src;
 
 	for (; height > 0; height--) {
 		memcpy(dst, usrc, width * sizeof(uint32));
@@ -51,7 +51,7 @@ void Blitter_32bppBase::CopyFromBuffer(void *video, const void *src, int width, 
 void Blitter_32bppBase::CopyToBuffer(const void *video, void *dst, int width, int height)
 {
 	uint32 *udst = (uint32 *)dst;
-	uint32 *src = (uint32 *)video;
+	const uint32 *src = (const uint32 *)video;
 
 	for (; height > 0; height--) {
 		memcpy(udst, src, width * sizeof(uint32));
@@ -63,7 +63,7 @@ void Blitter_32bppBase::CopyToBuffer(const void *video, void *dst, int width, in
 void Blitter_32bppBase::CopyImageToBuffer(const void *video, void *dst, int width, int height, int dst_pitch)
 {
 	uint32 *udst = (uint32 *)dst;
-	uint32 *src = (uint32 *)video;
+	const uint32 *src = (const uint32 *)video;
 
 	for (; height > 0; height--) {
 		memcpy(udst, src, width * sizeof(uint32));
@@ -107,7 +107,7 @@ void Blitter_32bppBase::ScrollBuffer(void *video, int &left, int &top, int &widt
 		dst = (uint32 *)video + left + top * _screen.pitch;
 		src = dst - scroll_y * _screen.pitch;
 
-		/* Decrese height. (scroll_y is <=0). */
+		/* Decrease height. (scroll_y is <=0). */
 		height += scroll_y;
 		assert(height > 0);
 
@@ -136,7 +136,7 @@ int Blitter_32bppBase::BufferSize(int width, int height)
 	return width * height * sizeof(uint32);
 }
 
-void Blitter_32bppBase::PaletteAnimate(uint start, uint count)
+void Blitter_32bppBase::PaletteAnimate(const Palette &palette)
 {
 	/* By default, 32bpp doesn't have palette animation */
 }

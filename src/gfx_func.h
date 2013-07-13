@@ -26,10 +26,10 @@
  * This whole mechanism is controlled by an rectangle defined in #_invalid_rect. This
  * rectangle defines the area on the screen which must be repaint. If a new object
  * needs to be repainted this rectangle is extended to 'catch' the object on the
- * screen. At some point (which is normaly uninteressted for patch writers) this
+ * screen. At some point (which is normally uninteresting for patch writers) this
  * rectangle is send to the video drivers method
  * VideoDriver::MakeDirty and it is truncated back to an empty rectangle. At some
- * later point (which is uninteressted, too) the video driver
+ * later point (which is uninteresting, too) the video driver
  * repaints all these saved rectangle instead of the whole screen and drop the
  * rectangle informations. Then a new round begins by marking objects "dirty".
  *
@@ -64,12 +64,10 @@ extern bool _right_button_clicked;
 extern DrawPixelInfo _screen;
 extern bool _screen_disable_anim;   ///< Disable palette animation (important for 32bpp-anim blitter during giant screenshot)
 
-extern int _pal_first_dirty;
-extern int _pal_count_dirty;
 extern int _num_resolutions;
 extern Dimension _resolutions[32];
 extern Dimension _cur_resolution;
-extern Colour _cur_palette[256]; ///< Current palette. Entry 0 has to be always fully transparent!
+extern Palette _cur_palette; ///< Current palette
 
 void HandleKeypress(uint32 key);
 void HandleCtrlChanged();
@@ -88,8 +86,9 @@ static const int DRAW_STRING_BUFFER = 2048;
 void RedrawScreenRect(int left, int top, int right, int bottom);
 void GfxScroll(int left, int top, int width, int height, int xo, int yo);
 
-Dimension GetSpriteSize(SpriteID sprid, Point *offset = NULL);
-void DrawSprite(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub = NULL);
+Dimension GetSpriteSize(SpriteID sprid, Point *offset = NULL, ZoomLevel zoom = ZOOM_LVL_GUI);
+void DrawSpriteViewport(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub = NULL);
+void DrawSprite(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub = NULL, ZoomLevel zoom = ZOOM_LVL_GUI);
 
 /** How to align the to-be drawn text. */
 enum StringAlignment {
@@ -106,14 +105,13 @@ enum StringAlignment {
 	SA_CENTER      = SA_HOR_CENTER | SA_VERT_CENTER, ///< Center both horizontally and vertically.
 
 	SA_FORCE       = 1 << 4, ///< Force the alignment, i.e. don't swap for RTL languages.
-	SA_STRIP       = 1 << 5, ///< Strip the SETX/SETXY commands from the string
 };
 DECLARE_ENUM_AS_BIT_SET(StringAlignment)
 
-int DrawString(int left, int right, int top, const char *str, TextColour colour = TC_FROMSTRING, StringAlignment align = SA_LEFT, bool underline = false);
-int DrawString(int left, int right, int top, StringID str, TextColour colour = TC_FROMSTRING, StringAlignment align = SA_LEFT, bool underline = false);
-int DrawStringMultiLine(int left, int right, int top, int bottom, const char *str, TextColour colour = TC_FROMSTRING, StringAlignment align = (SA_TOP | SA_LEFT), bool underline = false);
-int DrawStringMultiLine(int left, int right, int top, int bottom, StringID str, TextColour colour = TC_FROMSTRING, StringAlignment align = (SA_TOP | SA_LEFT), bool underline = false);
+int DrawString(int left, int right, int top, const char *str, TextColour colour = TC_FROMSTRING, StringAlignment align = SA_LEFT, bool underline = false, FontSize fontsize = FS_NORMAL);
+int DrawString(int left, int right, int top, StringID str, TextColour colour = TC_FROMSTRING, StringAlignment align = SA_LEFT, bool underline = false, FontSize fontsize = FS_NORMAL);
+int DrawStringMultiLine(int left, int right, int top, int bottom, const char *str, TextColour colour = TC_FROMSTRING, StringAlignment align = (SA_TOP | SA_LEFT), bool underline = false, FontSize fontsize = FS_NORMAL);
+int DrawStringMultiLine(int left, int right, int top, int bottom, StringID str, TextColour colour = TC_FROMSTRING, StringAlignment align = (SA_TOP | SA_LEFT), bool underline = false, FontSize fontsize = FS_NORMAL);
 
 void DrawCharCentered(uint32 c, int x, int y, TextColour colour);
 
@@ -123,10 +121,11 @@ void DrawBox(int x, int y, int dx1, int dy1, int dx2, int dy2, int dx3, int dy3)
 
 Dimension GetStringBoundingBox(const char *str, FontSize start_fontsize = FS_NORMAL);
 Dimension GetStringBoundingBox(StringID strid);
-uint32 FormatStringLinebreaks(char *str, const char *last, int maxw, FontSize start_fontsize = FS_NORMAL);
 int GetStringHeight(StringID str, int maxw);
+int GetStringLineCount(StringID str, int maxw);
 Dimension GetStringMultiLineBoundingBox(StringID str, const Dimension &suggestion);
-void LoadStringWidthTable();
+Dimension GetStringMultiLineBoundingBox(const char *str, const Dimension &suggestion);
+void LoadStringWidthTable(bool monospace = false);
 
 void DrawDirtyBlocks();
 void SetDirtyBlocks(int left, int top, int right, int bottom);
@@ -150,18 +149,9 @@ bool ToggleFullScreen(bool fs);
 /* gfx.cpp */
 byte GetCharacterWidth(FontSize size, uint32 key);
 byte GetDigitWidth(FontSize size = FS_NORMAL);
+void GetBroadestDigit(uint *front, uint *next, FontSize size = FS_NORMAL);
 
-/**
- * Get height of a character for a given font size.
- * @param size Font size to get height of
- * @return     Height of characters in the given font (pixels)
- */
-static inline byte GetCharacterHeight(FontSize size)
-{
-	assert(size < FS_END);
-	extern int _font_height[FS_END];
-	return _font_height[size];
-}
+int GetCharacterHeight(FontSize size);
 
 /** Height of characters in the small (#FS_SMALL) font. */
 #define FONT_HEIGHT_SMALL  (GetCharacterHeight(FS_SMALL))
@@ -172,7 +162,12 @@ static inline byte GetCharacterHeight(FontSize size)
 /** Height of characters in the large (#FS_LARGE) font. */
 #define FONT_HEIGHT_LARGE  (GetCharacterHeight(FS_LARGE))
 
+/** Height of characters in the large (#FS_MONO) font. */
+#define FONT_HEIGHT_MONO  (GetCharacterHeight(FS_MONO))
+
 extern DrawPixelInfo *_cur_dpi;
+
+TextColour GetContrastColour(uint8 background);
 
 /**
  * All 16 colour gradients

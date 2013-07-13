@@ -39,7 +39,10 @@ int CDECL seprintf(char *str, const char *last, const char *format, ...) WARN_FO
 
 char *CDECL str_fmt(const char *str, ...) WARN_FORMAT(1, 2);
 
-void str_validate(char *str, const char *last, bool allow_newlines = false, bool ignore = false);
+void str_validate(char *str, const char *last, StringValidationSettings settings = SVS_REPLACE_WITH_QUESTION_MARK);
+void ValidateString(const char *str);
+
+void str_fix_scc_encoded(char *str, const char *last);
 void str_strip_colours(char *str);
 bool strtolower(char *str);
 
@@ -48,7 +51,7 @@ bool StrValid(const char *str, const char *last);
 /**
  * Check if a string buffer is empty.
  *
- * @param s The pointer to the firste element of the buffer
+ * @param s The pointer to the first element of the buffer
  * @return true if the buffer starts with the terminating null-character or
  *         if the given pointer points to NULL else return false
  */
@@ -60,7 +63,7 @@ static inline bool StrEmpty(const char *s)
 /**
  * Get the length of a string, within a limited buffer.
  *
- * @param str The pointer to the firste element of the buffer
+ * @param str The pointer to the first element of the buffer
  * @param maxlen The maximum size of the buffer
  * @return The length of the string
  */
@@ -210,6 +213,6 @@ char *strndup(const char *s, size_t len);
 char *strcasestr(const char *haystack, const char *needle);
 #endif /* strcasestr is available */
 
-int strnatcmp(const char *s1, const char *s2);
+int strnatcmp(const char *s1, const char *s2, bool ignore_garbage_at_front = false);
 
 #endif /* STRING_FUNC_H */

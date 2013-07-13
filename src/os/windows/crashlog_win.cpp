@@ -25,6 +25,7 @@
 #include "../../strings_func.h"
 #include "../../gamelog.h"
 #include "../../saveload/saveload.h"
+#include "../../video/video_driver.hpp"
 
 #include <windows.h>
 #include <signal.h>
@@ -526,7 +527,7 @@ static LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS *ep)
 	/* Close any possible log files */
 	CloseConsoleLogIfActive();
 
-	if (_safe_esp != NULL) {
+	if ((_video_driver == NULL || _video_driver->HasGUI()) && _safe_esp != NULL) {
 #ifdef _M_AMD64
 		ep->ContextRecord->Rip = (DWORD64)ShowCrashlogWindow;
 		ep->ContextRecord->Rsp = (DWORD64)_safe_esp;
@@ -621,7 +622,7 @@ static INT_PTR CALLBACK CrashDialogFunc(HWND wnd, UINT msg, WPARAM wParam, LPARA
 	switch (msg) {
 		case WM_INITDIALOG: {
 #if defined(UNICODE)
-			/* We need to put the crash-log in a seperate buffer because the default
+			/* We need to put the crash-log in a separate buffer because the default
 			 * buffer in MB_TO_WIDE is not large enough (512 chars) */
 			wchar_t crash_msgW[lengthof(CrashLogWindows::current->crashlog)];
 #endif

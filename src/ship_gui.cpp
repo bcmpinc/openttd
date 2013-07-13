@@ -17,6 +17,7 @@
 #include "strings_func.h"
 #include "vehicle_func.h"
 #include "spritecache.h"
+#include "zoom_func.h"
 
 #include "table/strings.h"
 
@@ -28,21 +29,23 @@
  * @param y         Vertical position to draw at
  * @param selection Selected vehicle to draw a frame around
  */
-void DrawShipImage(const Vehicle *v, int left, int right, int y, VehicleID selection)
+void DrawShipImage(const Vehicle *v, int left, int right, int y, VehicleID selection, EngineImageType image_type)
 {
 	bool rtl = _current_text_dir == TD_RTL;
 
-	SpriteID sprite = v->GetImage(rtl ? DIR_E : DIR_W);
+	SpriteID sprite = v->GetImage(rtl ? DIR_E : DIR_W, image_type);
 	const Sprite *real_sprite = GetSprite(sprite, ST_NORMAL);
 
-	int x = rtl ? right - real_sprite->width - real_sprite->x_offs : left - real_sprite->x_offs;
+	int width = UnScaleByZoom(real_sprite->width, ZOOM_LVL_GUI);
+	int x_offs = UnScaleByZoom(real_sprite->x_offs, ZOOM_LVL_GUI);
+	int x = rtl ? right - width - x_offs : left - x_offs;
 
 	DrawSprite(sprite, GetVehiclePalette(v), x, y + 10);
 
 	if (v->index == selection) {
-		x += real_sprite->x_offs;
-		y += real_sprite->y_offs + 10;
-		DrawFrameRect(x - 1, y - 1, x + real_sprite->width + 1, y + real_sprite->height + 1, COLOUR_WHITE, FR_BORDERONLY);
+		x += x_offs;
+		y += UnScaleByZoom(real_sprite->y_offs, ZOOM_LVL_GUI) + 10;
+		DrawFrameRect(x - 1, y - 1, x + width + 1, y + UnScaleByZoom(real_sprite->height, ZOOM_LVL_GUI) + 1, COLOUR_WHITE, FR_BORDERONLY);
 	}
 }
 
@@ -59,7 +62,7 @@ void DrawShipDetails(const Vehicle *v, int left, int right, int y)
 	SetDParam(0, v->engine_type);
 	SetDParam(1, v->build_year);
 	SetDParam(2, v->value);
-	DrawString(left, right, y, STR_VEHICLE_INFO_BUILT_VALUE, TC_FROMSTRING, SA_LEFT | SA_STRIP);
+	DrawString(left, right, y, STR_VEHICLE_INFO_BUILT_VALUE);
 
 	SetDParam(0, v->cargo_type);
 	SetDParam(1, v->cargo_cap);
@@ -67,9 +70,9 @@ void DrawShipDetails(const Vehicle *v, int left, int right, int y)
 	DrawString(left, right, y + FONT_HEIGHT_NORMAL, STR_VEHICLE_INFO_CAPACITY);
 
 	StringID str = STR_VEHICLE_DETAILS_CARGO_EMPTY;
-	if (!v->cargo.Empty()) {
+	if (v->cargo.StoredCount() > 0) {
 		SetDParam(0, v->cargo_type);
-		SetDParam(1, v->cargo.Count());
+		SetDParam(1, v->cargo.StoredCount());
 		SetDParam(2, v->cargo.Source());
 		str = STR_VEHICLE_DETAILS_CARGO_FROM;
 	}

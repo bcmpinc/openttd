@@ -34,8 +34,11 @@ protected:
 	virtual NetworkRecvStatus Receive_ADMIN_POLL(Packet *p);
 	virtual NetworkRecvStatus Receive_ADMIN_CHAT(Packet *p);
 	virtual NetworkRecvStatus Receive_ADMIN_RCON(Packet *p);
+	virtual NetworkRecvStatus Receive_ADMIN_GAMESCRIPT(Packet *p);
+	virtual NetworkRecvStatus Receive_ADMIN_PING(Packet *p);
 
 	NetworkRecvStatus SendProtocol();
+	NetworkRecvStatus SendPong(uint32 d1);
 public:
 	AdminUpdateFrequency update_frequency[ADMIN_UPDATE_END]; ///< Admin requested update intervals.
 	uint32 realtime_connect;                                 ///< Time of connection.
@@ -51,7 +54,7 @@ public:
 
 	NetworkRecvStatus SendDate();
 	NetworkRecvStatus SendClientJoin(ClientID client_id);
-	NetworkRecvStatus SendClientInfo(const NetworkClientSocket *cs);
+	NetworkRecvStatus SendClientInfo(const NetworkClientSocket *cs, const NetworkClientInfo *ci);
 	NetworkRecvStatus SendClientUpdate(const NetworkClientInfo *ci);
 	NetworkRecvStatus SendClientQuit(ClientID client_id);
 	NetworkRecvStatus SendClientError(ClientID client_id, NetworkErrorCode error);
@@ -65,8 +68,10 @@ public:
 	NetworkRecvStatus SendChat(NetworkAction action, DestType desttype, ClientID client_id, const char *msg, int64 data);
 	NetworkRecvStatus SendRcon(uint16 colour, const char *command);
 	NetworkRecvStatus SendConsole(const char *origin, const char *command);
+	NetworkRecvStatus SendGameScript(const char *json);
 	NetworkRecvStatus SendCmdNames();
 	NetworkRecvStatus SendCmdLogging(ClientID client_id, const CommandPacket *cp);
+	NetworkRecvStatus SendRconEnd(const char *command);
 
 	static void Send();
 	static void AcceptConnection(SOCKET s, const NetworkAddress &address);
@@ -116,6 +121,7 @@ void NetworkAdminChat(NetworkAction action, DestType desttype, ClientID client_i
 void NetworkAdminUpdate(AdminUpdateFrequency freq);
 void NetworkServerSendAdminRcon(AdminIndex admin_index, TextColour colour_code, const char *string);
 void NetworkAdminConsole(const char *origin, const char *string);
+void NetworkAdminGameScript(const char *json);
 void NetworkAdminCmdLogging(const NetworkClientSocket *owner, const CommandPacket *cp);
 
 #endif /* ENABLE_NETWORK */

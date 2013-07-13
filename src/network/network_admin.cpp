@@ -23,6 +23,7 @@
 #include "../core/pool_func.hpp"
 #include "../map_func.h"
 #include "../rev.h"
+#include "../game/game.hpp"
 
 
 /* This file handles all the admin network commands. */
@@ -52,6 +53,7 @@ static const AdminUpdateFrequency _admin_update_type_frequencies[] = {
 	                       ADMIN_FREQUENCY_AUTOMATIC,                                                                                                      ///< ADMIN_UPDATE_CONSOLE
 	ADMIN_FREQUENCY_POLL,                                                                                                                                  ///< ADMIN_UPDATE_CMD_NAMES
 	                       ADMIN_FREQUENCY_AUTOMATIC,                                                                                                      ///< ADMIN_UPDATE_CMD_LOGGING
+	                       ADMIN_FREQUENCY_AUTOMATIC,                                                                                                      ///< ADMIN_UPDATE_GAMESCRIPT
 };
 /** Sanity check. */
 assert_compile(lengthof(_admin_update_type_frequencies) == ADMIN_UPDATE_END);
@@ -226,18 +228,18 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::SendClientJoin(ClientID clien
 
 /**
  * Send an initial set of data from some client's information.
- * @param cs The information about a client.
+ * @param cs The socket of the client.
+ * @param ci The information about the client.
  */
-NetworkRecvStatus ServerNetworkAdminSocketHandler::SendClientInfo(const NetworkClientSocket *cs)
+NetworkRecvStatus ServerNetworkAdminSocketHandler::SendClientInfo(const NetworkClientSocket *cs, const NetworkClientInfo *ci)
 {
 	/* Only send data when we're a proper client, not just someone trying to query the server. */
-	const NetworkClientInfo *ci = cs->GetInfo();
 	if (ci == NULL) return NETWORK_RECV_STATUS_OKAY;
 
 	Packet *p = new Packet(ADMIN_PACKET_SERVER_CLIENT_INFO);
 
 	p->Send_uint32(ci->client_id);
-	p->Send_string(const_cast<NetworkAddress &>(cs->client_address).GetHostname());
+	p->Send_string(cs == NULL ? "" : const_cast<NetworkAddress &>(cs->client_address).GetHostname());
 	p->Send_string(ci->client_name);
 	p->Send_uint8 (ci->client_lang);
 	p->Send_uint32(ci->join_date);
@@ -363,7 +365,7 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::SendCompanyUpdate(const Compa
 	p->Send_string(manager_name);
 	p->Send_uint8 (c->colour);
 	p->Send_bool  (NetworkCompanyIsPassworded(c->index));
-	p->Send_uint8 (c->quarters_of_bankruptcy);
+	p->Send_uint8 (CeilDiv(c->months_of_bankruptcy, 3)); // send as quarters_of_bankruptcy
 
 	for (size_t i = 0; i < lengthof(c->share_owners); i++) {
 		p->Send_uint8(c->share_owners[i]);
@@ -410,13 +412,13 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::SendCompanyEconomy()
 		p->Send_uint64(company->money);
 		p->Send_uint64(company->current_loan);
 		p->Send_uint64(income);
-		p->Send_uint16(company->cur_economy.delivered_cargo);
+		p->Send_uint16(min(UINT16_MAX, company->cur_economy.delivered_cargo.GetSum<OverflowSafeInt64>()));
 
 		/* Send stats for the last 2 quarters. */
 		for (uint i = 0; i < 2; i++) {
 			p->Send_uint64(company->old_economy[i].company_value);
 			p->Send_uint16(company->old_economy[i].performance_history);
-			p->Send_uint16(company->old_economy[i].delivered_cargo);
+			p->Send_uint16(min(UINT16_MAX, company->old_economy[i].delivered_cargo.GetSum<OverflowSafeInt64>()));
 		}
 
 		this->SendPacket(p);
@@ -479,6 +481,20 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::SendChat(NetworkAction action
 }
 
 /**
+ * Send a notification indicating the rcon command has completed.
+ * @param command The original command sent.
+ */
+NetworkRecvStatus ServerNetworkAdminSocketHandler::SendRconEnd(const char *command)
+{
+	Packet *p = new Packet(ADMIN_PACKET_SERVER_RCON_END);
+
+	p->Send_string(command);
+	this->SendPacket(p);
+
+	return NETWORK_RECV_STATUS_OKAY;
+}
+
+/**
  * Send the reply of an rcon command.
  * @param colour The colour of the text.
  * @param result The result of the command.
@@ -507,7 +523,32 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::Receive_ADMIN_RCON(Packet *p)
 	_redirect_console_to_admin = this->index;
 	IConsoleCmdExec(command);
 	_redirect_console_to_admin = INVALID_ADMIN_ID;
+	return this->SendRconEnd(command);
+}
+
+NetworkRecvStatus ServerNetworkAdminSocketHandler::Receive_ADMIN_GAMESCRIPT(Packet *p)
+{
+	if (this->status == ADMIN_STATUS_INACTIVE) return this->SendError(NETWORK_ERROR_NOT_EXPECTED);
+
+	char json[NETWORK_GAMESCRIPT_JSON_LENGTH];
+
+	p->Recv_string(json, sizeof(json));
+
+	DEBUG(net, 2, "[admin] GameScript JSON from '%s' (%s): '%s'", this->admin_name, this->admin_version, json);
+
+	Game::NewEvent(new ScriptEventAdminPort(json));
 	return NETWORK_RECV_STATUS_OKAY;
+}
+
+NetworkRecvStatus ServerNetworkAdminSocketHandler::Receive_ADMIN_PING(Packet *p)
+{
+	if (this->status == ADMIN_STATUS_INACTIVE) return this->SendError(NETWORK_ERROR_NOT_EXPECTED);
+
+	uint32 d1 = p->Recv_uint32();
+
+	DEBUG(net, 2, "[admin] Ping from '%s' (%s): '%d'", this->admin_name, this->admin_version, d1);
+
+	return this->SendPong(d1);
 }
 
 /**
@@ -527,6 +568,36 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::SendConsole(const char *origi
 
 	p->Send_string(origin);
 	p->Send_string(string);
+	this->SendPacket(p);
+
+	return NETWORK_RECV_STATUS_OKAY;
+}
+
+/**
+ * Send GameScript JSON output.
+ * @param json The JSON string.
+ */
+NetworkRecvStatus ServerNetworkAdminSocketHandler::SendGameScript(const char *json)
+{
+	/* At the moment we cannot transmit anything larger than MTU. So we limit
+	 *  the maximum amount of json data that can be sent. Account also for
+	 *  the trailing \0 of the string */
+	if (strlen(json) + 1 >= NETWORK_GAMESCRIPT_JSON_LENGTH) return NETWORK_RECV_STATUS_OKAY;
+
+	Packet *p = new Packet(ADMIN_PACKET_SERVER_GAMESCRIPT);
+
+	p->Send_string(json);
+	this->SendPacket(p);
+
+	return NETWORK_RECV_STATUS_OKAY;
+}
+
+/** Send ping-reply (pong) to admin **/
+NetworkRecvStatus ServerNetworkAdminSocketHandler::SendPong(uint32 d1)
+{
+	Packet *p = new Packet(ADMIN_PACKET_SERVER_PONG);
+
+	p->Send_uint32(d1);
 	this->SendPacket(p);
 
 	return NETWORK_RECV_STATUS_OKAY;
@@ -658,12 +729,17 @@ NetworkRecvStatus ServerNetworkAdminSocketHandler::Receive_ADMIN_POLL(Packet *p)
 			/* The admin is requesting client info. */
 			const NetworkClientSocket *cs;
 			if (d1 == UINT32_MAX) {
+				this->SendClientInfo(NULL, NetworkClientInfo::GetByClientID(CLIENT_ID_SERVER));
 				FOR_ALL_CLIENT_SOCKETS(cs) {
-					this->SendClientInfo(cs);
+					this->SendClientInfo(cs, cs->GetInfo());
 				}
 			} else {
-				cs = NetworkClientSocket::GetByClientID((ClientID)d1);
-				if (cs != NULL) this->SendClientInfo(cs);
+				if (d1 == CLIENT_ID_SERVER) {
+					this->SendClientInfo(NULL, NetworkClientInfo::GetByClientID(CLIENT_ID_SERVER));
+				} else {
+					cs = NetworkClientSocket::GetByClientID((ClientID)d1);
+					if (cs != NULL) this->SendClientInfo(cs, cs->GetInfo());
+				}
 			}
 			break;
 
@@ -745,7 +821,7 @@ void NetworkAdminClientInfo(const NetworkClientSocket *cs, bool new_client)
 	ServerNetworkAdminSocketHandler *as;
 	FOR_ALL_ACTIVE_ADMIN_SOCKETS(as) {
 		if (as->update_frequency[ADMIN_UPDATE_CLIENT_INFO] & ADMIN_FREQUENCY_AUTOMATIC) {
-			as->SendClientInfo(cs);
+			as->SendClientInfo(cs, cs->GetInfo());
 			if (new_client) {
 				as->SendClientJoin(cs->client_id);
 			}
@@ -891,6 +967,20 @@ void NetworkAdminConsole(const char *origin, const char *string)
 }
 
 /**
+ * Send GameScript JSON to the admin network (if they did opt in for the respective update).
+ * @param json The JSON data as received from the GameScript.
+ */
+void NetworkAdminGameScript(const char *json)
+{
+	ServerNetworkAdminSocketHandler *as;
+	FOR_ALL_ACTIVE_ADMIN_SOCKETS(as) {
+		if (as->update_frequency[ADMIN_UPDATE_GAMESCRIPT] & ADMIN_FREQUENCY_AUTOMATIC) {
+			as->SendGameScript(json);
+		}
+	}
+}
+
+/**
  * Distribute CommandPacket details over the admin network for logging purposes.
  * @param owner The owner of the CommandPacket (who sent us the CommandPacket).
  * @param cp    The CommandPacket to be distributed.
@@ -920,7 +1010,7 @@ void ServerNetworkAdminSocketHandler::WelcomeAll()
 
 /**
  * Send (push) updates to the admin network as they have registered for these updates.
- * @param freq the frequency to be processd.
+ * @param freq the frequency to be processed.
  */
 void NetworkAdminUpdate(AdminUpdateFrequency freq)
 {

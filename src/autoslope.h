@@ -14,7 +14,6 @@
 
 #include "company_func.h"
 #include "depot_func.h"
-#include "slope_func.h"
 #include "tile_map.h"
 
 /**
@@ -31,9 +30,9 @@
  * @param entrance Entrance edge.
  * @return true iff terraforming is allowed.
  */
-static inline bool AutoslopeCheckForEntranceEdge(TileIndex tile, uint z_new, Slope tileh_new, DiagDirection entrance)
+static inline bool AutoslopeCheckForEntranceEdge(TileIndex tile, int z_new, Slope tileh_new, DiagDirection entrance)
 {
-	if (IsSteepSlope(tileh_new) || (GetTileMaxZ(tile) != z_new + GetSlopeMaxZ(tileh_new))) return false;
+	if (GetTileMaxZ(tile) != z_new + GetSlopeMaxZ(tileh_new)) return false;
 	return ((tileh_new == SLOPE_FLAT) || CanBuildDepotByTileh(entrance, tileh_new));
 }
 

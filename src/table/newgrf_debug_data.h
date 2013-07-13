@@ -9,6 +9,9 @@
 
 /** @file newgrf_debug_data.h Data 'tables' for NewGRF debugging. */
 
+#include "../newgrf_house.h"
+#include "../newgrf_engine.h"
+
 /* Helper for filling property tables */
 #define NIP(prop, base, variable, type, name) { name, cpp_offsetof(base, variable), cpp_sizeof(base, variable), prop, type }
 #define NIP_END() { NULL, 0, 0, 0, 0 }
@@ -61,13 +64,19 @@ static const NIVariable _niv_vehicles[] = {
 };
 
 class NIHVehicle : public NIHelper {
-	bool IsInspectable(uint index) const                 { return Engine::Get(Vehicle::Get(index)->engine_type)->grf_prop.grffile != NULL; }
+	bool IsInspectable(uint index) const                 { return Vehicle::Get(index)->GetGRF() != NULL; }
 	uint GetParent(uint index) const                     { const Vehicle *first = Vehicle::Get(index)->First(); return GetInspectWindowNumber(GetGrfSpecFeature(first->type), first->index); }
 	const void *GetInstance(uint index)const             { return Vehicle::Get(index); }
-	const void *GetSpec(uint index) const                { return Engine::Get(Vehicle::Get(index)->engine_type); }
+	const void *GetSpec(uint index) const                { return Vehicle::Get(index)->GetEngine(); }
 	void SetStringParameters(uint index) const           { this->SetSimpleStringParameters(STR_VEHICLE_NAME, index); }
-	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? Engine::Get(Vehicle::Get(index)->engine_type)->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetVehicleResolver(ResolverObject *ro, uint index); GetVehicleResolver(ro, index); }
+	uint32 GetGRFID(uint index) const                    { return Vehicle::Get(index)->GetGRFID(); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		Vehicle *v = Vehicle::Get(index);
+		VehicleResolverObject ro(v->engine_type, v);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_vehicle = {
@@ -124,7 +133,12 @@ class NIHStation : public NIHelper {
 	const void *GetSpec(uint index) const                { return GetStationSpec(index); }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_STATION_NAME, GetStationIndex(index), index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? GetStationSpec(index)->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetStationResolver(ResolverObject *ro, uint index); GetStationResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		StationResolverObject ro(GetStationSpec(index), Station::GetByTile(index), index);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_station = {
@@ -184,7 +198,12 @@ class NIHHouse : public NIHelper {
 	const void *GetSpec(uint index) const                { return HouseSpec::Get(GetHouseType(index)); }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_TOWN_NAME, GetTownIndex(index), index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? HouseSpec::Get(GetHouseType(index))->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetHouseResolver(ResolverObject *ro, uint index); GetHouseResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		HouseResolverObject ro(GetHouseType(index), index, Town::GetByTile(index));
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_house = {
@@ -229,7 +248,12 @@ class NIHIndustryTile : public NIHelper {
 	const void *GetSpec(uint index) const                { return GetIndustryTileSpec(GetIndustryGfx(index)); }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_INDUSTRY_NAME, GetIndustryIndex(index), index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? GetIndustryTileSpec(GetIndustryGfx(index))->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetIndustryTileResolver(ResolverObject *ro, uint index); GetIndustryTileResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		IndustryTileResolverObject ro(GetIndustryGfx(index), index, Industry::GetByTile(index));
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_industrytile = {
@@ -253,7 +277,7 @@ static const NIProperty _nip_industries[] = {
 
 #define NICI(cb_id, bit) NIC(cb_id, IndustrySpec, callback_mask, bit)
 static const NICallback _nic_industries[] = {
-	NICI(CBID_INDUSTRY_AVAILABLE,            CBM_IND_AVAILABLE),
+	NICI(CBID_INDUSTRY_PROBABILITY,          CBM_IND_PROBABILITY),
 	NICI(CBID_INDUSTRY_LOCATION,             CBM_IND_LOCATION),
 	NICI(CBID_INDUSTRY_PRODUCTION_CHANGE,    CBM_IND_PRODUCTION_CHANGE),
 	NICI(CBID_INDUSTRY_MONTHLYPROD_CHANGE,   CBM_IND_MONTHLYPROD_CHANGE),
@@ -265,6 +289,7 @@ static const NICallback _nic_industries[] = {
 	NICI(CBID_INDUSTRY_DECIDE_COLOUR,        CBM_IND_DECIDE_COLOUR),
 	NICI(CBID_INDUSTRY_INPUT_CARGO_TYPES,    CBM_IND_INPUT_CARGO_TYPES),
 	NICI(CBID_INDUSTRY_OUTPUT_CARGO_TYPES,   CBM_IND_OUTPUT_CARGO_TYPES),
+	NICI(CBID_INDUSTRY_PROD_CHANGE_BUILD,    CBM_IND_PROD_CHANGE_BUILD),
 	NIC_END()
 };
 
@@ -295,12 +320,19 @@ class NIHIndustry : public NIHelper {
 	const void *GetSpec(uint index) const                { return GetIndustrySpec(Industry::Get(index)->type); }
 	void SetStringParameters(uint index) const           { this->SetSimpleStringParameters(STR_INDUSTRY_NAME, index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? GetIndustrySpec(Industry::Get(index)->type)->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetIndustryResolver(ResolverObject *ro, uint index); GetIndustryResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		Industry *i = Industry::Get(index);
+		IndustriesResolverObject ro(i->location.tile, i, i->type);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
+
 	uint GetPSASize(uint index, uint32 grfid) const      { return cpp_lengthof(PersistentStorage, storage); }
 
-	int32 *GetPSAFirstPosition(uint index, uint32 grfid) const
+	const int32 *GetPSAFirstPosition(uint index, uint32 grfid) const
 	{
-		Industry *i = (Industry *)this->GetInstance(index);
+		const Industry *i = (const Industry *)this->GetInstance(index);
 		if (i->psa == NULL) return NULL;
 		return (int32 *)(&i->psa->storage);
 	}
@@ -353,7 +385,12 @@ class NIHObject : public NIHelper {
 	const void *GetSpec(uint index) const                { return ObjectSpec::GetByTile(index); }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_NEWGRF_INSPECT_CAPTION_OBJECT_AT_OBJECT, INVALID_STRING_ID, index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? ObjectSpec::GetByTile(index)->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetObjectResolver(ResolverObject *ro, uint index); GetObjectResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		ObjectResolverObject ro(ObjectSpec::GetByTile(index), Object::GetByTile(index), index);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_object = {
@@ -380,7 +417,14 @@ class NIHRailType : public NIHelper {
 	const void *GetSpec(uint index) const                { return NULL; }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_NEWGRF_INSPECT_CAPTION_OBJECT_AT_RAIL_TYPE, INVALID_STRING_ID, index); }
 	uint32 GetGRFID(uint index) const                    { return 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetRailTypeResolver(ResolverObject *ro, uint index); GetRailTypeResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		/* There is no unique GRFFile for the tile. Multiple GRFs can define different parts of the railtype.
+		 * However, currently the NewGRF Debug GUI does not display variables depending on the GRF (like 0x7F) anyway. */
+		RailTypeResolverObject ro(index, TCX_NORMAL, NULL);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_railtype = {
@@ -409,7 +453,12 @@ class NIHAirportTile : public NIHelper {
 	const void *GetSpec(uint index) const                { return AirportTileSpec::Get(GetAirportGfx(index)); }
 	void SetStringParameters(uint index) const           { this->SetObjectAtStringParameters(STR_STATION_NAME, GetStationIndex(index), index); }
 	uint32 GetGRFID(uint index) const                    { return (this->IsInspectable(index)) ? AirportTileSpec::Get(GetAirportGfx(index))->grf_prop.grffile->grfid : 0; }
-	void Resolve(ResolverObject *ro, uint32 index) const { extern void GetAirportTileTypeResolver(ResolverObject *ro, uint index); GetAirportTileTypeResolver(ro, index); }
+
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		AirportTileResolverObject ro(AirportTileSpec::GetByTile(index), index, Station::GetByTile(index));
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
 };
 
 static const NIFeature _nif_airporttile = {
@@ -442,11 +491,16 @@ class NIHTown : public NIHelper {
 	const void *GetSpec(uint index) const                { return NULL; }
 	void SetStringParameters(uint index) const           { this->SetSimpleStringParameters(STR_TOWN_NAME, index); }
 	uint32 GetGRFID(uint index) const                    { return 0; }
-	uint Resolve(uint index, uint var, uint param, bool *avail) const { return TownGetVariable(var, param, avail, Town::Get(index), NULL); }
 	bool PSAWithParameter() const                        { return true; }
 	uint GetPSASize(uint index, uint32 grfid) const      { return cpp_lengthof(PersistentStorage, storage); }
 
-	int32 *GetPSAFirstPosition(uint index, uint32 grfid) const
+	/* virtual */ uint Resolve(uint index, uint var, uint param, bool *avail) const
+	{
+		TownResolverObject ro(NULL, Town::Get(index), true);
+		return ro.GetScope(VSG_SCOPE_SELF)->GetVariable(var, param, avail);
+	}
+
+	const int32 *GetPSAFirstPosition(uint index, uint32 grfid) const
 	{
 		Town *t = Town::Get(index);
 
@@ -479,7 +533,7 @@ static const NIFeature * const _nifeatures[] = {
 	NULL,               // GSF_GLOBALVAR (has no "physical" objects)
 	&_nif_industrytile, // GSF_INDUSTRYTILES
 	&_nif_industry,     // GSF_INDUSTRIES
-	NULL,               // GSF_CARGOS (has no "physical" objects)
+	NULL,               // GSF_CARGOES (has no "physical" objects)
 	NULL,               // GSF_SOUNDFX (has no "physical" objects)
 	NULL,               // GSF_AIRPORTS (feature not implemented)
 	NULL,               // GSF_SIGNALS (feature not implemented)

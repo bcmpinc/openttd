@@ -17,6 +17,8 @@
 #include "../aircraft.h"
 #include "../station_base.h"
 #include "../effectvehicle_base.h"
+#include "../company_base.h"
+#include "../company_func.h"
 
 #include "saveload.h"
 
@@ -226,7 +228,7 @@ static void CheckValidVehicles()
 			case VEH_ROAD:
 			case VEH_SHIP:
 			case VEH_AIRCRAFT:
-				if (v->engine_type >= total_engines || v->type != Engine::Get(v->engine_type)->type) {
+				if (v->engine_type >= total_engines || v->type != v->GetEngine()->type) {
 					v->engine_type = first_engine[v->type];
 				}
 				break;
@@ -248,8 +250,6 @@ void AfterLoadVehicles(bool part_of_load)
 		/* Reinstate the previous pointer */
 		if (v->Next() != NULL) v->Next()->previous = v;
 		if (v->NextShared() != NULL) v->NextShared()->previous_shared = v;
-
-		v->UpdateDeltaXY(v->direction);
 
 		if (part_of_load) v->fill_percent_te_id = INVALID_TE_ID;
 		v->first = NULL;
@@ -351,6 +351,19 @@ void AfterLoadVehicles(bool part_of_load)
 				v->cargo_age_counter = _age_cargo_skip_counter;
 			}
 		}
+
+		if (IsSavegameVersionBefore(180)) {
+			/* Set service interval flags */
+			FOR_ALL_VEHICLES(v) {
+				if (!v->IsPrimaryVehicle()) continue;
+
+				const Company *c = Company::Get(v->owner);
+				int interval = CompanyServiceInterval(c, v->type);
+
+				v->SetServiceIntervalIsCustom(v->GetServiceInterval() != interval);
+				v->SetServiceIntervalIsPercent(c->settings.vehicle.servint_ispercent);
+			}
+		}
 	}
 
 	CheckValidVehicles();
@@ -419,12 +432,12 @@ void AfterLoadVehicles(bool part_of_load)
 
 			case VEH_TRAIN:
 			case VEH_SHIP:
-				v->cur_image = v->GetImage(v->direction);
+				v->cur_image = v->GetImage(v->direction, EIT_ON_MAP);
 				break;
 
 			case VEH_AIRCRAFT:
 				if (Aircraft::From(v)->IsNormalAircraft()) {
-					v->cur_image = v->GetImage(v->direction);
+					v->cur_image = v->GetImage(v->direction, EIT_ON_MAP);
 
 					/* The plane's shadow will have the same image as the plane */
 					Vehicle *shadow = v->Next();
@@ -433,17 +446,109 @@ void AfterLoadVehicles(bool part_of_load)
 					/* In the case of a helicopter we will update the rotor sprites */
 					if (v->subtype == AIR_HELICOPTER) {
 						Vehicle *rotor = shadow->Next();
-						rotor->cur_image = GetRotorImage(Aircraft::From(v));
+						rotor->cur_image = GetRotorImage(Aircraft::From(v), EIT_ON_MAP);
 					}
 
-					UpdateAircraftCache(Aircraft::From(v));
+					UpdateAircraftCache(Aircraft::From(v), true);
 				}
 				break;
 			default: break;
 		}
 
+		v->UpdateDeltaXY(v->direction);
 		v->coord.left = INVALID_COORD;
-		VehicleMove(v, false);
+		VehicleUpdatePosition(v);
+		VehicleUpdateViewport(v, false);
+	}
+}
+
+bool TrainController(Train *v, Vehicle *nomove, bool reverse = true); // From train_cmd.cpp
+void ReverseTrainDirection(Train *v);
+void ReverseTrainSwapVeh(Train *v, int l, int r);
+
+/** Fixup old train spacing. */
+void FixupTrainLengths()
+{
+	/* Vehicle center was moved from 4 units behind the front to half the length
+	 * behind the front. Move vehicles so they end up on the same spot. */
+	Vehicle *v;
+	FOR_ALL_VEHICLES(v) {
+		if (v->type == VEH_TRAIN && v->IsPrimaryVehicle()) {
+			/* The vehicle center is now more to the front depending on vehicle length,
+			 * so we need to move all vehicles forward to cover the difference to the
+			 * old center, otherwise wagon spacing in trains would be broken upon load. */
+			for (Train *u = Train::From(v); u != NULL; u = u->Next()) {
+				if (u->track == TRACK_BIT_DEPOT || (u->vehstatus & VS_CRASHED)) continue;
+
+				Train *next = u->Next();
+
+				/* Try to pull the vehicle half its length forward. */
+				int diff = (VEHICLE_LENGTH - u->gcache.cached_veh_length) / 2;
+				int done;
+				for (done = 0; done < diff; done++) {
+					if (!TrainController(u, next, false)) break;
+				}
+
+				if (next != NULL && done < diff && u->IsFrontEngine()) {
+					/* Pulling the front vehicle forwards failed, we either encountered a dead-end
+					 * or a red signal. To fix this, we try to move the whole train the required
+					 * space backwards and re-do the fix up of the front vehicle. */
+
+					/* Ignore any signals when backtracking. */
+					TrainForceProceeding old_tfp = u->force_proceed;
+					u->force_proceed = TFP_SIGNAL;
+
+					/* Swap start<>end, start+1<>end-1, ... */
+					int r = CountVehiclesInChain(u) - 1; // number of vehicles - 1
+					int l = 0;
+					do ReverseTrainSwapVeh(u, l++, r--); while (l <= r);
+
+					/* We moved the first vehicle which is now the last. Move it back to the
+					 * original position as we will fix up the last vehicle later in the loop. */
+					for (int i = 0; i < done; i++) TrainController(u->Last(), NULL);
+
+					/* Move the train backwards to get space for the first vehicle. As the stopping
+					 * distance from a line end is rounded up, move the train one unit more to cater
+					 * for front vehicles with odd lengths. */
+					int moved;
+					for (moved = 0; moved < diff + 1; moved++) {
+						if (!TrainController(u, NULL, false)) break;
+					}
+
+					/* Swap start<>end, start+1<>end-1, ... again. */
+					r = CountVehiclesInChain(u) - 1; // number of vehicles - 1
+					l = 0;
+					do ReverseTrainSwapVeh(u, l++, r--); while (l <= r);
+
+					u->force_proceed = old_tfp;
+
+					/* Tracks are too short to fix the train length. The player has to fix the
+					 * train in a depot. Bail out so we don't damage the vehicle chain any more. */
+					if (moved < diff + 1) break;
+
+					/* Re-do the correction for the first vehicle. */
+					for (done = 0; done < diff; done++) TrainController(u, next, false);
+
+					/* We moved one unit more backwards than needed for even-length front vehicles,
+					 * try to move that unit forward again. We don't care if this step fails. */
+					TrainController(u, NULL, false);
+				}
+
+				/* If the next wagon is still in a depot, check if it shouldn't be outside already. */
+				if (next != NULL && next->track == TRACK_BIT_DEPOT) {
+					int d = TicksToLeaveDepot(u);
+					if (d <= 0) {
+						/* Next vehicle should have left the depot already, show it and pull forward. */
+						next->vehstatus &= ~VS_HIDDEN;
+						next->track = TrackToTrackBits(GetRailDepotTrack(next->tile));
+						for (int i = 0; i >= d; i--) TrainController(next, NULL);
+					}
+				}
+			}
+
+			/* Update all cached properties after moving the vehicle chain around. */
+			Train::From(v)->ConsistChanged(true);
+		}
 	}
 }
 
@@ -468,7 +573,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 
 		     SLE_REF(Vehicle, next,                  REF_VEHICLE_OLD),
 		 SLE_CONDVAR(Vehicle, name,                  SLE_NAME,                     0,  83),
-		 SLE_CONDSTR(Vehicle, name,                  SLE_STR, 0,                  84, SL_MAX_VERSION),
+		 SLE_CONDSTR(Vehicle, name,                  SLE_STR | SLF_ALLOW_CONTROL, 0, 84, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, unitnumber,            SLE_FILE_U8  | SLE_VAR_U16,   0,   7),
 		 SLE_CONDVAR(Vehicle, unitnumber,            SLE_UINT16,                   8, SL_MAX_VERSION),
 		     SLE_VAR(Vehicle, owner,                 SLE_UINT8),
@@ -481,7 +586,8 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		 SLE_CONDVAR(Vehicle, x_pos,                 SLE_UINT32,                   6, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_FILE_U16 | SLE_VAR_U32,   0,   5),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_UINT32,                   6, SL_MAX_VERSION),
-		     SLE_VAR(Vehicle, z_pos,                 SLE_UINT8),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_FILE_U8  | SLE_VAR_I32,   0, 163),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_INT32,                  164, SL_MAX_VERSION),
 		     SLE_VAR(Vehicle, direction,             SLE_UINT8),
 
 		SLE_CONDNULL(2,                                                            0,  57),
@@ -498,6 +604,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		     SLE_VAR(Vehicle, vehstatus,             SLE_UINT8),
 		 SLE_CONDVAR(Vehicle, last_station_visited,  SLE_FILE_U8  | SLE_VAR_U16,   0,   4),
 		 SLE_CONDVAR(Vehicle, last_station_visited,  SLE_UINT16,                   5, SL_MAX_VERSION),
+		 SLE_CONDVAR(Vehicle, last_loading_station,  SLE_UINT16,                 182, SL_MAX_VERSION),
 
 		     SLE_VAR(Vehicle, cargo_type,            SLE_UINT8),
 		 SLE_CONDVAR(Vehicle, cargo_subtype,         SLE_UINT8,                   35, SL_MAX_VERSION),
@@ -506,8 +613,10 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		SLEG_CONDVAR(         _cargo_source,         SLE_UINT16,                   7,  67),
 		SLEG_CONDVAR(         _cargo_source_xy,      SLE_UINT32,                  44,  67),
 		     SLE_VAR(Vehicle, cargo_cap,             SLE_UINT16),
+		 SLE_CONDVAR(Vehicle, refit_cap,             SLE_UINT16,                 182, SL_MAX_VERSION),
 		SLEG_CONDVAR(         _cargo_count,          SLE_UINT16,                   0,  67),
 		 SLE_CONDLST(Vehicle, cargo.packets,         REF_CARGO_PACKET,            68, SL_MAX_VERSION),
+		 SLE_CONDARR(Vehicle, cargo.action_counts,   SLE_UINT, VehicleCargoList::NUM_MOVE_TO_ACTION, 181, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, cargo_age_counter,     SLE_UINT16,                 162, SL_MAX_VERSION),
 
 		     SLE_VAR(Vehicle, day_counter,           SLE_UINT8),
@@ -532,11 +641,12 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 
 		/* Refit in current order */
 		 SLE_CONDVAR(Vehicle, current_order.refit_cargo,   SLE_UINT8,             36, SL_MAX_VERSION),
-		 SLE_CONDVAR(Vehicle, current_order.refit_subtype, SLE_UINT8,             36, SL_MAX_VERSION),
+		SLE_CONDNULL(1,                                                           36, 181), // refit_subtype
 
 		/* Timetable in current order */
 		 SLE_CONDVAR(Vehicle, current_order.wait_time,     SLE_UINT16,            67, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, current_order.travel_time,   SLE_UINT16,            67, SL_MAX_VERSION),
+		 SLE_CONDVAR(Vehicle, current_order.max_speed,     SLE_UINT16,           174, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, timetable_start,       SLE_INT32,                  129, SL_MAX_VERSION),
 
 		 SLE_CONDREF(Vehicle, orders,                REF_ORDER,                    0, 104),
@@ -548,8 +658,9 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		 SLE_CONDVAR(Vehicle, max_age,               SLE_INT32,                   31, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, date_of_last_service,  SLE_FILE_U16 | SLE_VAR_I32,   0,  30),
 		 SLE_CONDVAR(Vehicle, date_of_last_service,  SLE_INT32,                   31, SL_MAX_VERSION),
-		 SLE_CONDVAR(Vehicle, service_interval,      SLE_FILE_U16 | SLE_VAR_I32,   0,  30),
-		 SLE_CONDVAR(Vehicle, service_interval,      SLE_INT32,                   31, SL_MAX_VERSION),
+		 SLE_CONDVAR(Vehicle, service_interval,      SLE_UINT16,                   0,  30),
+		 SLE_CONDVAR(Vehicle, service_interval,      SLE_FILE_U32 | SLE_VAR_U16,  31, 179),
+		 SLE_CONDVAR(Vehicle, service_interval,      SLE_UINT16,                 180, SL_MAX_VERSION),
 		     SLE_VAR(Vehicle, reliability,           SLE_UINT16),
 		     SLE_VAR(Vehicle, reliability_spd_dec,   SLE_UINT16),
 		     SLE_VAR(Vehicle, breakdown_ctr,         SLE_UINT8),
@@ -561,7 +672,8 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 
 		     SLE_VAR(Vehicle, load_unload_ticks,     SLE_UINT16),
 		SLEG_CONDVAR(         _cargo_paid_for,       SLE_UINT16,                  45, SL_MAX_VERSION),
-		 SLE_CONDVAR(Vehicle, vehicle_flags,         SLE_UINT8,                   40, SL_MAX_VERSION),
+		 SLE_CONDVAR(Vehicle, vehicle_flags,         SLE_FILE_U8 | SLE_VAR_U16,   40, 179),
+		 SLE_CONDVAR(Vehicle, vehicle_flags,         SLE_UINT16,                 180, SL_MAX_VERSION),
 
 		 SLE_CONDVAR(Vehicle, profit_this_year,      SLE_FILE_I32 | SLE_VAR_I64,   0,  64),
 		 SLE_CONDVAR(Vehicle, profit_this_year,      SLE_INT64,                   65, SL_MAX_VERSION),
@@ -658,6 +770,7 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		 SLE_CONDVAR(Aircraft, number_consecutive_turns, SLE_UINT8,                 2, SL_MAX_VERSION),
 
 		 SLE_CONDVAR(Aircraft, turn_counter,          SLE_UINT8,                  136, SL_MAX_VERSION),
+		 SLE_CONDVAR(Aircraft, flags,                 SLE_UINT8,                  167, SL_MAX_VERSION),
 
 		SLE_CONDNULL(13,                                                           2, 143), // old reserved space
 
@@ -676,7 +789,8 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		 SLE_CONDVAR(Vehicle, x_pos,                 SLE_INT32,                    6, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_FILE_I16 | SLE_VAR_I32,   0,   5),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_INT32,                    6, SL_MAX_VERSION),
-		     SLE_VAR(Vehicle, z_pos,                 SLE_UINT8),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_FILE_U8  | SLE_VAR_I32,   0, 163),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_INT32,                  164, SL_MAX_VERSION),
 
 		     SLE_VAR(Vehicle, cur_image,             SLE_FILE_U16 | SLE_VAR_U32),
 		SLE_CONDNULL(5,                                                            0,  57),
@@ -708,7 +822,8 @@ const SaveLoad *GetVehicleDescription(VehicleType vt)
 		 SLE_CONDVAR(Vehicle, x_pos,                 SLE_INT32,                    6, SL_MAX_VERSION),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_FILE_I16 | SLE_VAR_I32,   0,   5),
 		 SLE_CONDVAR(Vehicle, y_pos,                 SLE_INT32,                    6, SL_MAX_VERSION),
-		     SLE_VAR(Vehicle, z_pos,                 SLE_UINT8),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_FILE_U8  | SLE_VAR_I32,   0, 163),
+		 SLE_CONDVAR(Vehicle, z_pos,                 SLE_INT32,                  164, SL_MAX_VERSION),
 		     SLE_VAR(Vehicle, direction,             SLE_UINT8),
 
 		SLE_CONDNULL(5,                                                            0,  57),
@@ -789,6 +904,8 @@ void Load_VEHS()
 		if (IsSavegameVersionBefore(5) && v->last_station_visited == 0xFF) {
 			v->last_station_visited = INVALID_STATION;
 		}
+
+		if (IsSavegameVersionBefore(182)) v->last_loading_station = INVALID_STATION;
 
 		if (IsSavegameVersionBefore(5)) {
 			/* Convert the current_order.type (which is a mix of type and flags, because

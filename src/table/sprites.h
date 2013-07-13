@@ -9,11 +9,11 @@
 
 /**
  * @file sprites.h
- * This file contails all sprite-related enums and defines. These consist mainly of
+ * This file contains all sprite-related enums and defines. These consist mainly of
  * the sprite numbers and a bunch of masks and macros to handle sprites and to get
  * rid of all the magic numbers in the code.
  *
- * @NOTE:
+ * @note
  * ALL SPRITE NUMBERS BELOW 5126 are in the main files
  *
  * All elements which consist of two elements should
@@ -26,7 +26,7 @@
  *
  * All sprites which are described here are referenced only one to a handful of times
  * throughout the code. When introducing new sprite enums, use meaningful names.
- * Don't be lazy and typing, and only use abbrevations when their meaning is clear or
+ * Don't be lazy and typing, and only use abbreviations when their meaning is clear or
  * the length of the enum would get out of hand. In that case EXPLAIN THE ABBREVATION
  * IN THIS FILE, and perhaps add some comments in the code where it is used.
  * Now, don't whine about this being too much typing work if the enums are like
@@ -56,7 +56,7 @@ static const SpriteID SPR_LARGE_SMALL_WINDOW = 682;
 
 /** Extra graphic spritenumbers */
 static const SpriteID SPR_OPENTTD_BASE   = 4896;
-static const uint16 OPENTTD_SPRITE_COUNT = 160;
+static const uint16 OPENTTD_SPRITE_COUNT = 174;
 
 /* Halftile-selection sprites */
 static const SpriteID SPR_HALFTILE_SELECTION_FLAT = SPR_OPENTTD_BASE;
@@ -123,6 +123,8 @@ static const SpriteID SPR_PROFIT_LOT        = SPR_OPENTTD_BASE + 157;
 
 static const SpriteID SPR_UNREAD_NEWS                = SPR_OPENTTD_BASE + 158;
 static const SpriteID SPR_EXCLUSIVE_TRANSPORT        = SPR_OPENTTD_BASE + 159;
+static const SpriteID SPR_GROUP_REPLACE_PROTECT      = SPR_OPENTTD_BASE + 160;
+static const SpriteID SPR_GROUP_REPLACE_ACTIVE       = SPR_OPENTTD_BASE + 161;
 
 static const SpriteID SPR_GROUP_CREATE_TRAIN         = SPR_OPENTTD_BASE + 114;
 static const SpriteID SPR_GROUP_CREATE_ROADVEH       = SPR_OPENTTD_BASE + 115;
@@ -145,7 +147,17 @@ static const SpriteID SPR_GROUP_REPLACE_OFF_ROADVEH  = SPR_OPENTTD_BASE + 131;
 static const SpriteID SPR_GROUP_REPLACE_OFF_SHIP     = SPR_OPENTTD_BASE + 132;
 static const SpriteID SPR_GROUP_REPLACE_OFF_AIRCRAFT = SPR_OPENTTD_BASE + 133;
 
+static const SpriteID SPR_TOWN_RATING_NA             = SPR_OPENTTD_BASE + 162;
+static const SpriteID SPR_TOWN_RATING_APALLING       = SPR_OPENTTD_BASE + 163;
+static const SpriteID SPR_TOWN_RATING_MEDIOCRE       = SPR_OPENTTD_BASE + 164;
+static const SpriteID SPR_TOWN_RATING_GOOD           = SPR_OPENTTD_BASE + 165;
+
 static const SpriteID SPR_IMG_SWITCH_TOOLBAR = SPR_OPENTTD_BASE + 144;
+
+static const SpriteID SPR_IMG_DELETE_LEFT            = SPR_OPENTTD_BASE + 166;
+static const SpriteID SPR_IMG_DELETE_RIGHT           = SPR_OPENTTD_BASE + 167;
+
+static const SpriteID SPR_WINDOW_DEFSIZE             = SPR_OPENTTD_BASE + 168;
 
 static const SpriteID SPR_SIGNALS_BASE  = SPR_OPENTTD_BASE + OPENTTD_SPRITE_COUNT;
 static const uint16 PRESIGNAL_SPRITE_COUNT                   =  48;
@@ -268,8 +280,12 @@ static const uint16 ONEWAY_SPRITE_COUNT = 6;
 static const SpriteID SPR_FLAGS_BASE = SPR_ONEWAY_BASE + ONEWAY_SPRITE_COUNT;
 static const uint16 FLAGS_SPRITE_COUNT = 36;
 
+/** Tunnel sprites with grass only for custom railtype tunnel. */
+static const SpriteID SPR_RAILTYPE_TUNNEL_BASE = SPR_FLAGS_BASE + FLAGS_SPRITE_COUNT;
+static const uint16 RAILTYPE_TUNNEL_BASE_COUNT = 16;
+
 /* Not really a sprite, but an empty bounding box. Used to construct bounding boxes that help sorting the sprites, but do not have a sprite associated. */
-static const SpriteID SPR_EMPTY_BOUNDING_BOX = SPR_FLAGS_BASE + FLAGS_SPRITE_COUNT;
+static const SpriteID SPR_EMPTY_BOUNDING_BOX = SPR_RAILTYPE_TUNNEL_BASE + RAILTYPE_TUNNEL_BASE_COUNT;
 static const uint16 EMPTY_BOUNDING_BOX_SPRITE_COUNT = 1;
 
 /* From where can we start putting NewGRFs? */
@@ -695,14 +711,14 @@ static const SpriteID SPR_BTSGA_MGLV_Y_REAR       = 4365;
  * TILE_* denotes the different tiles a suspension bridge
  * can have
  * TILE_A and TILE_B are the "beginnings" and "ends" of the
- *   suspension system. they have small rectangluar endcaps
+ *   suspension system. They have small rectangular endcaps
  * TILE_C and TILE_D look almost identical to TILE_A and
  *   TILE_B, but they do not have the "endcaps". They form the
  *   middle part
  * TILE_E is a condensed configuration of two pillars. while they
  *   are usually 2 pillars apart, they only have 1 pillar separation
  *   here
- * TILE_F is an extended configuration of pillars. they are
+ * TILE_F is an extended configuration of pillars. They are
  *   plugged in when pillars should be 3 tiles apart
  */
 static const SpriteID SPR_BTSUS_ROAD_Y_REAR_TILE_A  = 2453;
@@ -846,7 +862,7 @@ static const SpriteID SPR_BTGIR_MGLV_Y        = 4403;
  * tubular bridges have 3 kinds of tiles:
  *  a start tile (with only half a tube on the far side, marked _BEG
  *  a middle tile (full tunnel), marked _MID
- *  and an end tile (half a tube on the near side, maked _END
+ *  and an end tile (half a tube on the near side, marked _END
  */
 static const SpriteID SPR_BTTUB_X_FRONT_BEG       = 2559;
 static const SpriteID SPR_BTTUB_X_FRONT_MID       = 2560;
@@ -1072,6 +1088,7 @@ static const SpriteID SPR_IMG_MESSAGES        = 680;
 static const SpriteID SPR_IMG_QUERY           = 723;
 static const SpriteID SPR_IMG_SIGN            = 4082;
 static const SpriteID SPR_IMG_BUY_LAND        = 4791;
+static const SpriteID SPR_IMG_STORY_BOOK      = SPR_OPENTTD_BASE + 169;
 
 /* OpenTTD in gamescreen */
 static const SpriteID SPR_OTTD_O                = 4842;
@@ -1300,6 +1317,12 @@ static const SpriteID SPR_IMG_CONVERT_RAIL   = SPR_OPENTTD_BASE + 55;
 static const SpriteID SPR_IMG_CONVERT_ELRAIL = SPR_OPENTTD_BASE + 59;
 static const SpriteID SPR_IMG_CONVERT_MONO   = SPR_OPENTTD_BASE + 65;
 static const SpriteID SPR_IMG_CONVERT_MAGLEV = SPR_OPENTTD_BASE + 71;
+
+/* story_gui.cpp */
+static const SpriteID SPR_IMG_VIEW_LOCATION  = SPR_OPENTTD_BASE + 170;
+static const SpriteID SPR_IMG_GOAL           = SPR_OPENTTD_BASE + 171;
+static const SpriteID SPR_IMG_GOAL_COMPLETED = SPR_OPENTTD_BASE + 172;
+static const SpriteID SPR_IMG_GOAL_BROKEN_REF= SPR_OPENTTD_BASE + 173;
 
 /* intro_gui.cpp, genworld_gui.cpp */
 static const SpriteID SPR_SELECT_TEMPERATE           = 4882;

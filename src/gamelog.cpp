@@ -64,14 +64,12 @@ void GamelogStopAction()
 }
 
 /**
- * Resets and frees all memory allocated - used before loading or starting a new game
+ * Frees the memory allocated by a gamelog
  */
-void GamelogReset()
+void GamelogFree(LoggedAction *gamelog_action, uint gamelog_actions)
 {
-	assert(_gamelog_action_type == GLAT_NONE);
-
-	for (uint i = 0; i < _gamelog_actions; i++) {
-		const LoggedAction *la = &_gamelog_action[i];
+	for (uint i = 0; i < gamelog_actions; i++) {
+		const LoggedAction *la = &gamelog_action[i];
 		for (uint j = 0; j < la->changes; j++) {
 			const LoggedChange *lc = &la->change[j];
 			if (lc->ct == GLCT_SETTING) free(lc->setting.name);
@@ -79,7 +77,16 @@ void GamelogReset()
 		free(la->change);
 	}
 
-	free(_gamelog_action);
+	free(gamelog_action);
+}
+
+/**
+ * Resets and frees all memory allocated - used before loading or starting a new game
+ */
+void GamelogReset()
+{
+	assert(_gamelog_action_type == GLAT_NONE);
+	GamelogFree(_gamelog_action, _gamelog_actions);
 
 	_gamelog_action  = NULL;
 	_gamelog_actions = 0;
@@ -773,4 +780,34 @@ void GamelogGRFUpdate(const GRFConfig *oldc, const GRFConfig *newc)
 
 	free(ol);
 	free(nl);
+}
+
+/**
+ * Get some basic information from the given gamelog.
+ * @param gamelog_action Pointer to the gamelog to extract information from.
+ * @param gamelog_actions Number of actions in the given gamelog.
+ * @param [out] last_ottd_rev OpenTTD NewGRF version from the binary that saved the savegame last.
+ * @param [out] ever_modified Max value of 'modified' from all binaries that ever saved this savegame.
+ * @param [out] removed_newgrfs Set to true if any NewGRFs have been removed.
+ */
+void GamelogInfo(LoggedAction *gamelog_action, uint gamelog_actions, uint32 *last_ottd_rev, byte *ever_modified, bool *removed_newgrfs)
+{
+	const LoggedAction *laend = &gamelog_action[gamelog_actions];
+	for (const LoggedAction *la = gamelog_action; la != laend; la++) {
+		const LoggedChange *lcend = &la->change[la->changes];
+		for (const LoggedChange *lc = la->change; lc != lcend; lc++) {
+			switch (lc->ct) {
+				default: break;
+
+				case GLCT_REVISION:
+					*last_ottd_rev = lc->revision.newgrf;
+					*ever_modified = max(*ever_modified, lc->revision.modified);
+					break;
+
+				case GLCT_GRFREM:
+					*removed_newgrfs = true;
+					break;
+			}
+		}
+	}
 }

@@ -10,7 +10,6 @@
 /** @file company_cmd.cpp Handling of companies. */
 
 #include "stdafx.h"
-#include "engine_base.h"
 #include "company_base.h"
 #include "company_func.h"
 #include "company_gui.h"
@@ -33,8 +32,8 @@
 #include "settings_func.h"
 #include "vehicle_base.h"
 #include "vehicle_func.h"
-#include "sprite.h"
 #include "smallmap_gui.h"
+#include "game/game.hpp"
 
 #include "table/strings.h"
 
@@ -60,6 +59,7 @@ Company::Company(uint16 name_1, bool is_ai)
 	this->is_ai = is_ai;
 	this->terraform_limit = _settings_game.construction.terraform_frame_burst << 16;
 	this->clear_limit     = _settings_game.construction.clear_frame_burst << 16;
+	this->tree_limit      = _settings_game.construction.tree_frame_burst << 16;
 
 	for (uint j = 0; j < 4; j++) this->share_owners[j] = COMPANY_SPECTATOR;
 	InvalidateWindowData(WC_PERFORMANCE_DETAIL, 0, INVALID_COMPANY);
@@ -68,8 +68,6 @@ Company::Company(uint16 name_1, bool is_ai)
 /** Destructor. */
 Company::~Company()
 {
-	free(this->num_engines);
-
 	if (CleaningPool()) return;
 
 	DeleteCompanyWindows(this->index);
@@ -84,6 +82,7 @@ void Company::PostDestructor(size_t index)
 	InvalidateWindowData(WC_GRAPH_LEGEND, 0, (int)index);
 	InvalidateWindowData(WC_PERFORMANCE_DETAIL, 0, (int)index);
 	InvalidateWindowData(WC_COMPANY_LEAGUE, 0, 0);
+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 	/* If the currently shown error message has this company in it, then close it. */
 	InvalidateWindowData(WC_ERRMSG, 0);
 }
@@ -113,6 +112,7 @@ void SetLocalCompany(CompanyID new_company)
 
 	/* ... and redraw the whole screen. */
 	MarkWholeScreenDirty();
+	InvalidateWindowClassesData(WC_SIGN_LIST, -1);
 }
 
 /**
@@ -262,6 +262,7 @@ void UpdateLandscapingLimits()
 	FOR_ALL_COMPANIES(c) {
 		c->terraform_limit = min(c->terraform_limit + _settings_game.construction.terraform_per_64k_frames, (uint32)_settings_game.construction.terraform_frame_burst << 16);
 		c->clear_limit     = min(c->clear_limit     + _settings_game.construction.clear_per_64k_frames,     (uint32)_settings_game.construction.clear_frame_burst << 16);
+		c->tree_limit      = min(c->tree_limit      + _settings_game.construction.tree_per_64k_frames,      (uint32)_settings_game.construction.tree_frame_burst << 16);
 	}
 }
 
@@ -375,9 +376,8 @@ set_name:;
 			SetDParam(1, STR_NEWS_COMPANY_LAUNCH_DESCRIPTION);
 			SetDParamStr(2, cni->company_name);
 			SetDParam(3, t->index);
-			AddNewsItem(STR_MESSAGE_NEWS_FORMAT, NS_COMPANY_NEW, NR_TILE, c->last_build_coordinate, NR_NONE, UINT32_MAX, cni);
+			AddNewsItem(STR_MESSAGE_NEWS_FORMAT, NT_COMPANY_INFO, NF_COMPANY, NR_TILE, c->last_build_coordinate, NR_NONE, UINT32_MAX, cni);
 		}
-		AI::BroadcastNewEvent(new AIEventCompanyNew(c->index), c->index);
 		return;
 	}
 bad_town_name:;
@@ -551,7 +551,7 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
 	c->avail_railtypes = GetCompanyRailtypes(c->index);
 	c->avail_roadtypes = GetCompanyRoadtypes(c->index);
 	c->inaugurated_year = _cur_year;
-	RandomCompanyManagerFaceBits(c->face, (GenderEthnicity)Random(), false); // create a random company manager face
+	RandomCompanyManagerFaceBits(c->face, (GenderEthnicity)Random(), false, false); // create a random company manager face
 
 	SetDefaultCompanySettings(c->index);
 
@@ -560,12 +560,14 @@ Company *DoStartupNewCompany(bool is_ai, CompanyID company = INVALID_COMPANY)
 	SetWindowDirty(WC_GRAPH_LEGEND, 0);
 	SetWindowClassesDirty(WC_CLIENT_LIST_POPUP);
 	SetWindowDirty(WC_CLIENT_LIST, 0);
+	InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 	BuildOwnerLegend();
 	InvalidateWindowData(WC_SMALLMAP, 0, 1);
 
 	if (is_ai && (!_networking || _network_server)) AI::StartNew(c->index);
 
-	c->num_engines = CallocT<uint16>(Engine::GetPoolSize());
+	AI::BroadcastNewEvent(new ScriptEventCompanyNew(c->index), c->index);
+	Game::NewEvent(new ScriptEventCompanyNew(c->index));
 
 	return c;
 }
@@ -576,7 +578,6 @@ void StartupCompanies()
 	_next_competitor_start = 0;
 }
 
-#ifdef ENABLE_AI
 /** Start a new competitor company if possible. */
 static void MaybeStartNewCompany()
 {
@@ -598,7 +599,6 @@ static void MaybeStartNewCompany()
 		DoCommandP(0, 1 | INVALID_COMPANY << 16, 0, CMD_COMPANY_CTRL);
 	}
 }
-#endif /* ENABLE_AI */
 
 /** Initialize the pool of companies. */
 void InitializeCompanies()
@@ -614,15 +614,14 @@ void InitializeCompanies()
  */
 bool MayCompanyTakeOver(CompanyID cbig, CompanyID csmall)
 {
-	uint big_counts[4], small_counts[4];
-	CountCompanyVehicles(cbig,   big_counts);
-	CountCompanyVehicles(csmall, small_counts);
+	const Company *c1 = Company::Get(cbig);
+	const Company *c2 = Company::Get(csmall);
 
 	/* Do the combined vehicle counts stay within the limits? */
-	return big_counts[VEH_TRAIN]     + small_counts[VEH_TRAIN]    <= _settings_game.vehicle.max_trains &&
-		big_counts[VEH_ROAD]     + small_counts[VEH_ROAD]     <= _settings_game.vehicle.max_roadveh &&
-		big_counts[VEH_SHIP]     + small_counts[VEH_SHIP]     <= _settings_game.vehicle.max_ships &&
-		big_counts[VEH_AIRCRAFT] + small_counts[VEH_AIRCRAFT] <= _settings_game.vehicle.max_aircraft;
+	return c1->group_all[VEH_TRAIN].num_vehicle + c2->group_all[VEH_TRAIN].num_vehicle <= _settings_game.vehicle.max_trains &&
+		c1->group_all[VEH_ROAD].num_vehicle     + c2->group_all[VEH_ROAD].num_vehicle     <= _settings_game.vehicle.max_roadveh &&
+		c1->group_all[VEH_SHIP].num_vehicle     + c2->group_all[VEH_SHIP].num_vehicle     <= _settings_game.vehicle.max_ships &&
+		c1->group_all[VEH_AIRCRAFT].num_vehicle + c2->group_all[VEH_AIRCRAFT].num_vehicle <= _settings_game.vehicle.max_aircraft;
 }
 
 /**
@@ -681,7 +680,7 @@ static void HandleBankruptcyTakeover(Company *c)
 
 	c->bankrupt_timeout = TAKE_OVER_TIMEOUT;
 	if (best->is_ai) {
-		AI::NewEvent(best->index, new AIEventCompanyAskMerger(c->index, ClampToI32(c->bankrupt_value)));
+		AI::NewEvent(best->index, new ScriptEventCompanyAskMerger(c->index, ClampToI32(c->bankrupt_value)));
 	} else if (IsInteractiveCompany(best->index)) {
 		ShowBuyCompanyDialog(c->index);
 	}
@@ -698,7 +697,6 @@ void OnTick_Companies()
 		if (c->bankrupt_asked != 0) HandleBankruptcyTakeover(c);
 	}
 
-#ifdef ENABLE_AI
 	if (_next_competitor_start == 0) {
 		_next_competitor_start = AI::GetStartNextTime() * DAY_TICKS;
 	}
@@ -706,7 +704,6 @@ void OnTick_Companies()
 	if (AI::CanStartNew() && _game_mode != GM_MENU && --_next_competitor_start == 0) {
 		MaybeStartNewCompany();
 	}
-#endif /* ENABLE_AI */
 
 	_cur_company_tick_index = (_cur_company_tick_index + 1) % MAX_COMPANIES;
 }
@@ -730,9 +727,9 @@ void CompaniesYearlyLoop()
 		ShowCompanyFinances(_local_company);
 		c = Company::Get(_local_company);
 		if (c->num_valid_stat_ent > 5 && c->old_economy[0].performance_history < c->old_economy[4].performance_history) {
-			SndPlayFx(SND_01_BAD_YEAR);
+			if (_settings_client.sound.new_year) SndPlayFx(SND_01_BAD_YEAR);
 		} else {
-			SndPlayFx(SND_00_GOOD_YEAR);
+			if (_settings_client.sound.new_year) SndPlayFx(SND_00_GOOD_YEAR);
 		}
 	}
 }
@@ -775,13 +772,14 @@ void CompanyAdminUpdate(const Company *company)
 }
 
 /**
- * Called whenever a company goes bankrupt in order to notify admins.
- * @param company_id The company that went bankrupt.
+ * Called whenever a company is removed in order to notify admins.
+ * @param company_id The company that was removed.
+ * @param reason     The reason the company was removed.
  */
-void CompanyAdminBankrupt(CompanyID company_id)
+void CompanyAdminRemove(CompanyID company_id, CompanyRemoveReason reason)
 {
 #ifdef ENABLE_NETWORK
-	if (_network_server) NetworkAdminCompanyRemove(company_id, ADMIN_CRR_BANKRUPT);
+	if (_network_server) NetworkAdminCompanyRemove(company_id, (AdminCompanyRemoveReason)reason);
 #endif /* ENABLE_NETWORK */
 }
 
@@ -816,10 +814,16 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			/* Has the network client a correct ClientIndex? */
 			if (!(flags & DC_EXEC)) return CommandCost();
 			NetworkClientInfo *ci = NetworkClientInfo::GetByClientID(client_id);
+#ifndef DEBUG_DUMP_COMMANDS
+			/* When replaying the client ID is not a valid client; there
+			 * are actually no clients at all. However, the company has to
+			 * be created, otherwise we cannot rerun the game properly.
+			 * So only allow a NULL client info in that case. */
 			if (ci == NULL) return CommandCost();
+#endif /* NOT DEBUG_DUMP_COMMANDS */
 
 			/* Delete multiplayer progress bar */
-			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 			Company *c = DoStartupNewCompany(false);
 
@@ -848,14 +852,17 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			}
 
 			if (_network_server) {
-				CompanyID old_playas = ci->client_playas;
-				ci->client_playas = c->index;
-				NetworkUpdateClientInfo(ci->client_id);
+				if (ci != NULL) {
+					/* ci is only NULL when replaying.
+					 * When replaying no client is actually in need of an update. */
+					ci->client_playas = c->index;
+					NetworkUpdateClientInfo(ci->client_id);
+				}
 
-				if (Company::IsValidID(ci->client_playas)) {
+				if (Company::IsValidID(c->index)) {
 					_network_company_states[c->index].months_empty = 0;
 					_network_company_states[c->index].password[0] = '\0';
-					NetworkServerUpdateCompanyPassworded(ci->client_playas, false);
+					NetworkServerUpdateCompanyPassworded(c->index, false);
 
 					/* XXX - When a client joins, we automatically set its name to the
 					 * client's name (for some reason). As it stands now only the server
@@ -868,13 +875,23 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 					 * TODO: Perhaps this could be improved by when the client is ready
 					 * with joining to let it send itself the command, and not the server?
 					 * For example in network_client.c:534? */
-					NetworkSendCommand(0, 0, 0, CMD_RENAME_PRESIDENT, NULL, ci->client_name, ci->client_playas);
+					if (ci != NULL) {
+						/* ci is only NULL when replaying.
+						 * When replaying, the command to rename the president will
+						 * automatically be ran, so this is not even needed to get
+						 * the exact same state. */
+						NetworkSendCommand(0, 0, 0, CMD_RENAME_PRESIDENT, NULL, ci->client_name, c->index);
+					}
 				}
 
-				/* Announce new company on network, if the client was a SPECTATOR before */
-				if (old_playas == COMPANY_SPECTATOR) {
-					NetworkAdminCompanyInfo(c, true);
-					NetworkServerSendChat(NETWORK_ACTION_COMPANY_NEW, DESTTYPE_BROADCAST, 0, "", ci->client_id, ci->client_playas + 1);
+				/* Announce new company on network. */
+				NetworkAdminCompanyInfo(c, true);
+
+				if (ci != NULL) {
+					/* ci is only NULL when replaying.
+					 * When replaying, the message that someone started a new company
+					 * is not interesting at all. */
+					NetworkServerSendChat(NETWORK_ACTION_COMPANY_NEW, DESTTYPE_BROADCAST, 0, "", ci->client_id, c->index + 1);
 				}
 			}
 #endif /* ENABLE_NETWORK */
@@ -889,6 +906,9 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			break;
 
 		case 2: { // Delete a company
+			CompanyRemoveReason reason = (CompanyRemoveReason)GB(p2, 0, 2);
+			if (reason >= CRR_END) return CMD_ERROR;
+
 			Company *c = Company::GetIfValid(company_id);
 			if (c == NULL) return CMD_ERROR;
 
@@ -903,7 +923,7 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 			SetDParam(0, STR_NEWS_COMPANY_BANKRUPT_TITLE);
 			SetDParam(1, STR_NEWS_COMPANY_BANKRUPT_DESCRIPTION);
 			SetDParamStr(2, cni->company_name);
-			AddCompanyNewsItem(STR_MESSAGE_NEWS_FORMAT, NS_COMPANY_BANKRUPT, cni);
+			AddCompanyNewsItem(STR_MESSAGE_NEWS_FORMAT, cni);
 
 			/* Remove the company */
 			ChangeOwnershipOfCompanyItems(c->index, INVALID_OWNER);
@@ -911,8 +931,9 @@ CommandCost CmdCompanyCtrl(TileIndex tile, DoCommandFlag flags, uint32 p1, uint3
 
 			CompanyID c_index = c->index;
 			delete c;
-			AI::BroadcastNewEvent(new AIEventCompanyBankrupt(c_index));
-			CompanyAdminBankrupt(c_index);
+			AI::BroadcastNewEvent(new ScriptEventCompanyBankrupt(c_index));
+			Game::NewEvent(new ScriptEventCompanyBankrupt(c_index));
+			CompanyAdminRemove(c_index, (CompanyRemoveReason)reason);
 			break;
 		}
 
@@ -1033,6 +1054,7 @@ CommandCost CmdSetCompanyColour(TileIndex tile, DoCommandFlag flags, uint32 p1, 
 		InvalidateWindowData(WC_DELIVERED_CARGO, 0);
 		InvalidateWindowData(WC_PERFORMANCE_HISTORY, 0);
 		InvalidateWindowData(WC_COMPANY_VALUE, 0);
+		InvalidateWindowData(WC_LINKGRAPH_LEGEND, 0);
 		/* The smallmap owner view also stores the company colours. */
 		BuildOwnerLegend();
 		InvalidateWindowData(WC_SMALLMAP, 0, 1);
@@ -1150,4 +1172,22 @@ CommandCost CmdRenamePresident(TileIndex tile, DoCommandFlag flags, uint32 p1, u
 	}
 
 	return CommandCost();
+}
+
+/**
+ * Get the service interval for the given company and vehicle type.
+ * @param c The company, or NULL for client-default settings.
+ * @param type The vehicle type to get the interval for.
+ * @return The service interval.
+ */
+int CompanyServiceInterval(const Company *c, VehicleType type)
+{
+	const VehicleDefaultSettings *vds = (c == NULL) ? &_settings_client.company.vehicle : &c->settings.vehicle;
+	switch (type) {
+		default: NOT_REACHED();
+		case VEH_TRAIN:    return vds->servint_trains;
+		case VEH_ROAD:     return vds->servint_roadveh;
+		case VEH_AIRCRAFT: return vds->servint_aircraft;
+		case VEH_SHIP:     return vds->servint_ships;
+	}
 }

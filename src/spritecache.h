@@ -16,11 +16,11 @@
 
 /** Data structure describing a sprite. */
 struct Sprite {
-	byte height;  ///< Height of the sprite.
-	uint16 width; ///< Width of the sprite.
-	int16 x_offs; ///< Number of pixels to shift the sprite to the right.
-	int16 y_offs; ///< Number of pixels to shift the sprite downwards.
-	byte data[];  ///< Sprite data.
+	uint16 height; ///< Height of the sprite.
+	uint16 width;  ///< Width of the sprite.
+	int16 x_offs;  ///< Number of pixels to shift the sprite to the right.
+	int16 y_offs;  ///< Number of pixels to shift the sprite downwards.
+	byte data[];   ///< Sprite data.
 };
 
 extern uint _sprite_cache_size;
@@ -48,9 +48,12 @@ static inline const byte *GetNonSprite(SpriteID sprite, SpriteType type)
 }
 
 void GfxInitSpriteMem();
+void GfxClearSpriteCache();
 void IncreaseSpriteLRU();
 
-bool LoadNextSprite(int load_index, byte file_index, uint file_sprite_id);
+void ReadGRFSpriteOffsets(byte container_version);
+size_t GetGRFSpriteOffset(uint32 id);
+bool LoadNextSprite(int load_index, byte file_index, uint file_sprite_id, byte container_version);
 bool SkipSpriteData(byte type, uint16 num);
 void DupSprite(SpriteID old_spr, SpriteID new_spr);
 

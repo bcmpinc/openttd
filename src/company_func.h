@@ -14,8 +14,8 @@
 
 #include "command_type.h"
 #include "company_type.h"
-#include "tile_type.h"
 #include "gfx_type.h"
+#include "vehicle_type.h"
 
 bool MayCompanyTakeOver(CompanyID cbig, CompanyID small);
 void ChangeOwnershipOfCompanyItems(Owner old_owner, Owner new_owner);
@@ -56,5 +56,7 @@ static inline bool IsInteractiveCompany(CompanyID company)
 {
 	return company == _local_company;
 }
+
+int CompanyServiceInterval(const Company *c, VehicleType type);
 
 #endif /* COMPANY_FUNC_H */

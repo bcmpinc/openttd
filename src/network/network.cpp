@@ -36,7 +36,7 @@
 #include "../rev.h"
 #include "../core/pool_func.hpp"
 #include "../gfx_func.h"
-#include "table/strings.h"
+#include "../error.h"
 
 #ifdef DEBUG_DUMP_COMMANDS
 #include "../fileio_func.h"
@@ -287,8 +287,7 @@ uint NetworkCalculateLag(const NetworkClientSocket *cs)
 void NetworkError(StringID error_string)
 {
 	_switch_mode = SM_MENU;
-	extern StringID _switch_mode_errorstr;
-	_switch_mode_errorstr = error_string;
+	ShowErrorMessage(error_string, INVALID_STRING_ID, WL_CRITICAL);
 }
 
 /**
@@ -316,8 +315,13 @@ StringID GetNetworkErrorMsg(NetworkErrorCode err)
 		STR_NETWORK_ERROR_CLIENT_KICKED,
 		STR_NETWORK_ERROR_CLIENT_CHEATER,
 		STR_NETWORK_ERROR_CLIENT_SERVER_FULL,
-		STR_NETWORK_ERROR_CLIENT_TOO_MANY_COMMANDS
+		STR_NETWORK_ERROR_CLIENT_TOO_MANY_COMMANDS,
+		STR_NETWORK_ERROR_CLIENT_TIMEOUT_PASSWORD,
+		STR_NETWORK_ERROR_CLIENT_TIMEOUT_COMPUTER,
+		STR_NETWORK_ERROR_CLIENT_TIMEOUT_MAP,
+		STR_NETWORK_ERROR_CLIENT_TIMEOUT_JOIN,
 	};
+	assert_compile(lengthof(network_error_strings) == NETWORK_ERROR_END);
 
 	if (err >= (ptrdiff_t)lengthof(network_error_strings)) err = NETWORK_ERROR_GENERAL;
 
@@ -336,6 +340,7 @@ void NetworkHandlePauseChange(PauseMode prev_mode, PauseMode changed_mode)
 	switch (changed_mode) {
 		case PM_PAUSED_NORMAL:
 		case PM_PAUSED_JOIN:
+		case PM_PAUSED_GAME_SCRIPT:
 		case PM_PAUSED_ACTIVE_CLIENTS: {
 			bool changed = ((_pause_mode == PM_UNPAUSED) != (prev_mode == PM_UNPAUSED));
 			bool paused = (_pause_mode != PM_UNPAUSED);
@@ -344,14 +349,17 @@ void NetworkHandlePauseChange(PauseMode prev_mode, PauseMode changed_mode)
 			StringID str;
 			if (!changed) {
 				int i = -1;
+
 				if ((_pause_mode & PM_PAUSED_NORMAL) != PM_UNPAUSED)         SetDParam(++i, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_MANUAL);
 				if ((_pause_mode & PM_PAUSED_JOIN) != PM_UNPAUSED)           SetDParam(++i, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_CONNECTING_CLIENTS);
+				if ((_pause_mode & PM_PAUSED_GAME_SCRIPT) != PM_UNPAUSED)    SetDParam(++i, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_GAME_SCRIPT);
 				if ((_pause_mode & PM_PAUSED_ACTIVE_CLIENTS) != PM_UNPAUSED) SetDParam(++i, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_NOT_ENOUGH_PLAYERS);
 				str = STR_NETWORK_SERVER_MESSAGE_GAME_STILL_PAUSED_1 + i;
 			} else {
 				switch (changed_mode) {
 					case PM_PAUSED_NORMAL:         SetDParam(0, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_MANUAL); break;
 					case PM_PAUSED_JOIN:           SetDParam(0, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_CONNECTING_CLIENTS); break;
+					case PM_PAUSED_GAME_SCRIPT:    SetDParam(0, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_GAME_SCRIPT); break;
 					case PM_PAUSED_ACTIVE_CLIENTS: SetDParam(0, STR_NETWORK_SERVER_MESSAGE_GAME_REASON_NOT_ENOUGH_PLAYERS); break;
 					default: NOT_REACHED();
 				}
@@ -447,7 +455,7 @@ static void CheckPauseOnJoin()
  * Converts a string to ip/port/company
  *  Format: IP:port#company
  *
- * connection_string will be re-terminated to seperate out the hostname, and company and port will
+ * connection_string will be re-terminated to separate out the hostname, and company and port will
  * be set to the company and port strings given by the user, inside the memory area originally
  * occupied by connection_string.
  */
@@ -480,7 +488,7 @@ void ParseConnectionString(const char **company, const char **port, char *connec
 }
 
 /**
- * Handle the acception of a connection to the server.
+ * Handle the accepting of a connection to the server.
  * @param s The socket of the new connection.
  * @param address The address of the peer.
  */
@@ -541,7 +549,7 @@ void NetworkClose(bool close_admins)
 	InitializeNetworkPools(close_admins);
 }
 
-/* Inits the network (cleans sockets and stuff) */
+/* Initializes the network (cleans sockets and stuff) */
 static void NetworkInitialize(bool close_admins = true)
 {
 	InitializeNetworkPools(close_admins);
@@ -791,7 +799,7 @@ void NetworkDisconnect(bool blocking, bool close_admins)
 
 	if (_settings_client.network.server_advertise) NetworkUDPRemoveAdvertise(blocking);
 
-	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+	DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_JOIN);
 
 	NetworkClose(close_admins);
 
@@ -801,7 +809,7 @@ void NetworkDisconnect(bool blocking, bool close_admins)
 
 /**
  * Receives something from the network.
- * @return true if everthing went fine, false when the connection got closed.
+ * @return true if everything went fine, false when the connection got closed.
  */
 static bool NetworkReceive()
 {
@@ -824,20 +832,18 @@ static void NetworkSend()
 	}
 }
 
-/* We have to do some UDP checking */
-void NetworkUDPGameLoop()
+/**
+ * We have to do some (simple) background stuff that runs normally,
+ * even when we are not in multiplayer. For example stuff needed
+ * for finding servers or downloading content.
+ */
+void NetworkBackgroundLoop()
 {
 	_network_content_client.SendReceive();
 	TCPConnecter::CheckCallbacks();
 	NetworkHTTPSocketHandler::HTTPReceive();
 
-	if (_network_udp_server) {
-		_udp_server_socket->ReceivePackets();
-		_udp_master_socket->ReceivePackets();
-	} else {
-		_udp_client_socket->ReceivePackets();
-		if (_network_udp_broadcast > 0) _network_udp_broadcast--;
-	}
+	NetworkBackgroundUDPLoop();
 }
 
 /* The main loop called from ttd.c

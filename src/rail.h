@@ -20,6 +20,7 @@
 #include "slope_type.h"
 #include "strings_type.h"
 #include "date_type.h"
+#include "signal_type.h"
 
 /** Railtype flags. */
 enum RailTypeFlags {
@@ -46,6 +47,8 @@ enum RailTypeSpriteGroup {
 	RTSG_CROSSING,    ///< Level crossing overlay images
 	RTSG_DEPOT,       ///< Depot images
 	RTSG_FENCES,      ///< Fence images
+	RTSG_TUNNEL_PORTAL, ///< Tunnel portal overlay
+	RTSG_SIGNALS,     ///< Signal images
 	RTSG_END,
 };
 
@@ -73,7 +76,7 @@ enum RailTrackOffset {
 };
 
 /**
- * Offsets for spries within a bridge surface overlay set.
+ * Offsets for sprites within a bridge surface overlay set.
  */
 enum RailTrackBridgeOffset {
 	RTBO_X,     ///< Piece of rail in X direction
@@ -96,6 +99,9 @@ enum RailFenceOffset {
 	RFO_SLOPE_NW,
 };
 
+/** List of rail type labels. */
+typedef SmallVector<RailTypeLabel, 4> RailTypeLabelList;
+
 /**
  * This struct contains all the info that is needed to draw and construct tracks.
  */
@@ -114,7 +120,7 @@ struct RailtypeInfo {
 		SpriteID single_s;     ///< single piece of rail in the southern corner
 		SpriteID single_e;     ///< single piece of rail in the eastern corner
 		SpriteID single_w;     ///< single piece of rail in the western corner
-		SpriteID single_sloped;///< single piecs of rail for slopes
+		SpriteID single_sloped;///< single piece of rail for slopes
 		SpriteID crossing;     ///< level crossing, rail in X direction
 		SpriteID tunnel;       ///< tunnel sprites base
 	} base_sprites;
@@ -132,6 +138,7 @@ struct RailtypeInfo {
 		SpriteID build_depot;        ///< button for building depots
 		SpriteID build_tunnel;       ///< button for building a tunnel
 		SpriteID convert_rail;       ///< button for converting rail
+		SpriteID signals[SIGTYPE_END][2][2]; ///< signal GUI sprites (type, variant, state)
 	} gui_sprites;
 
 	struct {
@@ -146,6 +153,7 @@ struct RailtypeInfo {
 	} cursor;
 
 	struct {
+		StringID name;
 		StringID toolbar_caption;
 		StringID menu_text;
 		StringID build_caption;
@@ -188,6 +196,11 @@ struct RailtypeInfo {
 	uint16 cost_multiplier;
 
 	/**
+	 * Cost multiplier for maintenance of this rail type
+	 */
+	uint16 maintenance_multiplier;
+
+	/**
 	 * Acceleration type of this rail type
 	 */
 	uint8 acceleration_type;
@@ -201,6 +214,11 @@ struct RailtypeInfo {
 	 * Unique 32 bit rail type identifier
 	 */
 	RailTypeLabel label;
+
+	/**
+	 * Rail type labels this type provides in addition to the main label.
+	 */
+	RailTypeLabelList alternate_labels;
 
 	/**
 	 * Colour on mini-map
@@ -362,6 +380,29 @@ static inline Money RailConvertCost(RailType from, RailType to)
 	return rebuildcost;
 }
 
+/**
+ * Calculates the maintenance cost of a number of track bits.
+ * @param railtype The railtype to get the cost of.
+ * @param num Number of track bits of this railtype.
+ * @param total_num Total number of track bits of all railtypes.
+ * @return Total cost.
+ */
+static inline Money RailMaintenanceCost(RailType railtype, uint32 num, uint32 total_num)
+{
+	assert(railtype < RAILTYPE_END);
+	return (_price[PR_INFRASTRUCTURE_RAIL] * GetRailTypeInfo(railtype)->maintenance_multiplier * num * (1 + IntSqrt(total_num))) >> 11; // 4 bits fraction for the multiplier and 7 bits scaling.
+}
+
+/**
+ * Calculates the maintenance cost of a number of signals.
+ * @param num Number of signals.
+ * @return Total cost.
+ */
+static inline Money SignalMaintenanceCost(uint32 num)
+{
+	return (_price[PR_INFRASTRUCTURE_RAIL] * 15 * num * (1 + IntSqrt(num))) >> 8; // 1 bit fraction for the multiplier and 7 bits scaling.
+}
+
 void DrawTrainDepotSprite(int x, int y, int image, RailType railtype);
 int TicksToLeaveDepot(const Train *v);
 
@@ -376,7 +417,7 @@ RailTypes AddDateIntroducedRailTypes(RailTypes current, Date date);
 RailType GetBestRailtype(const CompanyID company);
 RailTypes GetCompanyRailtypes(const CompanyID c);
 
-RailType GetRailTypeByLabel(RailTypeLabel label);
+RailType GetRailTypeByLabel(RailTypeLabel label, bool allow_alternate_labels = true);
 
 void ResetRailTypes();
 void InitRailTypes();

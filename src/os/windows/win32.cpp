@@ -17,7 +17,9 @@
 #include "../../fios.h"
 #include <windows.h>
 #include <fcntl.h>
+#include <regstr.h>
 #include <shlobj.h> /* SHGetFolderPath */
+#include <Shellapi.h>
 #include "win32.h"
 #include "../../core/alloc_func.hpp"
 #include "../../openttd.h"
@@ -28,14 +30,16 @@
 #include <sys/stat.h>
 
 static bool _has_console;
+static bool _cursor_disable = true;
+static bool _cursor_visible = true;
 
-static bool cursor_visible = true;
-
-bool MyShowCursor(bool show)
+bool MyShowCursor(bool show, bool toggle)
 {
-	if (cursor_visible == show) return show;
+	if (toggle) _cursor_disable = !_cursor_disable;
+	if (_cursor_disable) return show;
+	if (_cursor_visible == show) return show;
 
-	cursor_visible = show;
+	_cursor_visible = show;
 	ShowCursor(show);
 
 	return !show;
@@ -77,9 +81,27 @@ void ShowOSErrorBox(const char *buf, bool system)
 	MessageBox(GetActiveWindow(), MB_TO_WIDE(buf), _T("Error!"), MB_ICONSTOP);
 }
 
+void OSOpenBrowser(const char *url)
+{
+	ShellExecute(GetActiveWindow(), _T("open"), MB_TO_WIDE(url), NULL, NULL, SW_SHOWNORMAL);
+}
+
 /* Code below for windows version of opendir/readdir/closedir copied and
  * modified from Jan Wassenberg's GPL implementation posted over at
  * http://www.gamedev.net/community/forums/topic.asp?topic_id=364584&whichpage=1&#2398903 */
+
+struct DIR {
+	HANDLE hFind;
+	/* the dirent returned by readdir.
+	 * note: having only one global instance is not possible because
+	 * multiple independent opendir/readdir sequences must be supported. */
+	dirent ent;
+	WIN32_FIND_DATA fd;
+	/* since opendir calls FindFirstFile, we need a means of telling the
+	 * first call to readdir that we already have a file.
+	 * that's the case iff this is true */
+	bool at_first_entry;
+};
 
 /* suballocator - satisfies most requests with a reusable static instance.
  * this avoids hundreds of alloc/free which would fragment the heap.
@@ -217,8 +239,8 @@ bool FiosIsValidFile(const char *path, const struct dirent *ent, struct stat *sb
 	 * we just have to subtract POSIX epoch and scale down to units of seconds.
 	 * http://www.gamedev.net/community/forums/topic.asp?topic_id=294070&whichpage=1&#1860504
 	 * XXX - not entirely correct, since filetimes on FAT aren't UTC but local,
-	 * this won't entirely be correct, but we use the time only for comparsion. */
-	sb->st_mtime = (time_t)((*(uint64*)&fd->ftLastWriteTime - posix_epoch_hns) / 1E7);
+	 * this won't entirely be correct, but we use the time only for comparison. */
+	sb->st_mtime = (time_t)((*(const uint64*)&fd->ftLastWriteTime - posix_epoch_hns) / 1E7);
 	sb->st_mode  = (fd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)? S_IFDIR : S_IFREG;
 
 	return true;
@@ -350,7 +372,7 @@ static INT_PTR CALLBACK HelpDialogFunc(HWND wnd, UINT msg, WPARAM wParam, LPARAM
 			}
 			*q = '\0';
 #if defined(UNICODE)
-			/* We need to put the text in a seperate buffer because the default
+			/* We need to put the text in a separate buffer because the default
 			 * buffer in MB_TO_WIDE might not be large enough (512 chars) */
 			wchar_t help_msgW[8192];
 #endif
@@ -386,7 +408,7 @@ void ShowInfo(const char *str)
 			DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(101), NULL, HelpDialogFunc);
 		} else {
 #if defined(UNICODE)
-			/* We need to put the text in a seperate buffer because the default
+			/* We need to put the text in a separate buffer because the default
 			 * buffer in MB_TO_WIDE might not be large enough (512 chars) */
 			wchar_t help_msgW[8192];
 #endif
@@ -440,7 +462,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	argc = ParseCommandLine(cmdline, argv, lengthof(argv));
 
-	ttd_main(argc, argv);
+	openttd_main(argc, argv);
 	return 0;
 }
 
@@ -484,19 +506,25 @@ void DetermineBasePaths(const char *exe)
 	char tmp[MAX_PATH];
 	TCHAR path[MAX_PATH];
 #ifdef WITH_PERSONAL_DIR
-	SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path);
-	strecpy(tmp, WIDE_TO_MB_BUFFER(path, tmp, lengthof(tmp)), lastof(tmp));
-	AppendPathSeparator(tmp, MAX_PATH);
-	ttd_strlcat(tmp, PERSONAL_DIR, MAX_PATH);
-	AppendPathSeparator(tmp, MAX_PATH);
-	_searchpaths[SP_PERSONAL_DIR] = strdup(tmp);
+	if (SUCCEEDED(OTTDSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, path))) {
+		strecpy(tmp, WIDE_TO_MB_BUFFER(path, tmp, lengthof(tmp)), lastof(tmp));
+		AppendPathSeparator(tmp, MAX_PATH);
+		ttd_strlcat(tmp, PERSONAL_DIR, MAX_PATH);
+		AppendPathSeparator(tmp, MAX_PATH);
+		_searchpaths[SP_PERSONAL_DIR] = strdup(tmp);
+	} else {
+		_searchpaths[SP_PERSONAL_DIR] = NULL;
+	}
 
-	SHGetFolderPath(NULL, CSIDL_COMMON_DOCUMENTS, NULL, SHGFP_TYPE_CURRENT, path);
-	strecpy(tmp, WIDE_TO_MB_BUFFER(path, tmp, lengthof(tmp)), lastof(tmp));
-	AppendPathSeparator(tmp, MAX_PATH);
-	ttd_strlcat(tmp, PERSONAL_DIR, MAX_PATH);
-	AppendPathSeparator(tmp, MAX_PATH);
-	_searchpaths[SP_SHARED_DIR] = strdup(tmp);
+	if (SUCCEEDED(OTTDSHGetFolderPath(NULL, CSIDL_COMMON_DOCUMENTS, NULL, SHGFP_TYPE_CURRENT, path))) {
+		strecpy(tmp, WIDE_TO_MB_BUFFER(path, tmp, lengthof(tmp)), lastof(tmp));
+		AppendPathSeparator(tmp, MAX_PATH);
+		ttd_strlcat(tmp, PERSONAL_DIR, MAX_PATH);
+		AppendPathSeparator(tmp, MAX_PATH);
+		_searchpaths[SP_SHARED_DIR] = strdup(tmp);
+	} else {
+		_searchpaths[SP_SHARED_DIR] = NULL;
+	}
 #else
 	_searchpaths[SP_PERSONAL_DIR] = NULL;
 	_searchpaths[SP_SHARED_DIR]   = NULL;
@@ -539,7 +567,7 @@ bool GetClipboardContents(char *buffer, size_t buff_len)
 		cbuf = GetClipboardData(CF_UNICODETEXT);
 
 		ptr = (const char*)GlobalLock(cbuf);
-		const char *ret = convert_from_fs((wchar_t*)ptr, buffer, buff_len);
+		const char *ret = convert_from_fs((const wchar_t*)ptr, buffer, buff_len);
 		GlobalUnlock(cbuf);
 		CloseClipboard();
 
@@ -705,8 +733,11 @@ HRESULT OTTDSHGetFolderPath(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, 
 #else
 # define W(x) x "A"
 #endif
-		if (!LoadLibraryList((Function*)&SHGetFolderPath, "SHFolder.dll\0" W("SHGetFolderPath") "\0\0")) {
-			DEBUG(misc, 0, "Unable to load " W("SHGetFolderPath") "from SHFolder.dll");
+		/* The function lives in shell32.dll for all current Windows versions, but it first started to appear in SHFolder.dll. */
+		if (!LoadLibraryList((Function*)&SHGetFolderPath, "shell32.dll\0" W("SHGetFolderPath") "\0\0")) {
+			if (!LoadLibraryList((Function*)&SHGetFolderPath, "SHFolder.dll\0" W("SHGetFolderPath") "\0\0")) {
+				DEBUG(misc, 0, "Unable to load " W("SHGetFolderPath") "from either shell32.dll or SHFolder.dll");
+			}
 		}
 #undef W
 		first_time = false;
@@ -731,6 +762,17 @@ HRESULT OTTDSHGetFolderPath(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, 
 
 				return (HRESULT)0;
 
+			case CSIDL_PERSONAL:
+			case CSIDL_COMMON_DOCUMENTS: {
+				HKEY key;
+				if (RegOpenKeyEx(csidl == CSIDL_PERSONAL ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE, REGSTR_PATH_SPECIAL_FOLDERS, 0, KEY_READ, &key) != ERROR_SUCCESS) break;
+				DWORD len = MAX_PATH;
+				ret = RegQueryValueEx(key, csidl == CSIDL_PERSONAL ? _T("Personal") : _T("Common Documents"), NULL, NULL, (LPBYTE)pszPath, &len);
+				RegCloseKey(key);
+				if (ret == ERROR_SUCCESS) return (HRESULT)0;
+				break;
+			}
+
 			/* XXX - other types to go here when needed... */
 		}
 	}
@@ -750,4 +792,12 @@ const char *GetCurrentLocale(const char *)
 	/* Format it as 'en_us'. */
 	static char retbuf[6] = {lang[0], lang[1], '_', country[0], country[1], 0};
 	return retbuf;
+}
+
+uint GetCPUCoreCount()
+{
+	SYSTEM_INFO info;
+
+	GetSystemInfo(&info);
+	return info.dwNumberOfProcessors;
 }

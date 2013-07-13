@@ -12,6 +12,7 @@
 #ifndef VEHICLE_BASE_H
 #define VEHICLE_BASE_H
 
+#include "core/smallmap_type.hpp"
 #include "track_type.h"
 #include "command_type.h"
 #include "order_base.h"
@@ -21,6 +22,7 @@
 #include "order_func.h"
 #include "transport_type.h"
 #include "group_type.h"
+#include "base_consist.h"
 
 /** Vehicle status bits in #Vehicle::vehstatus. */
 enum VehStatus {
@@ -44,6 +46,8 @@ enum VehicleFlags {
 	VF_AUTOFILL_PRES_WAIT_TIME, ///< Whether non-destructive auto-fill should preserve waiting times
 	VF_STOP_LOADING,            ///< Don't load anymore during the next load cycle.
 	VF_PATHFINDER_LOST,         ///< Vehicle's pathfinder is lost.
+	VF_SERVINT_IS_CUSTOM,       ///< Service interval is custom.
+	VF_SERVINT_IS_PERCENT,      ///< Service interval is percent.
 };
 
 /** Bit numbers used to indicate which of the #NewGRFCache values are valid. */
@@ -60,7 +64,7 @@ struct NewGRFCache {
 	/* Values calculated when they are requested for the first time after invalidating the NewGRF cache. */
 	uint32 position_consist_length;   ///< Cache for NewGRF var 40.
 	uint32 position_same_id_length;   ///< Cache for NewGRF var 41.
-	uint32 consist_cargo_information; ///< Cache for NewGRF var 42.
+	uint32 consist_cargo_information; ///< Cache for NewGRF var 42. (Note: The cargotype is untranslated in the cache because the accessing GRF is yet unknown.)
 	uint32 company_information;       ///< Cache for NewGRF var 43.
 	uint8  cache_valid;               ///< Bitset that indicates which cache values are valid.
 };
@@ -118,8 +122,10 @@ struct LoadgameState;
 extern bool LoadOldVehicle(LoadgameState *ls, int num);
 extern void FixOldVehicles();
 
+struct GRFFile;
+
 /** %Vehicle data structure. */
-struct Vehicle : VehiclePool::PoolItem<&_vehicle_pool>, BaseVehicle {
+struct Vehicle : VehiclePool::PoolItem<&_vehicle_pool>, BaseVehicle, BaseConsist {
 private:
 	Vehicle *next;                      ///< pointer to the next vehicle in the chain
 	Vehicle *previous;                  ///< NOSAVE: pointer to the previous vehicle in the chain
@@ -132,8 +138,6 @@ public:
 	friend void FixOldVehicles();
 	friend void AfterLoadVehicles(bool part_of_load);             ///< So we can set the #previous and #first pointers while loading
 	friend bool LoadOldVehicle(LoadgameState *ls, int num);       ///< So we can set the proper next pointer while loading
-
-	char *name;                         ///< Name of vehicle
 
 	TileIndex tile;                     ///< Current tile index
 
@@ -150,19 +154,14 @@ public:
 
 	CargoPayment *cargo_payment;        ///< The cargo payment we're currently in
 
-	/* Used for timetabling. */
-	uint32 current_order_time;          ///< How many ticks have passed since this order started.
-	int32 lateness_counter;             ///< How many ticks late (or early if negative) this vehicle is.
-	Date timetable_start;               ///< When the vehicle is supposed to start the timetable.
-
 	Rect coord;                         ///< NOSAVE: Graphical bounding box of the vehicle, i.e. what to redraw on moves.
 
-	Vehicle *next_hash;                 ///< NOSAVE: Next vehicle in the visual location hash.
-	Vehicle **prev_hash;                ///< NOSAVE: Previous vehicle in the visual location hash.
+	Vehicle *hash_viewport_next;        ///< NOSAVE: Next vehicle in the visual location hash.
+	Vehicle **hash_viewport_prev;       ///< NOSAVE: Previous vehicle in the visual location hash.
 
-	Vehicle *next_new_hash;             ///< NOSAVE: Next vehicle in the tile location hash.
-	Vehicle **prev_new_hash;            ///< NOSAVE: Previous vehicle in the tile location hash.
-	Vehicle **old_new_hash;             ///< NOSAVE: Cache of the current hash chain.
+	Vehicle *hash_tile_next;            ///< NOSAVE: Next vehicle in the tile location hash.
+	Vehicle **hash_tile_prev;           ///< NOSAVE: Previous vehicle in the tile location hash.
+	Vehicle **hash_tile_current;        ///< NOSAVE: Cache of the current hash chain.
 
 	SpriteID colourmap;                 ///< NOSAVE: cached colour mapping
 
@@ -171,7 +170,6 @@ public:
 	Date age;                           ///< Age in days
 	Date max_age;                       ///< Maximum age
 	Date date_of_last_service;          ///< Last date the vehicle had a service at a depot.
-	Date service_interval;              ///< The interval for (automatic) servicing; either in days or %.
 	uint16 reliability;                 ///< Reliability.
 	uint16 reliability_spd_dec;         ///< Reliability decrease speed.
 	byte breakdown_ctr;                 ///< Counter for managing breakdown events. @see Vehicle::HandleBreakdown
@@ -181,17 +179,22 @@ public:
 
 	int32 x_pos;                        ///< x coordinate.
 	int32 y_pos;                        ///< y coordinate.
-	byte z_pos;                         ///< z coordinate.
+	int32 z_pos;                        ///< z coordinate.
 	DirectionByte direction;            ///< facing
 
 	OwnerByte owner;                    ///< Which company owns the vehicle?
-	byte spritenum;                     ///< currently displayed sprite index
-	                                    ///< 0xfd == custom sprite, 0xfe == custom second head sprite
-	                                    ///< 0xff == reserved for another custom sprite
+	/**
+	 * currently displayed sprite index
+	 * 0xfd == custom sprite, 0xfe == custom second head sprite
+	 * 0xff == reserved for another custom sprite
+	 */
+	byte spritenum;
 	SpriteID cur_image;                 ///< sprite number for this vehicle
 	byte x_extent;                      ///< x-extent of vehicle bounding box
 	byte y_extent;                      ///< y-extent of vehicle bounding box
 	byte z_extent;                      ///< z-extent of vehicle bounding box
+	int8 x_bb_offs;                     ///< x offset of vehicle bounding box
+	int8 y_bb_offs;                     ///< y offset of vehicle bounding box
 	int8 x_offs;                        ///< x offset for vehicle sprite
 	int8 y_offs;                        ///< y offset for vehicle sprite
 	EngineID engine_type;               ///< The type of engine used for this vehicle.
@@ -209,10 +212,12 @@ public:
 	byte waiting_triggers;              ///< Triggers to be yet matched before rerandomizing the random bits.
 
 	StationID last_station_visited;     ///< The last station we stopped at.
+	StationID last_loading_station;     ///< Last station the vehicle has stopped at and could possibly leave from with any cargo loaded.
 
 	CargoID cargo_type;                 ///< type of cargo this vehicle is carrying
 	byte cargo_subtype;                 ///< Used for livery refits (NewGRF variations)
 	uint16 cargo_cap;                   ///< total capacity
+	uint16 refit_cap;                   ///< Capacity left over from before last refit.
 	VehicleCargoList cargo;             ///< The cargo this vehicle is carrying
 	uint16 cargo_age_counter;           ///< Ticks till cargo is aged next.
 
@@ -222,15 +227,11 @@ public:
 
 	byte vehstatus;                     ///< Status
 	Order current_order;                ///< The current order (+ status, like: loading)
-	VehicleOrderID cur_real_order_index;///< The index to the current real (non-implicit) order
-	VehicleOrderID cur_implicit_order_index;///< The index to the current implicit order
 
 	union {
 		OrderList *list;            ///< Pointer to the order list for this vehicle
 		Order     *old;             ///< Only used during conversion of old save games
 	} orders;                           ///< The orders currently assigned to the vehicle.
-
-	byte vehicle_flags;                 ///< Used for gradual loading and other miscellaneous things (@see VehicleFlags enum)
 
 	uint16 load_unload_ticks;           ///< Ticks to wait before starting next cycle.
 	GroupID group_id;                   ///< Index of group Pool array
@@ -246,6 +247,7 @@ public:
 	virtual ~Vehicle();
 
 	void BeginLoading();
+	void CancelReservation(StationID next, Station *st);
 	void LeaveStation();
 
 	GroundVehicleCache *GetGroundVehicleCache();
@@ -257,6 +259,10 @@ public:
 	void DeleteUnreachedImplicitOrders();
 
 	void HandleLoading(bool mode = false);
+
+	void GetConsistFreeCapacities(SmallMap<CargoID, uint> &capacities) const;
+
+	uint GetConsistTotalCapacity() const;
 
 	/**
 	 * Marks the vehicles to be redrawn and updates cached variables
@@ -288,7 +294,7 @@ public:
 	 * @param speed Direction-independent unscaled speed.
 	 * @return speed scaled by movement direction. 256 units are required for each movement step.
 	 */
-	FORCEINLINE uint GetOldAdvanceSpeed(uint speed)
+	inline uint GetOldAdvanceSpeed(uint speed)
 	{
 		return (this->direction & 1) ? speed : speed * 3 / 4;
 	}
@@ -305,7 +311,7 @@ public:
 	 * @param speed Direction-independent unscaled speed.
 	 * @return speed, scaled to match #GetAdvanceDistance().
 	 */
-	static FORCEINLINE uint GetAdvanceSpeed(uint speed)
+	static inline uint GetAdvanceSpeed(uint speed)
 	{
 		return speed * 3 / 4;
 	}
@@ -317,7 +323,7 @@ public:
 	 *
 	 * @return distance to drive for a movement step on the map.
 	 */
-	FORCEINLINE uint GetAdvanceDistance()
+	inline uint GetAdvanceDistance()
 	{
 		return (this->direction & 1) ? 192 : 256;
 	}
@@ -338,18 +344,23 @@ public:
 	 */
 	virtual bool IsPrimaryVehicle() const { return false; }
 
+	const Engine *GetEngine() const;
+
 	/**
 	 * Gets the sprite to show for the given direction
 	 * @param direction the direction the vehicle is facing
 	 * @return the sprite for the given vehicle in the given direction
 	 */
-	virtual SpriteID GetImage(Direction direction) const { return 0; }
+	virtual SpriteID GetImage(Direction direction, EngineImageType image_type) const { return 0; }
+
+	const GRFFile *GetGRF() const;
+	uint32 GetGRFID() const;
 
 	/**
 	 * Invalidates cached NewGRF variables
 	 * @see InvalidateNewGRFCacheOfChain
 	 */
-	FORCEINLINE void InvalidateNewGRFCache()
+	inline void InvalidateNewGRFCache()
 	{
 		this->grf_cache.cache_valid = 0;
 	}
@@ -358,7 +369,7 @@ public:
 	 * Invalidates cached NewGRF variables of all vehicles in the chain (after the current vehicle)
 	 * @see InvalidateNewGRFCache
 	 */
-	FORCEINLINE void InvalidateNewGRFCacheOfChain()
+	inline void InvalidateNewGRFCacheOfChain()
 	{
 		for (Vehicle *u = this; u != NULL; u = u->Next()) {
 			u->InvalidateNewGRFCache();
@@ -369,7 +380,7 @@ public:
 	 * Check if the vehicle is a ground vehicle.
 	 * @return True iff the vehicle is a train or a road vehicle.
 	 */
-	FORCEINLINE bool IsGroundVehicle() const
+	inline bool IsGroundVehicle() const
 	{
 		return this->type == VEH_TRAIN || this->type == VEH_ROAD;
 	}
@@ -387,6 +398,12 @@ public:
 	virtual int GetDisplayMaxSpeed() const { return 0; }
 
 	/**
+	 * Calculates the maximum speed of the vehicle under its current conditions.
+	 * @return Current maximum speed in native units.
+	 */
+	virtual int GetCurrentMaxSpeed() const { return 0; }
+
+	/**
 	 * Gets the running cost of a vehicle
 	 * @return the vehicle's running cost
 	 */
@@ -399,10 +416,22 @@ public:
 	virtual bool IsInDepot() const { return false; }
 
 	/**
+	 * Check whether the whole vehicle chain is in the depot.
+	 * @return true if and only if the whole chain is in the depot.
+	 */
+	virtual bool IsChainInDepot() const { return this->IsInDepot(); }
+
+	/**
 	 * Check whether the vehicle is in the depot *and* stopped.
 	 * @return true if and only if the vehicle is in the depot and stopped.
 	 */
-	virtual bool IsStoppedInDepot() const { return this->IsInDepot() && (this->vehstatus & VS_STOPPED) != 0; }
+	bool IsStoppedInDepot() const
+	{
+		assert(this == this->First());
+		/* Free wagons have no VS_STOPPED state */
+		if (this->IsPrimaryVehicle() && !(this->vehstatus & VS_STOPPED)) return false;
+		return this->IsChainInDepot();
+	}
 
 	/**
 	 * Calls the tick handler of the vehicle
@@ -499,6 +528,38 @@ public:
 	}
 
 	/**
+	 * Get the vehicle at offset \a n of this vehicle chain.
+	 * @param n Offset from the current vehicle.
+	 * @return The new vehicle or NULL if the offset is out-of-bounds.
+	 */
+	inline Vehicle *Move(int n)
+	{
+		Vehicle *v = this;
+		if (n < 0) {
+			for (int i = 0; i != n && v != NULL; i--) v = v->Previous();
+		} else {
+			for (int i = 0; i != n && v != NULL; i++) v = v->Next();
+		}
+		return v;
+	}
+
+	/**
+	 * Get the vehicle at offset \a n of this vehicle chain.
+	 * @param n Offset from the current vehicle.
+	 * @return The new vehicle or NULL if the offset is out-of-bounds.
+	 */
+	inline const Vehicle *Move(int n) const
+	{
+		const Vehicle *v = this;
+		if (n < 0) {
+			for (int i = 0; i != n && v != NULL; i--) v = v->Previous();
+		} else {
+			for (int i = 0; i != n && v != NULL; i++) v = v->Next();
+		}
+		return v;
+	}
+
+	/**
 	 * Get the first order of the vehicles order list.
 	 * @return first order of order list.
 	 */
@@ -544,6 +605,19 @@ public:
 	inline VehicleOrderID GetNumManualOrders() const { return (this->orders.list == NULL) ? 0 : this->orders.list->GetNumManualOrders(); }
 
 	/**
+	 * Get the next station the vehicle will stop at.
+	 * @return ID of the next station the vehicle will stop at or INVALID_STATION.
+	 */
+	inline StationID GetNextStoppingStation() const
+	{
+		return (this->orders.list == NULL) ? INVALID_STATION : this->orders.list->GetNextStoppingStation(this);
+	}
+
+	void ResetRefitCaps();
+
+	void RefreshNextHopsStats();
+
+	/**
 	 * Copy certain configurations and statistics of a vehicle after successful autoreplace/renew
 	 * The function shall copy everything that cannot be copied by a command (like orders / group etc),
 	 * and that shall not be resetted for the new vehicle.
@@ -551,31 +625,21 @@ public:
 	 */
 	inline void CopyVehicleConfigAndStatistics(const Vehicle *src)
 	{
+		this->CopyConsistPropertiesFrom(src);
+
 		this->unitnumber = src->unitnumber;
 
-		this->cur_real_order_index = src->cur_real_order_index;
-		this->cur_implicit_order_index = src->cur_implicit_order_index;
 		this->current_order = src->current_order;
 		this->dest_tile  = src->dest_tile;
 
 		this->profit_this_year = src->profit_this_year;
 		this->profit_last_year = src->profit_last_year;
-
-		this->current_order_time = src->current_order_time;
-		this->lateness_counter = src->lateness_counter;
-		this->timetable_start = src->timetable_start;
-
-		if (HasBit(src->vehicle_flags, VF_TIMETABLE_STARTED)) SetBit(this->vehicle_flags, VF_TIMETABLE_STARTED);
-		if (HasBit(src->vehicle_flags, VF_AUTOFILL_TIMETABLE)) SetBit(this->vehicle_flags, VF_AUTOFILL_TIMETABLE);
-		if (HasBit(src->vehicle_flags, VF_AUTOFILL_PRES_WAIT_TIME)) SetBit(this->vehicle_flags, VF_AUTOFILL_PRES_WAIT_TIME);
-
-		this->service_interval = src->service_interval;
 	}
 
 
 	bool HandleBreakdown();
 
-	bool NeedsAutorenewing(const Company *c) const;
+	bool NeedsAutorenewing(const Company *c, bool use_renew_setting = true) const;
 
 	bool NeedsServicing() const;
 	bool NeedsAutomaticServicing() const;
@@ -603,6 +667,18 @@ public:
 
 	void UpdateVisualEffect(bool allow_power_change = true);
 	void ShowVisualEffect() const;
+
+	inline uint16 GetServiceInterval() const { return this->service_interval; }
+
+	inline void SetServiceInterval(uint16 interval) { this->service_interval = interval; }
+
+	inline bool ServiceIntervalIsCustom() const { return HasBit(this->vehicle_flags, VF_SERVINT_IS_CUSTOM); }
+
+	inline bool ServiceIntervalIsPercent() const { return HasBit(this->vehicle_flags, VF_SERVINT_IS_PERCENT); }
+
+	inline void SetServiceIntervalIsCustom(bool on) { SB(this->vehicle_flags, VF_SERVINT_IS_CUSTOM, 1, on); }
+
+	inline void SetServiceIntervalIsPercent(bool on) { SB(this->vehicle_flags, VF_SERVINT_IS_PERCENT, 1, on); }
 
 private:
 	/**
@@ -711,7 +787,7 @@ public:
 	 * Check if the vehicle is a front engine.
 	 * @return Returns true if the vehicle is a front engine.
 	 */
-	FORCEINLINE bool IsFrontEngine() const
+	inline bool IsFrontEngine() const
 	{
 		return this->IsGroundVehicle() && HasBit(this->subtype, GVSF_FRONT);
 	}
@@ -720,7 +796,7 @@ public:
 	 * Check if the vehicle is an articulated part of an engine.
 	 * @return Returns true if the vehicle is an articulated part.
 	 */
-	FORCEINLINE bool IsArticulatedPart() const
+	inline bool IsArticulatedPart() const
 	{
 		return this->IsGroundVehicle() && HasBit(this->subtype, GVSF_ARTICULATED_PART);
 	}
@@ -729,7 +805,7 @@ public:
 	 * Check if an engine has an articulated part.
 	 * @return True if the engine has an articulated part.
 	 */
-	FORCEINLINE bool HasArticulatedPart() const
+	inline bool HasArticulatedPart() const
 	{
 		return this->Next() != NULL && this->Next()->IsArticulatedPart();
 	}
@@ -739,7 +815,7 @@ public:
 	 * @return Next part of the articulated engine.
 	 * @pre The vehicle is an articulated engine.
 	 */
-	FORCEINLINE Vehicle *GetNextArticulatedPart() const
+	inline Vehicle *GetNextArticulatedPart() const
 	{
 		assert(this->HasArticulatedPart());
 		return this->Next();
@@ -749,7 +825,7 @@ public:
 	 * Get the first part of an articulated engine.
 	 * @return First part of the engine.
 	 */
-	FORCEINLINE Vehicle *GetFirstEnginePart()
+	inline Vehicle *GetFirstEnginePart()
 	{
 		Vehicle *v = this;
 		while (v->IsArticulatedPart()) v = v->Previous();
@@ -760,7 +836,7 @@ public:
 	 * Get the first part of an articulated engine.
 	 * @return First part of the engine.
 	 */
-	FORCEINLINE const Vehicle *GetFirstEnginePart() const
+	inline const Vehicle *GetFirstEnginePart() const
 	{
 		const Vehicle *v = this;
 		while (v->IsArticulatedPart()) v = v->Previous();
@@ -771,7 +847,7 @@ public:
 	 * Get the last part of an articulated engine.
 	 * @return Last part of the engine.
 	 */
-	FORCEINLINE Vehicle *GetLastEnginePart()
+	inline Vehicle *GetLastEnginePart()
 	{
 		Vehicle *v = this;
 		while (v->HasArticulatedPart()) v = v->GetNextArticulatedPart();
@@ -782,7 +858,7 @@ public:
 	 * Get the next real (non-articulated part) vehicle in the consist.
 	 * @return Next vehicle in the consist.
 	 */
-	FORCEINLINE Vehicle *GetNextVehicle() const
+	inline Vehicle *GetNextVehicle() const
 	{
 		const Vehicle *v = this;
 		while (v->HasArticulatedPart()) v = v->GetNextArticulatedPart();
@@ -795,7 +871,7 @@ public:
 	 * Get the previous real (non-articulated part) vehicle in the consist.
 	 * @return Previous vehicle in the consist.
 	 */
-	FORCEINLINE Vehicle *GetPrevVehicle() const
+	inline Vehicle *GetPrevVehicle() const
 	{
 		Vehicle *v = this->Previous();
 		while (v != NULL && v->IsArticulatedPart()) v = v->Previous();
@@ -830,88 +906,88 @@ struct SpecializedVehicle : public Vehicle {
 	/**
 	 * Set vehicle type correctly
 	 */
-	FORCEINLINE SpecializedVehicle<T, Type>() : Vehicle(Type) { }
+	inline SpecializedVehicle<T, Type>() : Vehicle(Type) { }
 
 	/**
 	 * Get the first vehicle in the chain
 	 * @return first vehicle in the chain
 	 */
-	FORCEINLINE T *First() const { return (T *)this->Vehicle::First(); }
+	inline T *First() const { return (T *)this->Vehicle::First(); }
 
 	/**
 	 * Get the last vehicle in the chain
 	 * @return last vehicle in the chain
 	 */
-	FORCEINLINE T *Last() { return (T *)this->Vehicle::Last(); }
+	inline T *Last() { return (T *)this->Vehicle::Last(); }
 
 	/**
 	 * Get the last vehicle in the chain
 	 * @return last vehicle in the chain
 	 */
-	FORCEINLINE const T *Last() const { return (const T *)this->Vehicle::Last(); }
+	inline const T *Last() const { return (const T *)this->Vehicle::Last(); }
 
 	/**
 	 * Get next vehicle in the chain
 	 * @return next vehicle in the chain
 	 */
-	FORCEINLINE T *Next() const { return (T *)this->Vehicle::Next(); }
+	inline T *Next() const { return (T *)this->Vehicle::Next(); }
 
 	/**
 	 * Get previous vehicle in the chain
 	 * @return previous vehicle in the chain
 	 */
-	FORCEINLINE T *Previous() const { return (T *)this->Vehicle::Previous(); }
+	inline T *Previous() const { return (T *)this->Vehicle::Previous(); }
 
 	/**
 	 * Get the next part of an articulated engine.
 	 * @return Next part of the articulated engine.
 	 * @pre The vehicle is an articulated engine.
 	 */
-	FORCEINLINE T *GetNextArticulatedPart() { return (T *)this->Vehicle::GetNextArticulatedPart(); }
+	inline T *GetNextArticulatedPart() { return (T *)this->Vehicle::GetNextArticulatedPart(); }
 
 	/**
 	 * Get the next part of an articulated engine.
 	 * @return Next part of the articulated engine.
 	 * @pre The vehicle is an articulated engine.
 	 */
-	FORCEINLINE T *GetNextArticulatedPart() const { return (T *)this->Vehicle::GetNextArticulatedPart(); }
+	inline T *GetNextArticulatedPart() const { return (T *)this->Vehicle::GetNextArticulatedPart(); }
 
 	/**
 	 * Get the first part of an articulated engine.
 	 * @return First part of the engine.
 	 */
-	FORCEINLINE T *GetFirstEnginePart() { return (T *)this->Vehicle::GetFirstEnginePart(); }
+	inline T *GetFirstEnginePart() { return (T *)this->Vehicle::GetFirstEnginePart(); }
 
 	/**
 	 * Get the first part of an articulated engine.
 	 * @return First part of the engine.
 	 */
-	FORCEINLINE const T *GetFirstEnginePart() const { return (const T *)this->Vehicle::GetFirstEnginePart(); }
+	inline const T *GetFirstEnginePart() const { return (const T *)this->Vehicle::GetFirstEnginePart(); }
 
 	/**
 	 * Get the last part of an articulated engine.
 	 * @return Last part of the engine.
 	 */
-	FORCEINLINE T *GetLastEnginePart() { return (T *)this->Vehicle::GetLastEnginePart(); }
+	inline T *GetLastEnginePart() { return (T *)this->Vehicle::GetLastEnginePart(); }
 
 	/**
 	 * Get the next real (non-articulated part) vehicle in the consist.
 	 * @return Next vehicle in the consist.
 	 */
-	FORCEINLINE T *GetNextVehicle() const { return (T *)this->Vehicle::GetNextVehicle(); }
+	inline T *GetNextVehicle() const { return (T *)this->Vehicle::GetNextVehicle(); }
 
 	/**
 	 * Get the previous real (non-articulated part) vehicle in the consist.
 	 * @return Previous vehicle in the consist.
 	 */
-	FORCEINLINE T *GetPrevVehicle() const { return (T *)this->Vehicle::GetPrevVehicle(); }
+	inline T *GetPrevVehicle() const { return (T *)this->Vehicle::GetPrevVehicle(); }
 
 	/**
 	 * Tests whether given index is a valid index for vehicle of this type
 	 * @param index tested index
 	 * @return is this index valid index of T?
 	 */
-	static FORCEINLINE bool IsValidID(size_t index)
+	static inline bool IsValidID(size_t index)
 	{
 		return Vehicle::IsValidID(index) && Vehicle::Get(index)->type == Type;
 	}
@@ -920,7 +996,7 @@ struct SpecializedVehicle : public Vehicle {
 	 * Gets vehicle with given index
 	 * @return pointer to vehicle with given index casted to T *
 	 */
-	static FORCEINLINE T *Get(size_t index)
+	static inline T *Get(size_t index)
 	{
 		return (T *)Vehicle::Get(index);
 	}
@@ -929,7 +1005,7 @@ struct SpecializedVehicle : public Vehicle {
 	 * Returns vehicle if the index is a valid index for this vehicle type
 	 * @return pointer to vehicle with given index if it's a vehicle of this type
 	 */
-	static FORCEINLINE T *GetIfValid(size_t index)
+	static inline T *GetIfValid(size_t index)
 	{
 		return IsValidID(index) ? Get(index) : NULL;
 	}
@@ -939,7 +1015,7 @@ struct SpecializedVehicle : public Vehicle {
 	 * @param v Vehicle pointer
 	 * @return pointer to SpecializedVehicle
 	 */
-	static FORCEINLINE T *From(Vehicle *v)
+	static inline T *From(Vehicle *v)
 	{
 		assert(v->type == Type);
 		return (T *)v;
@@ -950,7 +1026,7 @@ struct SpecializedVehicle : public Vehicle {
 	 * @param v Vehicle pointer
 	 * @return pointer to SpecializedVehicle
 	 */
-	static FORCEINLINE const T *From(const Vehicle *v)
+	static inline const T *From(const Vehicle *v)
 	{
 		assert(v->type == Type);
 		return (const T *)v;
@@ -958,19 +1034,19 @@ struct SpecializedVehicle : public Vehicle {
 
 	/**
 	 * Update vehicle sprite- and position caches
-	 * @param moved Was the vehicle moved?
-	 * @param turned Did the vehicle direction change?
+	 * @param force_update Force updating the vehicle on the viewport.
+	 * @param update_delta Also update the delta?
 	 */
-	FORCEINLINE void UpdateViewport(bool moved, bool turned)
+	inline void UpdateViewport(bool force_update, bool update_delta)
 	{
-		extern void VehicleMove(Vehicle *v, bool update_viewport);
+		extern void VehicleUpdateViewport(Vehicle *v, bool dirty);
 
 		/* Explicitly choose method to call to prevent vtable dereference -
 		 * it gives ~3% runtime improvements in games with many vehicles */
-		if (turned) ((T *)this)->T::UpdateDeltaXY(this->direction);
+		if (update_delta) ((T *)this)->T::UpdateDeltaXY(this->direction);
 		SpriteID old_image = this->cur_image;
-		this->cur_image = ((T *)this)->T::GetImage(this->direction);
-		if (moved || this->cur_image != old_image) VehicleMove(this, true);
+		this->cur_image = ((T *)this)->T::GetImage(this->direction, EIT_ON_MAP);
+		if (force_update || this->cur_image != old_image) VehicleUpdateViewport(this, true);
 	}
 };
 
@@ -984,7 +1060,7 @@ struct SpecializedVehicle : public Vehicle {
 /**
  * Disasters, like submarines, skyrangers and their shadows, belong to this class.
  */
-struct DisasterVehicle : public SpecializedVehicle<DisasterVehicle, VEH_DISASTER> {
+struct DisasterVehicle FINAL : public SpecializedVehicle<DisasterVehicle, VEH_DISASTER> {
 	SpriteID image_override;            ///< Override for the default disaster vehicle sprite.
 	VehicleID big_ufo_destroyer_target; ///< The big UFO that this destroyer is supposed to bomb.
 

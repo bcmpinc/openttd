@@ -105,19 +105,19 @@ public:
 	/** Free all our allocated data. */
 	~NetworkHTTPContentConnecter()
 	{
-		free((void*)this->url);
+		free(this->url);
 	}
 
 	virtual void OnFailure()
 	{
 		this->callback->OnFailure();
-		free((void*)this->data);
+		free(this->data);
 	}
 
 	virtual void OnConnect(SOCKET s)
 	{
 		new NetworkHTTPSocketHandler(s, this->callback, this->address.GetHostname(), this->url, this->data, this->depth);
-		/* We've relinguished control of data now. */
+		/* We've relinquished control of data now. */
 		this->data = NULL;
 	}
 };

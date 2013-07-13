@@ -14,7 +14,6 @@
 #include "company_base.h"
 #include "roadveh.h"
 #include "viewport_func.h"
-#include "window_func.h"
 #include "date_func.h"
 #include "command_func.h"
 #include "news_func.h"
@@ -25,6 +24,8 @@
 #include "roadstop_base.h"
 #include "industry.h"
 #include "core/random_func.hpp"
+#include "linkgraph/linkgraph.h"
+#include "linkgraph/linkgraphschedule.h"
 
 #include "table/strings.h"
 
@@ -64,7 +65,8 @@ Station::Station(TileIndex tile) :
 }
 
 /**
- * Clean up a station by clearing vehicle orders and invalidating windows.
+ * Clean up a station by clearing vehicle orders, invalidating windows and
+ * removing link stats.
  * Aircraft-Hangar orders need special treatment here, as the hangars are
  * actually part of a station (tiletype is STATION), but the order type
  * is OT_GOTO_DEPOT.
@@ -88,19 +90,44 @@ Station::~Station()
 		if (a->targetairport == this->index) a->targetairport = INVALID_STATION;
 	}
 
+	for (CargoID c = 0; c < NUM_CARGO; ++c) {
+		LinkGraph *lg = LinkGraph::GetIfValid(this->goods[c].link_graph);
+		if (lg == NULL) continue;
+
+		for (NodeID node = 0; node < lg->Size(); ++node) {
+			if ((*lg)[node][this->goods[c].node].LastUpdate() != INVALID_DATE) {
+				Station *st = Station::Get((*lg)[node].Station());
+				st->goods[c].flows.DeleteFlows(this->index);
+				RerouteCargo(st, c, this->index, st->index);
+			}
+		}
+		lg->RemoveNode(this->goods[c].node);
+		if (lg->Size() == 0) {
+			LinkGraphSchedule::Instance()->Unqueue(lg);
+			delete lg;
+		}
+	}
+
 	Vehicle *v;
 	FOR_ALL_VEHICLES(v) {
 		/* Forget about this station if this station is removed */
 		if (v->last_station_visited == this->index) {
 			v->last_station_visited = INVALID_STATION;
 		}
+		if (v->last_loading_station == this->index) {
+			v->last_loading_station = INVALID_STATION;
+		}
 	}
 
 	/* Clear the persistent storage. */
 	delete this->airport.psa;
 
-
-	InvalidateWindowData(WC_STATION_LIST, this->owner, 0);
+	if (this->owner == OWNER_NONE) {
+		/* Invalidate all in case of oil rigs. */
+		InvalidateWindowClassesData(WC_STATION_LIST, 0);
+	} else {
+		InvalidateWindowData(WC_STATION_LIST, this->owner, 0);
+	}
 
 	DeleteWindowById(WC_STATION_VIEW, index);
 
@@ -111,7 +138,7 @@ Station::~Station()
 	DeleteStationNews(this->index);
 
 	for (CargoID c = 0; c < NUM_CARGO; c++) {
-		this->goods[c].cargo.Truncate(0);
+		this->goods[c].cargo.Truncate();
 	}
 
 	CargoPacket::InvalidateAllFrom(this->index);
@@ -140,7 +167,7 @@ RoadStop *Station::GetPrimaryRoadStop(const RoadVehicle *v) const
 	for (; rs != NULL; rs = rs->next) {
 		/* The vehicle cannot go to this roadstop (different roadtype) */
 		if ((GetRoadTypes(rs->xy) & v->compatible_roadtypes) == ROADTYPES_NONE) continue;
-		/* The vehicle is articulated and can therefor not go the a standard road stop */
+		/* The vehicle is articulated and can therefore not go to a standard road stop. */
 		if (IsStandardRoadStopTile(rs->xy) && v->HasArticulatedPart()) continue;
 
 		/* The vehicle can actually go to this road stop. So, return it! */
@@ -373,7 +400,7 @@ void StationRect::MakeEmpty()
  * @note x and y are in Tile coordinates
  * @param x X coordinate
  * @param y Y coordinate
- * @param distance The maxmium distance a point may have (L1 norm)
+ * @param distance The maximum distance a point may have (L1 norm)
  * @return true if the point is within distance tiles of the station rectangle
  */
 bool StationRect::PtInExtendedRect(int x, int y, int distance) const
@@ -518,4 +545,23 @@ StationRect& StationRect::operator = (const Rect &src)
 	this->right = src.right;
 	this->bottom = src.bottom;
 	return *this;
+}
+
+/**
+ * Calculates the maintenance cost of all airports of a company.
+ * @param owner Company.
+ * @return Total cost.
+ */
+Money AirportMaintenanceCost(Owner owner)
+{
+	Money total_cost = 0;
+
+	const Station *st;
+	FOR_ALL_STATIONS(st) {
+		if (st->owner == owner && (st->facilities & FACIL_AIRPORT)) {
+			total_cost += _price[PR_INFRASTRUCTURE_AIRPORT] * st->airport.GetSpec()->maintenance_cost;
+		}
+	}
+	/* 3 bits fraction for the maintenance cost factor. */
+	return total_cost >> 3;
 }

@@ -10,9 +10,11 @@ function Regression::TestInit()
 {
 	print("");
 	print("--TestInit--");
+	print(" Ops:      " + this.GetOpsTillSuspend());
 	print(" TickTest: " + this.GetTick());
 	this.Sleep(1);
 	print(" TickTest: " + this.GetTick());
+	print(" Ops:      " + this.GetOpsTillSuspend());
 	print(" SetCommandDelay: " + AIController.SetCommandDelay(1));
 	print(" IsValid(vehicle.plane_speed): " + AIGameSettings.IsValid("vehicle.plane_speed"));
 	print(" vehicle.plane_speed: " + AIGameSettings.GetValue("vehicle.plane_speed"));
@@ -166,6 +168,8 @@ function Regression::TestInit()
 	foreach (idx, val in list) {
 		print("   " + idx);
 	}
+
+	print(" Ops:      " + this.GetOpsTillSuspend());
 }
 
 function Regression::Std()
@@ -919,12 +923,12 @@ function Regression::Order()
 	print("--Order--");
 	print("  GetOrderCount():       " + AIOrder.GetOrderCount(12));
 	print("  GetOrderDestination(): " + AIOrder.GetOrderDestination(12, 1));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.AIOF_TRANSFER));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.AIOF_TRANSFER | AIOrder.AIOF_UNLOAD));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.AIOF_TRANSFER | AIOrder.AIOF_FULL_LOAD));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33417, AIOrder.AIOF_SERVICE_IF_NEEDED));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33417, AIOrder.AIOF_STOP_IN_DEPOT));
-	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(0, AIOrder.AIOF_SERVICE_IF_NEEDED | AIOrder.AIOF_GOTO_NEAREST_DEPOT));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.OF_TRANSFER));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.OF_TRANSFER | AIOrder.OF_UNLOAD));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33416, AIOrder.OF_TRANSFER | AIOrder.OF_FULL_LOAD));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33417, AIOrder.OF_SERVICE_IF_NEEDED));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(33417, AIOrder.OF_STOP_IN_DEPOT));
+	print("  AreOrderFlagsValid():  " + AIOrder.AreOrderFlagsValid(0, AIOrder.OF_SERVICE_IF_NEEDED | AIOrder.OF_GOTO_NEAREST_DEPOT));
 	print("  IsValidConditionalOrder(): " + AIOrder.IsValidConditionalOrder(AIOrder.OC_LOAD_PERCENTAGE, AIOrder.CF_EQUALS));
 	print("  IsValidConditionalOrder(): " + AIOrder.IsValidConditionalOrder(AIOrder.OC_RELIABILITY, AIOrder.CF_IS_TRUE));
 	print("  IsValidConditionalOrder(): " + AIOrder.IsValidConditionalOrder(AIOrder.OC_REQUIRES_SERVICE, AIOrder.CF_IS_FALSE));
@@ -936,8 +940,8 @@ function Regression::Order()
 	print("  IsConditionalOrder():  " + AIOrder.IsConditionalOrder(12, 1));
 	print("  IsCurrentOrderPartOfOrderList(): " + AIOrder.IsCurrentOrderPartOfOrderList(12));
 	print("  GetOrderFlags():       " + AIOrder.GetOrderFlags(12, 1));
-	print("  AppendOrder():         " + AIOrder.AppendOrder(12, 33416, AIOrder.AIOF_TRANSFER));
-	print("  InsertOrder():         " + AIOrder.InsertOrder(12, 0, 33416, AIOrder.AIOF_TRANSFER));
+	print("  AppendOrder():         " + AIOrder.AppendOrder(12, 33416, AIOrder.OF_TRANSFER));
+	print("  InsertOrder():         " + AIOrder.InsertOrder(12, 0, 33416, AIOrder.OF_TRANSFER));
 	print("  GetOrderCount():       " + AIOrder.GetOrderCount(12));
 	print("  IsValidVehicleOrder(): " + AIOrder.IsValidVehicleOrder(12, 1));
 	print("  IsGotoStationOrder():  " + AIOrder.IsGotoStationOrder(12, 1));
@@ -949,7 +953,7 @@ function Regression::Order()
 	print("  GetOrderFlags():       " + AIOrder.GetOrderFlags(12, 1));
 	print("  GetOrderJumpTo():      " + AIOrder.GetOrderJumpTo(12, 1));
 	print("  RemoveOrder():         " + AIOrder.RemoveOrder(12, 0));
-	print("  SetOrderFlags():       " + AIOrder.SetOrderFlags(12, 0, AIOrder.AIOF_FULL_LOAD));
+	print("  SetOrderFlags():       " + AIOrder.SetOrderFlags(12, 0, AIOrder.OF_FULL_LOAD));
 	print("  GetOrderFlags():       " + AIOrder.GetOrderFlags(12, 0));
 	print("  GetOrderDestination(): " + AIOrder.GetOrderDestination(12, 0));
 	print("  CopyOrders():          " + AIOrder.CopyOrders(12, 1));
@@ -957,12 +961,12 @@ function Regression::Order()
 	print("  ShareOrders():         " + AIOrder.ShareOrders(13, 1));
 	print("  ShareOrders():         " + AIOrder.ShareOrders(13, 12));
 	print("  UnshareOrders():       " + AIOrder.UnshareOrders(13));
-	print("  AppendOrder():         " + AIOrder.AppendOrder(12, 33421, AIOrder.AIOF_NONE));
+	print("  AppendOrder():         " + AIOrder.AppendOrder(12, 33421, AIOrder.OF_NONE));
 
 	print("  GetStopLocation():     " + AIOrder.GetStopLocation(13, 0));
 	print("  BuildVehicle():        " + AIVehicle.BuildVehicle(23596, 8));
 	print("  BuildRailStation():    " + AIRail.BuildRailStation(7958, AIRail.RAILTRACK_NE_SW, 1, 1, AIStation.STATION_NEW));
-	print("  AppendOrder():         " + AIOrder.AppendOrder(20, 7958, AIOrder.AIOF_NONE));
+	print("  AppendOrder():         " + AIOrder.AppendOrder(20, 7958, AIOrder.OF_NONE));
 	print("  GetOrderCount():       " + AIOrder.GetOrderCount(20));
 	print("  GetStopLocation():     " + AIOrder.GetStopLocation(20, 0));
 	print("  SetStopLocation():     " + AIOrder.SetStopLocation(20, 0, AIOrder.STOPLOCATION_MIDDLE));
@@ -1387,8 +1391,16 @@ function Regression::TileList()
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		print("    " + i + " => " + list.GetValue(i));
 	}
+
+	list.AddRectangle(31895 - 256 * 5, 256 * 5 + 31895 + 8);
+
 	list.Valuate(AITile.GetOwner);
 	print("  GetOwner() ListDump:");
+	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
+		print("    " + i + " => " + list.GetValue(i));
+	}
+	list.Valuate(AITile.GetTownAuthority);
+	print("  GetTownAuthority() ListDump:");
 	for (local i = list.Begin(); !list.IsEnd(); i = list.Next()) {
 		print("    " + i + " => " + list.GetValue(i));
 	}
@@ -1855,13 +1867,13 @@ function Regression::Start()
 		print("  GetNextEvent:          " + (e == null ? "null" : "instance"));
 		print("    GetEventType:        " + e.GetEventType());
 		switch (e.GetEventType()) {
-			case AIEvent.AI_ET_SUBSIDY_OFFER: {
+			case AIEvent.ET_SUBSIDY_OFFER: {
 				local c = AIEventSubsidyOffer.Convert(e);
 				print("      EventName:         SubsidyOffer");
 				PrintSubsidy(c.GetSubsidyID());
 			} break;
 
-			case AIEvent.AI_ET_VEHICLE_WAITING_IN_DEPOT: {
+			case AIEvent.ET_VEHICLE_WAITING_IN_DEPOT: {
 				local c = AIEventVehicleWaitingInDepot.Convert(e);
 				print("      EventName:         VehicleWaitingInDepot");
 				print("      VehicleID:         " + c.GetVehicleID());

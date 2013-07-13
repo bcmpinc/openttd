@@ -18,37 +18,68 @@
 #include "vehicle_type.h"
 #include "engine_type.h"
 #include "gfx_type.h"
+#include "newgrf_spritegroup.h"
+
+/** Resolver for a vehicle scope. */
+struct VehicleScopeResolver : public ScopeResolver {
+	const struct Vehicle *v; ///< The vehicle being resolved.
+	EngineID self_type;      ///< Type of the vehicle.
+	bool info_view;          ///< Indicates if the item is being drawn in an info window.
+
+	VehicleScopeResolver(ResolverObject *ro, EngineID engine_type, const Vehicle *v, bool info_view);
+
+	void SetVehicle(const Vehicle *v) { this->v = v; }
+
+	/* virtual */ uint32 GetRandomBits() const;
+	/* virtual */ uint32 GetVariable(byte variable, uint32 parameter, bool *available) const;
+	/* virtual */ uint32 GetTriggers() const;
+	/* virtual */ void SetTriggers(int triggers) const;
+};
+
+/** Resolver for a vehicle (chain) */
+struct VehicleResolverObject : public ResolverObject {
+	VehicleScopeResolver self_scope;     ///< Scope resolver for the indicated vehicle.
+	VehicleScopeResolver parent_scope;   ///< Scope resolver for its parent vehicle.
+
+	VehicleScopeResolver relative_scope; ///< Scope resolver for an other vehicle in the chain.
+	byte cached_relative_count;          ///< Relative position of the other vehicle.
+
+	VehicleResolverObject(EngineID engine_type, const Vehicle *v, bool info_view = false,
+			CallbackID callback = CBID_NO_CALLBACK, uint32 callback_param1 = 0, uint32 callback_param2 = 0);
+
+	/* virtual */ ScopeResolver *GetScope(VarSpriteGroupScope scope = VSG_SCOPE_SELF, byte relative = 0);
+
+	/* virtual */ const SpriteGroup *ResolveReal(const RealSpriteGroup *group) const;
+};
 
 static const uint TRAININFO_DEFAULT_VEHICLE_WIDTH   = 29;
-static const uint ROADVEHINFO_DEFAULT_VEHICLE_WIDTH = 28;
+static const uint ROADVEHINFO_DEFAULT_VEHICLE_WIDTH = 32;
 static const uint VEHICLEINFO_FULL_VEHICLE_WIDTH    = 32;
 
 void SetWagonOverrideSprites(EngineID engine, CargoID cargo, const struct SpriteGroup *group, EngineID *train_id, uint trains);
 const SpriteGroup *GetWagonOverrideSpriteSet(EngineID engine, CargoID cargo, EngineID overriding_engine);
 void SetCustomEngineSprites(EngineID engine, byte cargo, const struct SpriteGroup *group);
-SpriteID GetCustomEngineSprite(EngineID engine, const Vehicle *v, Direction direction);
-SpriteID GetRotorOverrideSprite(EngineID engine, const struct Aircraft *v, bool info_view);
-#define GetCustomRotorSprite(v, i) GetRotorOverrideSprite(v->engine_type, v, i)
-#define GetCustomRotorIcon(et) GetRotorOverrideSprite(et, NULL, true)
+SpriteID GetCustomEngineSprite(EngineID engine, const Vehicle *v, Direction direction, EngineImageType image_type);
+SpriteID GetRotorOverrideSprite(EngineID engine, const struct Aircraft *v, bool info_view, EngineImageType image_type);
+#define GetCustomRotorSprite(v, i, image_type) GetRotorOverrideSprite(v->engine_type, v, i, image_type)
+#define GetCustomRotorIcon(et, image_type) GetRotorOverrideSprite(et, NULL, true, image_type)
 
 /* Forward declaration of GRFFile, to avoid unnecessary inclusion of newgrf.h
  * elsewhere... */
 struct GRFFile;
 
 void SetEngineGRF(EngineID engine, const struct GRFFile *file);
-const struct GRFFile *GetEngineGRF(EngineID engine);
-uint32 GetEngineGRFID(EngineID engine);
 
 uint16 GetVehicleCallback(CallbackID callback, uint32 param1, uint32 param2, EngineID engine, const Vehicle *v);
 uint16 GetVehicleCallbackParent(CallbackID callback, uint32 param1, uint32 param2, EngineID engine, const Vehicle *v, const Vehicle *parent);
 bool UsesWagonOverride(const Vehicle *v);
-#define GetCustomVehicleSprite(v, direction) GetCustomEngineSprite(v->engine_type, v, direction)
-#define GetCustomVehicleIcon(et, direction) GetCustomEngineSprite(et, NULL, direction)
+#define GetCustomVehicleSprite(v, direction, image_type) GetCustomEngineSprite(v->engine_type, v, direction, image_type)
+#define GetCustomVehicleIcon(et, direction, image_type) GetCustomEngineSprite(et, NULL, direction, image_type)
 
 /* Handler to Evaluate callback 36. If the callback fails (i.e. most of the
  * time) orig_value is returned */
 uint GetVehicleProperty(const Vehicle *v, PropertyID property, uint orig_value);
-uint GetEngineProperty(EngineID engine, PropertyID property, uint orig_value);
+uint GetEngineProperty(EngineID engine, PropertyID property, uint orig_value, const Vehicle *v = NULL);
 
 enum VehicleTrigger {
 	VEHICLE_TRIGGER_NEW_CARGO     = 0x01,
@@ -65,8 +96,7 @@ void TriggerVehicle(Vehicle *veh, VehicleTrigger trigger);
 
 void UnloadWagonOverrides(Engine *e);
 
-uint ListPositionOfEngine(EngineID engine);
-void AlterVehicleListOrder(EngineID engine, EngineID target);
+void AlterVehicleListOrder(EngineID engine, uint target);
 void CommitVehicleListOrderChanges();
 
 EngineID GetNewEngineID(const GRFFile *file, VehicleType type, uint16 internal_id);

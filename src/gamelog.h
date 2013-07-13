@@ -30,6 +30,7 @@ enum GamelogActionType {
 void GamelogStartAction(GamelogActionType at);
 void GamelogStopAction();
 
+void GamelogFree(struct LoggedAction *gamelog_action, uint gamelog_actions);
 void GamelogReset();
 
 /**
@@ -60,5 +61,7 @@ void GamelogTestRevision();
 void GamelogTestMode();
 
 bool GamelogGRFBugReverse(uint32 grfid, uint16 internal_id);
+
+void GamelogInfo(struct LoggedAction *gamelog_action, uint gamelog_actions, uint32 *last_ottd_rev, byte *ever_modified, bool *removed_newgrfs);
 
 #endif /* GAMELOG_H */

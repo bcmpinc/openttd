@@ -18,6 +18,7 @@
 #include "../network.h"
 #include "../network_internal.h"
 #include "../../debug.h"
+#include "../../error.h"
 
 #include "table/strings.h"
 
@@ -46,8 +47,7 @@ NetworkRecvStatus NetworkGameSocketHandler::CloseConnection(bool error)
 	if (!_network_server && _networking) {
 		_switch_mode = SM_MENU;
 		_networking = false;
-		extern StringID _switch_mode_errorstr;
-		_switch_mode_errorstr = STR_NETWORK_ERROR_LOSTCONNECTION;
+		ShowErrorMessage(STR_NETWORK_ERROR_LOSTCONNECTION, INVALID_STRING_ID, WL_CRITICAL);
 
 		return NETWORK_RECV_STATUS_CONN_LOST;
 	}
@@ -55,12 +55,6 @@ NetworkRecvStatus NetworkGameSocketHandler::CloseConnection(bool error)
 	return this->CloseConnection(error ? NETWORK_RECV_STATUS_SERVER_ERROR : NETWORK_RECV_STATUS_CONN_LOST);
 }
 
-
-/**
- * Defines a simple (switch) case for each network packet
- * @param type the packet type to create the case for
- */
-#define GAME_COMMAND(type) case type: return this->NetworkPacketReceive_ ## type ## _command(p); break;
 
 /**
  * Handle the given packet, i.e. pass it to the right parser receive command.

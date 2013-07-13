@@ -13,9 +13,7 @@
 #define NEWGRF_SPRITEGROUP_H
 
 #include "town_type.h"
-#include "gfx_type.h"
 #include "engine_type.h"
-#include "core/pool_type.hpp"
 #include "house_type.h"
 
 #include "newgrf_callbacks.h"
@@ -163,8 +161,8 @@ enum DeterministicSpriteGroupAdjustOperation {
 	DSGA_OP_RST,  ///< return b
 	DSGA_OP_STOP, ///< store a into persistent storage, indexed by b, return a
 	DSGA_OP_ROR,  ///< rotate a b positions to the right
-	DSGA_OP_SCMP, ///< (signed) comparision (a < b -> 0, a == b = 1, a > b = 2)
-	DSGA_OP_UCMP, ///< (unsigned) comparision (a < b -> 0, a == b = 1, a > b = 2)
+	DSGA_OP_SCMP, ///< (signed) comparison (a < b -> 0, a == b = 1, a > b = 2)
+	DSGA_OP_UCMP, ///< (unsigned) comparison (a < b -> 0, a == b = 1, a > b = 2)
 	DSGA_OP_SHL,  ///< a << b
 	DSGA_OP_SHR,  ///< (unsigned) a >> b
 	DSGA_OP_SAR,  ///< (signed) a >> b
@@ -240,14 +238,15 @@ struct CallbackResultSpriteGroup : SpriteGroup {
 	/**
 	 * Creates a spritegroup representing a callback result
 	 * @param value The value that was used to represent this callback result
+	 * @param grf_version8 True, if we are dealing with a new NewGRF which uses GRF version >= 8.
 	 */
-	CallbackResultSpriteGroup(uint16 value) :
+	CallbackResultSpriteGroup(uint16 value, bool grf_version8) :
 		SpriteGroup(SGT_CALLBACK),
 		result(value)
 	{
-		/* Old style callback results have the highest byte 0xFF so signify it is a callback result
+		/* Old style callback results (only valid for version < 8) have the highest byte 0xFF so signify it is a callback result.
 		 * New style ones only have the highest bit set (allows 15-bit results, instead of just 8) */
-		if ((this->result >> 8) == 0xFF) {
+		if (!grf_version8 && (this->result >> 8) == 0xFF) {
 			this->result &= ~0xFF00;
 		} else {
 			this->result &= ~0x8000;
@@ -302,88 +301,54 @@ struct IndustryProductionSpriteGroup : SpriteGroup {
 	uint8 again;
 };
 
+struct ResolverObject;
 
+/**
+ * Interface to query and set values specific to a single #VarSpriteGroupScope (action 2 scope).
+ *
+ * Multiple of these interfaces are combined into a #ResolverObject to allow access
+ * to different game entities from a #SpriteGroup-chain (action 1-2-3 chain).
+ */
+struct ScopeResolver {
+	ResolverObject *ro; ///< Surrounding resolver object.
+
+	ScopeResolver(ResolverObject *ro);
+	virtual ~ScopeResolver();
+
+	virtual uint32 GetRandomBits() const;
+	virtual uint32 GetTriggers() const;
+	virtual void SetTriggers(int triggers) const;
+
+	virtual uint32 GetVariable(byte variable, uint32 parameter, bool *available) const;
+	virtual void StorePSA(uint reg, int32 value);
+};
+
+/**
+ * Interface for #SpriteGroup-s to access the gamestate.
+ *
+ * Using this interface #SpriteGroup-chains (action 1-2-3 chains) can be resolved,
+ * to get the results of callbacks, rerandomisations or normal sprite lookups.
+ */
 struct ResolverObject {
-	CallbackID callback;
-	uint32 callback_param1;
-	uint32 callback_param2;
+	ResolverObject(const GRFFile *grffile, CallbackID callback = CBID_NO_CALLBACK, uint32 callback_param1 = 0, uint32 callback_param2 = 0);
+	virtual ~ResolverObject();
+
+	ScopeResolver default_scope; ///< Default implementation of the grf scope.
+
+	CallbackID callback;        ///< Callback being resolved.
+	uint32 callback_param1;     ///< First parameter (var 10) of the callback.
+	uint32 callback_param2;     ///< Second parameter (var 18) of the callback.
 
 	byte trigger;
 
 	uint32 last_value;          ///< Result of most recent DeterministicSpriteGroup (including procedure calls)
 	uint32 reseed[VSG_END];     ///< Collects bits to rerandomise while triggering triggers.
 
-	VarSpriteGroupScope scope;  ///< Scope of currently resolved DeterministicSpriteGroup resp. RandomizedSpriteGroup
-	byte count;                 ///< Additional scope for RandomizedSpriteGroup
-
 	const GRFFile *grffile;     ///< GRFFile the resolved SpriteGroup belongs to
 
-	union {
-		struct {
-			const struct Vehicle *self;
-			const struct Vehicle *parent;
-			EngineID self_type;
-			bool info_view;                ///< Indicates if the item is being drawn in an info window
-		} vehicle;
-		struct {
-			TileIndex tile;
-		} canal;
-		struct {
-			TileIndex tile;
-			struct BaseStation *st;
-			const struct StationSpec *statspec;
-			CargoID cargo_type;
-			Axis axis;                     ///< Station axis, used only for the slope check callback.
-		} station;
-		struct {
-			TileIndex tile;
-			Town *town;                    ///< Town of this house
-			HouseID house_id;
-			uint16 initial_random_bits;    ///< Random bits during construction checks
-			bool not_yet_constructed;      ///< True for construction check
-		} house;
-		struct {
-			TileIndex tile;
-			Industry *ind;
-			IndustryGfx gfx;
-			IndustryType type;
-		} industry;
-		struct {
-			const struct CargoSpec *cs;
-		} cargo;
-		struct {
-			CargoID cargo_type;
-			uint8 default_selection;
-			uint8 src_industry;            ///< Source industry substitute type. 0xFF for "town", 0xFE for "unknown".
-			uint8 dst_industry;            ///< Destination industry substitute type. 0xFF for "town", 0xFE for "unknown".
-			uint8 distance;
-			AIConstructionEvent event;
-			uint8 count;
-			uint8 station_size;
-		} generic;
-		struct {
-			TileIndex tile;                ///< Tracktile. For track on a bridge this is the southern bridgehead.
-			TileContext context;           ///< Are we resolving sprites for the upper halftile, or on a bridge?
-		} routes;
-		struct {
-			struct Station *st;            ///< Station of the airport for which the callback is run, or NULL for build gui.
-			byte airport_id;               ///< Type of airport for which the callback is run
-			byte layout;                   ///< Layout of the airport to build.
-			TileIndex tile;                ///< Tile for the callback, only valid for airporttile callbacks.
-		} airport;
-		struct {
-			struct Object *o;              ///< The object the callback is ran for.
-			TileIndex tile;                ///< The tile related to the object.
-			uint8 view;                    ///< The view of the object.
-		} object;
-	} u;
+	virtual const SpriteGroup *ResolveReal(const RealSpriteGroup *group) const;
 
-	uint32 (*GetRandomBits)(const struct ResolverObject*);
-	uint32 (*GetTriggers)(const struct ResolverObject*);
-	void (*SetTriggers)(const struct ResolverObject*, int);
-	uint32 (*GetVariable)(const struct ResolverObject*, byte, byte, bool*);
-	const SpriteGroup *(*ResolveReal)(const struct ResolverObject*, const RealSpriteGroup*);
-	void (*StorePSA)(struct ResolverObject*, uint, int32);
+	virtual ScopeResolver *GetScope(VarSpriteGroupScope scope = VSG_SCOPE_SELF, byte relative = 0);
 
 	/**
 	 * Returns the OR-sum of all bits that need reseeding

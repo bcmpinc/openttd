@@ -12,6 +12,7 @@
 #ifndef FILEIO_FUNC_H
 #define FILEIO_FUNC_H
 
+#include "core/enum_type.hpp"
 #include "fileio_type.h"
 
 void FioSeekTo(size_t pos, int mode);
@@ -55,14 +56,16 @@ char *FioFindFullPath(char *buf, size_t buflen, Subdirectory subdir, const char 
 char *FioAppendDirectory(char *buf, size_t buflen, Searchpath sp, Subdirectory subdir);
 char *FioGetDirectory(char *buf, size_t buflen, Subdirectory subdir);
 
+const char *FiosGetScreenshotDir();
+
 void SanitizeFilename(char *filename);
 bool AppendPathSeparator(char *buf, size_t buflen);
 void DeterminePaths(const char *exe);
 void *ReadFileToMem(const char *filename, size_t *lenp, size_t maxsize);
 bool FileExists(const char *filename);
-const char *FioTarFirstDir(const char *tarname);
-void FioTarAddLink(const char *src, const char *dest);
-bool ExtractTar(const char *tar_filename);
+const char *FioTarFirstDir(const char *tarname, Subdirectory subdir);
+void FioTarAddLink(const char *src, const char *dest, Subdirectory subdir);
+bool ExtractTar(const char *tar_filename, Subdirectory subdir);
 
 extern char *_personal_dir; ///< custom directory for personal settings, saves, newgrf, etc.
 
@@ -90,16 +93,31 @@ public:
 
 /** Helper for scanning for files with tar as extension */
 class TarScanner : FileScanner {
+	uint DoScan(Subdirectory sd);
 public:
+	/** The mode of tar scanning. */
+	enum Mode {
+		NONE     = 0,      ///< Scan nothing.
+		BASESET  = 1 << 0, ///< Scan for base sets.
+		NEWGRF   = 1 << 1, ///< Scan for non-base sets.
+		AI       = 1 << 2, ///< Scan for AIs and its libraries.
+		SCENARIO = 1 << 3, ///< Scan for scenarios and heightmaps.
+		GAME     = 1 << 4, ///< Scan for game scripts.
+		ALL      = BASESET | NEWGRF | AI | SCENARIO | GAME, ///< Scan for everything.
+	};
+
 	/* virtual */ bool AddFile(const char *filename, size_t basepath_length, const char *tar_filename = NULL);
 
+	bool AddFile(Subdirectory sd, const char *filename);
+
 	/** Do the scan for Tars. */
-	static uint DoScan();
+	static uint DoScan(TarScanner::Mode mode);
 };
+
+DECLARE_ENUM_AS_BIT_SET(TarScanner::Mode)
 
 /* Implementation of opendir/readdir/closedir for Windows */
 #if defined(WIN32)
-#include <windows.h>
 struct DIR;
 
 struct dirent { // XXX - only d_name implemented
@@ -108,19 +126,6 @@ struct dirent { // XXX - only d_name implemented
 	 * save us a call to GetFileAttributes if we want information
 	 * about the file (for example in function fio_bla) */
 	DIR *dir;
-};
-
-struct DIR {
-	HANDLE hFind;
-	/* the dirent returned by readdir.
-	 * note: having only one global instance is not possible because
-	 * multiple independent opendir/readdir sequences must be supported. */
-	dirent ent;
-	WIN32_FIND_DATA fd;
-	/* since opendir calls FindFirstFile, we need a means of telling the
-	 * first call to readdir that we already have a file.
-	 * that's the case iff this is true */
-	bool at_first_entry;
 };
 
 DIR *opendir(const TCHAR *path);

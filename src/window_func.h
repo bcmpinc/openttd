@@ -7,7 +7,7 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** @file window_func.h Window functions not directly related to making/drawing windows. */
+/** @file window_func.h %Window functions not directly related to making/drawing windows. */
 
 #ifndef WINDOW_FUNC_H
 #define WINDOW_FUNC_H
@@ -19,7 +19,7 @@ Window *FindWindowById(WindowClass cls, WindowNumber number);
 Window *FindWindowByClass(WindowClass cls);
 void ChangeWindowOwner(Owner old_owner, Owner new_owner);
 
-void ResizeWindow(Window *w, int x, int y);
+void ResizeWindow(Window *w, int x, int y, bool clamp_to_screen = true);
 int PositionMainToolbar(Window *w);
 int PositionStatusbar(Window *w);
 int PositionNewsMessage(Window *w);

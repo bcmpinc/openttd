@@ -14,8 +14,9 @@
 #include "../stdafx.h"
 #include "../rev.h"
 #include "../ai/ai.hpp"
+#include "../game/game.hpp"
 #include "../window_func.h"
-#include "../gui.h"
+#include "../error.h"
 #include "../base_media_base.h"
 #include "../settings_type.h"
 #include "network_content.h"
@@ -56,7 +57,7 @@ bool ClientNetworkContentSocketHandler::Receive_SERVER_INFO(Packet *p)
 	p->Recv_string(ci->name, lengthof(ci->name));
 	p->Recv_string(ci->version, lengthof(ci->name));
 	p->Recv_string(ci->url, lengthof(ci->url));
-	p->Recv_string(ci->description, lengthof(ci->description),  true);
+	p->Recv_string(ci->description, lengthof(ci->description), SVS_REPLACE_WITH_QUESTION_MARK | SVS_ALLOW_NEWLINE);
 
 	ci->unique_id = p->Recv_uint32();
 	for (uint j = 0; j < sizeof(ci->md5sum); j++) {
@@ -97,8 +98,19 @@ bool ClientNetworkContentSocketHandler::Receive_SERVER_INFO(Packet *p)
 			break;
 
 		case CONTENT_TYPE_AI:
-		case CONTENT_TYPE_AI_LIBRARY:
 			proc = AI::HasAI; break;
+			break;
+
+		case CONTENT_TYPE_AI_LIBRARY:
+			proc = AI::HasAILibrary; break;
+			break;
+
+		case CONTENT_TYPE_GAME:
+			proc = Game::HasGame; break;
+			break;
+
+		case CONTENT_TYPE_GAME_LIBRARY:
+			proc = Game::HasGameLibrary; break;
 			break;
 
 		case CONTENT_TYPE_SCENARIO:
@@ -177,10 +189,10 @@ void ClientNetworkContentSocketHandler::RequestContentList(ContentType type)
 		this->RequestContentList(CONTENT_TYPE_BASE_SOUNDS);
 		this->RequestContentList(CONTENT_TYPE_SCENARIO);
 		this->RequestContentList(CONTENT_TYPE_HEIGHTMAP);
-#ifdef ENABLE_AI
 		this->RequestContentList(CONTENT_TYPE_AI);
 		this->RequestContentList(CONTENT_TYPE_AI_LIBRARY);
-#endif /* ENABLE_AI */
+		this->RequestContentList(CONTENT_TYPE_GAME);
+		this->RequestContentList(CONTENT_TYPE_GAME_LIBRARY);
 		this->RequestContentList(CONTENT_TYPE_NEWGRF);
 		return;
 	}
@@ -372,18 +384,8 @@ void ClientNetworkContentSocketHandler::DownloadSelectedContentFallback(const Co
  */
 static char *GetFullFilename(const ContentInfo *ci, bool compressed)
 {
-	Subdirectory dir;
-	switch (ci->type) {
-		default: return NULL;
-		case CONTENT_TYPE_BASE_GRAPHICS: dir = BASESET_DIR;    break;
-		case CONTENT_TYPE_BASE_MUSIC:    dir = GM_DIR;         break;
-		case CONTENT_TYPE_BASE_SOUNDS:   dir = BASESET_DIR;    break;
-		case CONTENT_TYPE_NEWGRF:        dir = NEWGRF_DIR;     break;
-		case CONTENT_TYPE_AI:            dir = AI_DIR;         break;
-		case CONTENT_TYPE_AI_LIBRARY:    dir = AI_LIBRARY_DIR; break;
-		case CONTENT_TYPE_SCENARIO:      dir = SCENARIO_DIR;   break;
-		case CONTENT_TYPE_HEIGHTMAP:     dir = HEIGHTMAP_DIR;  break;
-	}
+	Subdirectory dir = GetContentInfoSubDir(ci->type);
+	if (dir == NO_DIRECTORY) return NULL;
 
 	static char buf[MAX_PATH];
 	FioGetFullPath(buf, lengthof(buf), SP_AUTODOWNLOAD_DIR, dir, ci->filename);
@@ -474,7 +476,7 @@ bool ClientNetworkContentSocketHandler::Receive_SERVER_CONTENT(Packet *p)
 		/* We have a file opened, thus are downloading internal content */
 		size_t toRead = (size_t)(p->size - p->pos);
 		if (fwrite(p->buffer + p->pos, 1, toRead, this->curFile) != toRead) {
-			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_CONTENT_DOWNLOAD);
 			ShowErrorMessage(STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD, STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_FILE_NOT_WRITABLE, WL_ERROR);
 			this->Close();
 			fclose(this->curFile);
@@ -507,8 +509,8 @@ bool ClientNetworkContentSocketHandler::BeforeDownload()
 		/* The filesize is > 0, so we are going to download it */
 		const char *filename = GetFullFilename(this->curInfo, true);
 		if (filename == NULL || (this->curFile = fopen(filename, "wb")) == NULL) {
-			/* Unless that fails ofcourse... */
-			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, 0);
+			/* Unless that fails of course... */
+			DeleteWindowById(WC_NETWORK_STATUS_WINDOW, WN_NETWORK_STATUS_WINDOW_CONTENT_DOWNLOAD);
 			ShowErrorMessage(STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD, STR_CONTENT_ERROR_COULD_NOT_DOWNLOAD_FILE_NOT_WRITABLE, WL_ERROR);
 			return false;
 		}
@@ -530,12 +532,15 @@ void ClientNetworkContentSocketHandler::AfterDownload()
 	if (GunzipFile(this->curInfo)) {
 		unlink(GetFullFilename(this->curInfo, true));
 
+		Subdirectory sd = GetContentInfoSubDir(this->curInfo->type);
+		if (sd == NO_DIRECTORY) NOT_REACHED();
+
 		TarScanner ts;
-		ts.AddFile(GetFullFilename(this->curInfo, false), 0);
+		ts.AddFile(sd, GetFullFilename(this->curInfo, false));
 
 		if (this->curInfo->type == CONTENT_TYPE_BASE_MUSIC) {
 			/* Music can't be in a tar. So extract the tar! */
-			ExtractTar(GetFullFilename(this->curInfo, false));
+			ExtractTar(GetFullFilename(this->curInfo, false), BASESET_DIR);
 			unlink(GetFullFilename(this->curInfo, false));
 		}
 

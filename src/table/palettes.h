@@ -11,12 +11,13 @@
 
 #include "../core/endian_type.hpp"
 
-#define M(r, g, b) { 0xff << 24 | (r) << 16 | (g) << 8 | (b) }
+#define M(r, g, b) Colour(r, g, b)
 
 /** Colour palette (DOS) */
-static const Colour _palette[256] = {
+static const Palette _palette = {
+	{
 		/* transparent */
-		{             0},
+		Colour(0, 0, 0, 0),
 		/* grey scale */
 		                  M( 16,  16,  16), M( 32,  32,  32), M( 48,  48,  48),
 		M( 65,  64,  65), M( 82,  80,  82), M( 98, 101,  98), M(115, 117, 115),
@@ -89,6 +90,9 @@ static const Colour _palette[256] = {
 		M(  0,   0,   0), M(  0,   0,   0), M(  0,   0,   0),
 		/* pure white */
 		                                                      M(252, 252, 252)
+	},
+	0,  // First dirty
+	256 // Dirty count
 };
 
 /** Description of the length of the palette cycle animations */

@@ -39,11 +39,7 @@ static CommandCallback * const _callback_table[] = {
 	/* 0x0F */ CcPlaySound1E,
 	/* 0x10 */ CcStation,
 	/* 0x11 */ CcTerraform,
-#ifdef ENABLE_AI
 	/* 0x12 */ CcAI,
-#else
-	/* 0x12 */ NULL,
-#endif /* ENABLE_AI */
 	/* 0x13 */ CcCloneVehicle,
 	/* 0x14 */ CcGiveMoney,
 	/* 0x15 */ CcCreateGroup,
@@ -51,6 +47,8 @@ static CommandCallback * const _callback_table[] = {
 	/* 0x17 */ CcRoadStop,
 	/* 0x18 */ CcBuildIndustry,
 	/* 0x19 */ CcStartStopVehicle,
+	/* 0x1A */ CcGame,
+	/* 0x1B */ CcAddVehicleNewGroup,
 };
 
 /**
@@ -265,7 +263,12 @@ static void DistributeCommandPacket(CommandPacket cp, const NetworkClientSocket 
  */
 static void DistributeQueue(CommandQueue *queue, const NetworkClientSocket *owner)
 {
+#ifdef DEBUG_DUMP_COMMANDS
+	/* When replaying we do not want this limitation. */
+	int to_go = UINT16_MAX;
+#else
 	int to_go = _settings_client.network.commands_per_frame;
+#endif
 
 	CommandPacket *cp;
 	while (--to_go >= 0 && (cp = queue->Pop(true)) != NULL) {
@@ -298,16 +301,16 @@ const char *NetworkGameSocketHandler::ReceiveCommand(Packet *p, CommandPacket *c
 {
 	cp->company = (CompanyID)p->Recv_uint8();
 	cp->cmd     = p->Recv_uint32();
-	cp->p1      = p->Recv_uint32();
-	cp->p2      = p->Recv_uint32();
-	cp->tile    = p->Recv_uint32();
-	p->Recv_string(cp->text, lengthof(cp->text));
-
-	byte callback = p->Recv_uint8();
-
 	if (!IsValidCommand(cp->cmd))               return "invalid command";
 	if (GetCommandFlags(cp->cmd) & CMD_OFFLINE) return "offline only command";
 	if ((cp->cmd & CMD_FLAGS_MASK) != 0)        return "invalid command flag";
+
+	cp->p1      = p->Recv_uint32();
+	cp->p2      = p->Recv_uint32();
+	cp->tile    = p->Recv_uint32();
+	p->Recv_string(cp->text, lengthof(cp->text), (!_network_server && GetCommandFlags(cp->cmd) & CMD_STR_CTRL) != 0 ? SVS_ALLOW_CONTROL_CODE | SVS_REPLACE_WITH_QUESTION_MARK : SVS_REPLACE_WITH_QUESTION_MARK);
+
+	byte callback = p->Recv_uint8();
 	if (callback >= lengthof(_callback_table))  return "invalid callback";
 
 	cp->callback = _callback_table[callback];

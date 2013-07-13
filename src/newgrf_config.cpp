@@ -19,6 +19,8 @@
 #include "window_func.h"
 #include "progress.h"
 #include "video/video_driver.hpp"
+#include "strings_func.h"
+#include "textfile_gui.h"
 
 #include "fileio_func.h"
 #include "fios.h"
@@ -43,11 +45,13 @@ GRFTextWrapper::~GRFTextWrapper()
 GRFConfig::GRFConfig(const char *filename) :
 	name(new GRFTextWrapper()),
 	info(new GRFTextWrapper()),
+	url(new GRFTextWrapper()),
 	num_valid_params(lengthof(param))
 {
 	if (filename != NULL) this->filename = strdup(filename);
 	this->name->AddRef();
 	this->info->AddRef();
+	this->url->AddRef();
 }
 
 /**
@@ -59,6 +63,7 @@ GRFConfig::GRFConfig(const GRFConfig &config) :
 	ident(config.ident),
 	name(config.name),
 	info(config.info),
+	url(config.url),
 	version(config.version),
 	min_loadable_version(config.min_loadable_version),
 	flags(config.flags & ~(1 << GCF_COPY)),
@@ -74,6 +79,7 @@ GRFConfig::GRFConfig(const GRFConfig &config) :
 	if (config.filename != NULL) this->filename = strdup(config.filename);
 	this->name->AddRef();
 	this->info->AddRef();
+	this->url->AddRef();
 	if (config.error    != NULL) this->error    = new GRFError(*config.error);
 	for (uint i = 0; i < config.param_info.Length(); i++) {
 		if (config.param_info[i] == NULL) {
@@ -94,6 +100,7 @@ GRFConfig::~GRFConfig()
 	}
 	this->name->Release();
 	this->info->Release();
+	this->url->Release();
 
 	for (uint i = 0; i < this->param_info.Length(); i++) delete this->param_info[i];
 }
@@ -116,6 +123,15 @@ const char *GRFConfig::GetName() const
 const char *GRFConfig::GetDescription() const
 {
 	return GetGRFStringFromGRFText(this->info->text);
+}
+
+/**
+ * Get the grf url.
+ * @return A string with an url of this grf.
+ */
+const char *GRFConfig::GetURL() const
+{
+	return GetGRFStringFromGRFText(this->url->text);
 }
 
 /** Set the default value for all parameters as specified by action14. */
@@ -148,6 +164,17 @@ void GRFConfig::SetSuitablePalette()
 	SB(this->palette, GRFP_USE_BIT, 1, pal == PAL_WINDOWS ? GRFP_USE_WINDOWS : GRFP_USE_DOS);
 }
 
+/**
+ * Finalize Action 14 info after file scan is finished.
+ */
+void GRFConfig::FinalizeParameterInfo()
+{
+	for (GRFParameterInfo **info = this->param_info.Begin(); info != this->param_info.End(); ++info) {
+		if (*info == NULL) continue;
+		(*info)->Finalize();
+	}
+}
+
 GRFConfig *_all_grfs;
 GRFConfig *_grfconfig;
 GRFConfig *_grfconfig_newgame;
@@ -173,8 +200,7 @@ GRFError::GRFError(const GRFError &error) :
 	custom_message(error.custom_message),
 	data(error.data),
 	message(error.message),
-	severity(error.severity),
-	num_params(error.num_params)
+	severity(error.severity)
 {
 	if (error.custom_message != NULL) this->custom_message = strdup(error.custom_message);
 	if (error.data           != NULL) this->data           = strdup(error.data);
@@ -217,7 +243,8 @@ GRFParameterInfo::GRFParameterInfo(GRFParameterInfo &info) :
 	def_value(info.def_value),
 	param_nr(info.param_nr),
 	first_bit(info.first_bit),
-	num_bit(info.num_bit)
+	num_bit(info.num_bit),
+	complete_labels(info.complete_labels)
 {
 	for (uint i = 0; i < info.value_names.Length(); i++) {
 		SmallPair<uint32, GRFText *> *data = info.value_names.Get(i);
@@ -262,7 +289,21 @@ void GRFParameterInfo::SetValue(struct GRFConfig *config, uint32 value)
 		SB(config->param[this->param_nr], this->first_bit, this->num_bit, value);
 	}
 	config->num_params = max<uint>(config->num_params, this->param_nr + 1);
-	SetWindowClassesDirty(WC_GAME_OPTIONS); // Is always the newgrf window
+	SetWindowDirty(WC_GAME_OPTIONS, WN_GAME_OPTIONS_NEWGRF_STATE);
+}
+
+/**
+ * Finalize Action 14 info after file scan is finished.
+ */
+void GRFParameterInfo::Finalize()
+{
+	this->complete_labels = true;
+	for (uint32 value = this->min_value; value <= this->max_value; value++) {
+		if (!this->value_names.Contains(value)) {
+			this->complete_labels = false;
+			break;
+		}
+	}
 }
 
 /**
@@ -277,6 +318,28 @@ bool UpdateNewGRFConfigPalette(int32 p1)
 	for (GRFConfig *c = _grfconfig_static;  c != NULL; c = c->next) c->SetSuitablePalette();
 	for (GRFConfig *c = _all_grfs;          c != NULL; c = c->next) c->SetSuitablePalette();
 	return true;
+}
+
+/**
+ * Get the data section size of a GRF.
+ * @param f GRF.
+ * @return Size of the data section or SIZE_MAX if the file has no separate data section.
+ */
+size_t GRFGetSizeOfDataSection(FILE *f)
+{
+	extern const byte _grf_cont_v2_sig[];
+	static const uint header_len = 14;
+
+	byte data[header_len];
+	if (fread(data, 1, header_len, f) == header_len) {
+		if (data[0] == 0 && data[1] == 0 && MemCmpT(data + 2, _grf_cont_v2_sig, 8) == 0) {
+			/* Valid container version 2, get data section size. */
+			size_t offset = (data[13] << 24) | (data[12] << 16) | (data[11] << 8) | data[10];
+			return header_len + offset;
+		}
+	}
+
+	return SIZE_MAX;
 }
 
 /**
@@ -295,6 +358,10 @@ static bool CalcGRFMD5Sum(GRFConfig *config, Subdirectory subdir)
 	/* open the file */
 	f = FioFOpenFile(config->filename, "rb", subdir, &size);
 	if (f == NULL) return false;
+
+	size_t start = ftell(f);
+	size = min(size, GRFGetSizeOfDataSection(f));
+	fseek(f, start, SEEK_SET);
 
 	/* calculate md5sum */
 	while ((len = fread(buffer, 1, (size > sizeof(buffer)) ? sizeof(buffer) : size, f)) != 0 && size != 0) {
@@ -326,6 +393,7 @@ bool FillGRFDetails(GRFConfig *config, bool is_static, Subdirectory subdir)
 	/* Find and load the Action 8 information */
 	LoadNewGRFFile(config, CONFIG_SLOT, GLS_FILESCAN, subdir);
 	config->SetSuitablePalette();
+	config->FinalizeParameterInfo();
 
 	/* Skip if the grfid is 0 (not read) or 0xFFFFFFFF (ttdp system grf) */
 	if (config->ident.grfid == 0 || config->ident.grfid == 0xFFFFFFFF || config->IsOpenTTDBaseGRF()) return false;
@@ -634,8 +702,7 @@ void DoScanNewGRFFiles(void *callback)
 	_modal_progress_work_mutex->BeginCritical();
 
 	ClearGRFConfigList(&_all_grfs);
-
-	TarScanner::DoScan();
+	TarScanner::DoScan(TarScanner::NEWGRF);
 
 	DEBUG(grf, 1, "Scanning for NewGRFs");
 	uint num = GRFFileScanner::DoScan();
@@ -674,7 +741,7 @@ void DoScanNewGRFFiles(void *callback)
 
 	/* Yes... these are the NewGRF windows */
 	InvalidateWindowClassesData(WC_SAVELOAD, 0, true);
-	InvalidateWindowData(WC_GAME_OPTIONS, 0, GOID_NEWGRF_RESCANNED, true);
+	InvalidateWindowData(WC_GAME_OPTIONS, WN_GAME_OPTIONS_NEWGRF_STATE, GOID_NEWGRF_RESCANNED, true);
 	if (callback != NULL) ((NewGRFScanCallback*)callback)->OnNewGRFsScanned();
 
 	DeleteWindowByClass(WC_MODAL_PROGRESS);
@@ -830,4 +897,14 @@ static const uint32 OPENTTD_GRAPHICS_BASE_GRF_ID = BSWAP32(0xFF4F5400);
 bool GRFConfig::IsOpenTTDBaseGRF() const
 {
 	return (this->ident.grfid & 0x00FFFFFF) == OPENTTD_GRAPHICS_BASE_GRF_ID;
+}
+
+/**
+ * Search a textfile file next to this NewGRF.
+ * @param type The type of the textfile to search for.
+ * @return The filename for the textfile, \c NULL otherwise.
+ */
+const char *GRFConfig::GetTextfile(TextfileType type) const
+{
+	return ::GetTextfile(type, NEWGRF_DIR, this->filename);
 }

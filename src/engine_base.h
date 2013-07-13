@@ -12,11 +12,9 @@
 #ifndef ENGINE_BASE_H
 #define ENGINE_BASE_H
 
-#include "company_type.h"
 #include "engine_type.h"
 #include "vehicle_type.h"
 #include "core/pool_type.hpp"
-#include "core/smallvec_type.hpp"
 #include "newgrf_commons.h"
 
 typedef Pool<Engine, EngineID, 64, 64000> EnginePool;
@@ -35,8 +33,9 @@ struct Engine : EnginePool::PoolItem<&_engine_pool> {
 	uint16 duration_phase_2;    ///< Second reliability phase in months, keeping #reliability_max.
 	uint16 duration_phase_3;    ///< Third reliability phase on months, decaying to #reliability_final.
 	byte flags;                 ///< Flags of the engine. @see EngineFlags
-	uint8 preview_company_rank; ///< Rank of the company that is offered a preview. \c 0xFF means no company.
-	byte preview_wait;          ///< Daily countdown timer for timeout of offering the engine to the #preview_company_rank company.
+	CompanyMask preview_asked;  ///< Bit for each company which has already been offered a preview.
+	CompanyByte preview_company;///< Company which is currently being offered a preview \c INVALID_COMPANY means no company.
+	byte preview_wait;          ///< Daily countdown timer for timeout of offering the engine to the #preview_company company.
 	CompanyMask company_avail;  ///< Bit for each company whether the engine is available for that company.
 	uint8 original_image_index; ///< Original vehicle image index, thus the image index of the overridden vehicle
 	VehicleType type;           ///< %Vehicle type, ie #VEH_ROAD, #VEH_TRAIN, etc.
@@ -73,7 +72,7 @@ struct Engine : EnginePool::PoolItem<&_engine_pool> {
 	 * Usually a valid cargo is returned, even though the vehicle has zero capacity, and can therefore not carry anything. But the cargotype is still used
 	 * for livery selection etc..
 	 *
-	 * Vehicles with CT_INVALID as default cargo are usally not available, but it can appear as default cargo of articulated parts.
+	 * Vehicles with CT_INVALID as default cargo are usually not available, but it can appear as default cargo of articulated parts.
 	 *
 	 * @return The default cargo type.
 	 * @see CanCarryCargo
@@ -83,8 +82,26 @@ struct Engine : EnginePool::PoolItem<&_engine_pool> {
 		return this->info.cargo_type;
 	}
 
+	uint DetermineCapacity(const Vehicle *v, uint16 *mail_capacity = NULL) const;
+
 	bool CanCarryCargo() const;
-	uint GetDisplayDefaultCapacity(uint16 *mail_capacity = NULL) const;
+
+	/**
+	 * Determines the default cargo capacity of an engine for display purposes.
+	 *
+	 * For planes carrying both passenger and mail this is the passenger capacity.
+	 * For multiheaded engines this is the capacity of both heads.
+	 * For articulated engines use GetCapacityOfArticulatedParts
+	 *
+	 * @param mail_capacity returns secondary cargo (mail) capacity of aircraft
+	 * @return The default capacity
+	 * @see GetDefaultCargoType
+	 */
+	uint GetDisplayDefaultCapacity(uint16 *mail_capacity = NULL) const
+	{
+		return this->DetermineCapacity(NULL, mail_capacity);
+	}
+
 	Money GetRunningCost() const;
 	Money GetCost() const;
 	uint GetDisplayMaxSpeed() const;
@@ -92,15 +109,28 @@ struct Engine : EnginePool::PoolItem<&_engine_pool> {
 	uint GetDisplayWeight() const;
 	uint GetDisplayMaxTractiveEffort() const;
 	Date GetLifeLengthInDays() const;
+	uint16 GetRange() const;
 
 	/**
 	 * Check if the engine is a ground vehicle.
 	 * @return True iff the engine is a train or a road vehicle.
 	 */
-	FORCEINLINE bool IsGroundVehicle() const
+	inline bool IsGroundVehicle() const
 	{
 		return this->type == VEH_TRAIN || this->type == VEH_ROAD;
 	}
+
+	/**
+	 * Retrieve the NewGRF the engine is tied to.
+	 * This is the GRF providing the Action 3.
+	 * @return NewGRF associated to the engine.
+	 */
+	const GRFFile *GetGRF() const
+	{
+		return this->grf_prop.grffile;
+	}
+
+	uint32 GetGRFID() const;
 };
 
 struct EngineIDMapping {

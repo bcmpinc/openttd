@@ -41,7 +41,6 @@ TTDS        = $(SRC_DIRS:%=%/$(TTD))
 OS          = !!OS!!
 OSXAPP      = !!OSXAPP!!
 LIPO        = !!LIPO!!
-REVISION    = !!REVISION!!
 AWK         = !!AWK!!
 SORT        = !!SORT!!
 DISTCC      = !!DISTCC!!
@@ -126,6 +125,13 @@ lang:
 mrproper:
 	@for dir in $(DIRS); do \
 		$(MAKE) -C $$dir mrproper; \
+	done
+# Don't be tempted to merge these two for loops. Doing that breaks make
+# --dry-run, since make has this "feature" that it always runs commands
+# containing $(MAKE), even when --dry-run is passed. The objective is of
+# course to also get a dry-run of submakes, but make is not smart enough
+# to see that a for loop runs both a submake and an actual command.
+	@for dir in $(DIRS); do \
 		rm -f $$dir/Makefile; \
 	done
 	$(Q)rm -rf objs
@@ -148,7 +154,7 @@ mrproper:
 distclean: mrproper
 
 maintainer-clean: distclean
-	$(Q)rm -f $(BIN_DIR)/data/openttd.grf
+	$(Q)rm -f $(BIN_DIR)/baseset/openttd.grf $(BIN_DIR)/baseset/*.obg $(BIN_DIR)/baseset/*.obs $(BIN_DIR)/baseset/*.obm
 
 depend:
 	@for dir in $(SRC_DIRS); do \

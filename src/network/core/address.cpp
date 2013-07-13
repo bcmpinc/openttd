@@ -39,10 +39,10 @@ uint16 NetworkAddress::GetPort() const
 	switch (this->address.ss_family) {
 		case AF_UNSPEC:
 		case AF_INET:
-			return ntohs(((struct sockaddr_in *)&this->address)->sin_port);
+			return ntohs(((const struct sockaddr_in *)&this->address)->sin_port);
 
 		case AF_INET6:
-			return ntohs(((struct sockaddr_in6 *)&this->address)->sin6_port);
+			return ntohs(((const struct sockaddr_in6 *)&this->address)->sin6_port);
 
 		default:
 			NOT_REACHED();
@@ -259,7 +259,7 @@ SOCKET NetworkAddress::Resolve(int family, int socktype, int flags, SocketList *
 	for (struct addrinfo *runp = ai; runp != NULL; runp = runp->ai_next) {
 		/* When we are binding to multiple sockets, make sure we do not
 		 * connect to one with exactly the same address twice. That's
-		 * ofcourse totally unneeded ;) */
+		 * of course totally unneeded ;) */
 		if (sockets != NULL) {
 			NetworkAddress address(runp->ai_addr, (int)runp->ai_addrlen);
 			if (sockets->Contains(address)) continue;

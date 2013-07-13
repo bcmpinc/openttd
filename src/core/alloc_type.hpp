@@ -48,7 +48,7 @@ struct SmallStackSafeStackAlloc {
 	 * Gets a pointer to the data stored in this wrapper.
 	 * @return the pointer.
 	 */
-	FORCEINLINE operator T *()
+	inline operator T *()
 	{
 		return data;
 	}
@@ -57,7 +57,7 @@ struct SmallStackSafeStackAlloc {
 	 * Gets a pointer to the data stored in this wrapper.
 	 * @return the pointer.
 	 */
-	FORCEINLINE T *operator -> ()
+	inline T *operator -> ()
 	{
 		return data;
 	}
@@ -67,7 +67,7 @@ struct SmallStackSafeStackAlloc {
 	 * @note needed because endof does not work properly for pointers.
 	 * @return the 'endof' pointer.
 	 */
-	FORCEINLINE T *EndOf()
+	inline T *EndOf()
 	{
 #if !defined(__NDS__)
 		return endof(data);
@@ -137,7 +137,7 @@ public:
 	 * Get the currently allocated buffer.
 	 * @return the buffer
 	 */
-	FORCEINLINE const T *GetBuffer() const
+	inline const T *GetBuffer() const
 	{
 		return this->buffer;
 	}
@@ -158,26 +158,60 @@ public:
 	 * @param size the amount of bytes to allocate.
 	 * @return the given amounts of bytes zeroed.
 	 */
-	FORCEINLINE void *operator new(size_t size) { return CallocT<byte>(size); }
+	inline void *operator new(size_t size) { return CallocT<byte>(size); }
 
 	/**
 	 * Memory allocator for an array of class instances.
 	 * @param size the amount of bytes to allocate.
 	 * @return the given amounts of bytes zeroed.
 	 */
-	FORCEINLINE void *operator new[](size_t size) { return CallocT<byte>(size); }
+	inline void *operator new[](size_t size) { return CallocT<byte>(size); }
 
 	/**
 	 * Memory release for a single class instance.
 	 * @param ptr  the memory to free.
 	 */
-	FORCEINLINE void operator delete(void *ptr) { free(ptr); }
+	inline void operator delete(void *ptr) { free(ptr); }
 
 	/**
 	 * Memory release for an array of class instances.
 	 * @param ptr  the memory to free.
 	 */
-	FORCEINLINE void operator delete[](void *ptr) { free(ptr); }
+	inline void operator delete[](void *ptr) { free(ptr); }
+};
+
+/**
+ * A smart pointer class that free()'s the pointer on destruction.
+ * @tparam T Storage type.
+ */
+template <typename T>
+class AutoFreePtr
+{
+	T *ptr; ///< Stored pointer.
+
+public:
+	AutoFreePtr(T *ptr) : ptr(ptr) {}
+	~AutoFreePtr() { free(this->ptr); }
+
+	/**
+	 * Take ownership of a new pointer and free the old one if needed.
+	 * @param ptr NEw pointer.
+	 */
+	inline void Assign(T *ptr)
+	{
+		free(this->ptr);
+		this->ptr = ptr;
+	}
+
+	/** Dereference pointer. */
+	inline T *operator ->() { return this->ptr; }
+	/** Dereference pointer. */
+	inline const T *operator ->() const { return this->ptr; }
+
+	/** Cast to underlaying regular pointer. */
+	inline operator T *() { return this->ptr; }
+	/** Cast to underlaying regular pointer. */
+	inline operator const T *() const { return this->ptr; }
 };
 
 #endif /* ALLOC_TYPE_HPP */

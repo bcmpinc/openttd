@@ -12,14 +12,13 @@
 #ifndef AI_HPP
 #define AI_HPP
 
-#ifdef ENABLE_AI
-#include "api/ai_event_types.hpp"
-#include "../date_type.h"
+#include "../script/api/script_event_types.hpp"
 #include "../core/string_compare_type.hpp"
+#include "ai_scanner.hpp"
 #include <map>
 
 /** A list that maps AI names to their AIInfo object. */
-typedef std::map<const char *, class AIInfo *, StringCompare> AIInfoList;
+typedef std::map<const char *, class ScriptInfo *, StringCompare> ScriptInfoList;
 
 /**
  * Main AI class. Contains all functions needed to start, stop, save and load AIs.
@@ -27,7 +26,7 @@ typedef std::map<const char *, class AIInfo *, StringCompare> AIInfoList;
 class AI {
 public:
 	/**
-	 * The default months AIs start after eachother.
+	 * The default months AIs start after each other.
 	 */
 	enum StartNext {
 		START_NEXT_EASY   = DAYS_IN_YEAR * 2,
@@ -69,13 +68,30 @@ public:
 	static void Stop(CompanyID company);
 
 	/**
-	 * Suspend an AI for the reminder of the current tick. If the AI is
-	 * in a state when it cannot be suspended, it will continue to run
-	 * until it can be suspended.
-	 * @param company The company for which the AI should be suspended.
+	 * Suspend the AI and then pause execution of the script. The script
+	 * will not be resumed from its suspended state until the script has
+	 * been unpaused.
+	 * @param company The company for which the AI should be paused.
 	 * @pre Company::IsValidAiID(company)
 	 */
-	static void Suspend(CompanyID company);
+	static void Pause(CompanyID company);
+
+	/**
+	 * Resume execution of the AI. This function will not actually execute
+	 * the script, but set a flag so that the script is executed my the usual
+	 * mechanism that executes the script.
+	 * @param company The company for which the AI should be unpaused.
+	 * @pre Company::IsValidAiID(company)
+	 */
+	static void Unpause(CompanyID company);
+
+	/**
+	 * Checks if the AI is paused.
+	 * @param company The company for which to check if the AI is paused.
+	 * @pre Company::IsValidAiID(company)
+	 * @return true if the AI is paused, otherwise false.
+	 */
+	static bool IsPaused(CompanyID company);
 
 	/**
 	 * Kill any and all AIs we manage.
@@ -102,12 +118,12 @@ public:
 	/**
 	 * Queue a new event for an AI.
 	 */
-	static void NewEvent(CompanyID company, AIEvent *event);
+	static void NewEvent(CompanyID company, ScriptEvent *event);
 
 	/**
 	 * Broadcast a new event to all active AIs.
 	 */
-	static void BroadcastNewEvent(AIEvent *event, CompanyID skip_company = MAX_COMPANIES);
+	static void BroadcastNewEvent(ScriptEvent *event, CompanyID skip_company = MAX_COMPANIES);
 
 	/**
 	 * Save data from an AI to a savegame.
@@ -129,48 +145,34 @@ public:
 	/** Wrapper function for AIScanner::GetAIConsoleLibraryList */
 	static char *GetConsoleLibraryList(char *p, const char *last);
 	/** Wrapper function for AIScanner::GetAIInfoList */
-	static const AIInfoList *GetInfoList();
+	static const ScriptInfoList *GetInfoList();
 	/** Wrapper function for AIScanner::GetUniqueAIInfoList */
-	static const AIInfoList *GetUniqueInfoList();
+	static const ScriptInfoList *GetUniqueInfoList();
 	/** Wrapper function for AIScanner::FindInfo */
-	static AIInfo *FindInfo(const char *name, int version, bool force_exact_match);
-	/** Wrapper function for AIScanner::ImportLibrary */
-	static bool ImportLibrary(const char *library, const char *class_name, int version, HSQUIRRELVM vm);
+	static class AIInfo *FindInfo(const char *name, int version, bool force_exact_match);
+	/** Wrapper function for AIScanner::FindLibrary */
+	static class AILibrary *FindLibrary(const char *library, int version);
 
 	/**
 	 * Rescans all searchpaths for available AIs. If a used AI is no longer
 	 * found it is removed from the config.
 	 */
 	static void Rescan();
+
+	/** Gets the ScriptScanner instance that is used to find AIs */
+	static AIScannerInfo *GetScannerInfo();
+	/** Gets the ScriptScanner instance that is used to find AI Libraries */
+	static AIScannerLibrary *GetScannerLibrary();
+
 #if defined(ENABLE_NETWORK)
 	/** Wrapper function for AIScanner::HasAI */
 	static bool HasAI(const struct ContentInfo *ci, bool md5sum);
+	static bool HasAILibrary(const ContentInfo *ci, bool md5sum);
 #endif
 private:
-	static uint frame_counter;          ///< Tick counter for the AI code
-	static class AIScanner *ai_scanner; ///< AIScanner instance that is used to find AIs
+	static uint frame_counter;                      ///< Tick counter for the AI code
+	static class AIScannerInfo *scanner_info;       ///< ScriptScanner instance that is used to find AIs
+	static class AIScannerLibrary *scanner_library; ///< ScriptScanner instance that is used to find AI Libraries
 };
 
-#else /* ENABLE_AI */
-
-#include "../company_type.h"
-
-#define NewEvent(cid, event) nop()
-#define BroadcastNewEvent(...) nop()
-
-class AI {
-public:
-	static void StartNew(CompanyID company, bool rerandomise_ai = true) {}
-	static void Stop(CompanyID company) {}
-	static void Initialize() {}
-	static void Uninitialize(bool keepConfig) {}
-	static void KillAll() {}
-	static void GameLoop() {}
-	static bool HasAI(const struct ContentInfo *ci, bool md5sum) { return false; }
-	static void Rescan() {}
-	static char *GetConsoleList(char *p, const char *last, bool newest_only = false) { return p; }
-	static void nop() { }
-};
-
-#endif /* ENABLE_AI */
 #endif /* AI_HPP */

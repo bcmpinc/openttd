@@ -1,9 +1,9 @@
 # Version numbers to update
 !define APPV_MAJOR 1
-!define APPV_MINOR 2
+!define APPV_MINOR 3
 !define APPV_MAINT 0
-!define APPV_BUILD 0
-!define APPV_EXTRA "-alpha"
+!define APPV_BUILD 5
+!define APPV_EXTRA ""
 
 !define APPNAME "OpenTTD"   ; Define application name
 !define APPVERSION "${APPV_MAJOR}.${APPV_MINOR}.${APPV_MAINT}${APPV_EXTRA}"  ; Define application version
@@ -14,7 +14,7 @@
 !define APPURLLINK "http://www.openttd.org"
 !define APPNAMEANDVERSION "${APPNAME} ${APPVERSION}"
 
-!define OPENGFX_BASE_VERSION "0.7.0"
+!define OPENGFX_BASE_VERSION "1.2.0"
 !define OPENSFX_BASE_VERSION "0.8.0"
 !define OPENMSX_BASE_VERSION "1.0.0"
 
@@ -86,7 +86,7 @@ Page custom SelectCDEnter SelectCDExit ": TTD folder"
 !define MUI_FINISHPAGE_TITLE_3LINES
 !define MUI_FINISHPAGE_RUN_TEXT "Run ${APPNAMEANDVERSION} now!"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\openttd.exe"
-!define MUI_FINISHPAGE_LINK "Visit the OpenTTD site for the latest news, FAQs and downloads"
+!define MUI_FINISHPAGE_LINK "Visit the OpenTTD site for more information"
 !define MUI_FINISHPAGE_LINK_LOCATION "${APPURLLINK}"
 !define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\readme.txt"
@@ -124,16 +124,17 @@ Section "!OpenTTD" Section1
 	SetOutPath "$INSTDIR\ai\"
 	File ${PATH_ROOT}bin\ai\compat_*.nut
 
-	; Copy data files
-	SetOutPath "$INSTDIR\data\"
-	File ${PATH_ROOT}bin\data\*.grf
-	File ${PATH_ROOT}bin\data\*.obg
-	File ${PATH_ROOT}bin\data\*.obs
-	File ${PATH_ROOT}bin\data\opntitle.dat
+	; Copy Game Script files
+	SetOutPath "$INSTDIR\game\"
+	File ${PATH_ROOT}bin\game\compat_*.nut
 
-	; Copy the music base metadata files
-	SetOutPath "$INSTDIR\gm\"
-	File ${PATH_ROOT}bin\gm\*.obm
+	; Copy data files
+	SetOutPath "$INSTDIR\baseset\"
+	File ${PATH_ROOT}bin\baseset\*.grf
+	File ${PATH_ROOT}bin\baseset\*.obg
+	File ${PATH_ROOT}bin\baseset\*.obm
+	File ${PATH_ROOT}bin\baseset\*.obs
+	File ${PATH_ROOT}bin\baseset\opntitle.dat
 
 	; Copy the scripts
 	SetOutPath "$INSTDIR\scripts\"
@@ -145,9 +146,6 @@ Section "!OpenTTD" Section1
 	SetOutPath "$INSTDIR\docs\"
 	File ${PATH_ROOT}docs\multiplayer.txt
 	Push "$INSTDIR\docs\multiplayer.txt"
-	Call unix2dos
-	File ${PATH_ROOT}docs\32bpp.txt
-	Push "$INSTDIR\docs\32bpp.txt"
 	Call unix2dos
 
 	; Copy the rest of the stuff
@@ -171,12 +169,30 @@ Section "!OpenTTD" Section1
 	File /oname=openttd.exe ${BINARY_DIR}\openttd.exe
 
 
-	; Delete old files from the main dir. they are now placed in data/ and lang/
+	; Delete old files from the main dir. they are now placed in baseset/ and lang/
 	Delete "$INSTDIR\*.lng"
 	Delete "$INSTDIR\*.grf"
 	Delete "$INSTDIR\sample.cat"
 	Delete "$INSTDIR\ttd.exe"
-
+	Delete "$INSTDIR\data\opntitle.dat"
+	Delete "$INSTDIR\data\2ccmap.grf"
+	Delete "$INSTDIR\data\airports.grf"
+	Delete "$INSTDIR\data\autorail.grf"
+	Delete "$INSTDIR\data\canalsw.grf"
+	Delete "$INSTDIR\data\dosdummy.grf"
+	Delete "$INSTDIR\data\elrailsw.grf"
+	Delete "$INSTDIR\data\nsignalsw.grf"
+	Delete "$INSTDIR\data\openttd.grf"
+	Delete "$INSTDIR\data\roadstops.grf"
+	Delete "$INSTDIR\data\trkfoundw.grf"
+	Delete "$INSTDIR\data\openttdd.grf"
+	Delete "$INSTDIR\data\openttdw.grf"
+	Delete "$INSTDIR\data\orig_win.obg"
+	Delete "$INSTDIR\data\orig_dos.obg"
+	Delete "$INSTDIR\data\orig_dos_de.obg"
+	Delete "$INSTDIR\data\orig_win.obs"
+	Delete "$INSTDIR\data\orig_dos.obs"
+	Delete "$INSTDIR\data\no_sound.obs"
 
 	; Create the Registry Entries
 	WriteRegStr HKEY_LOCAL_MACHINE "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\OpenTTD" "Comments" "Visit ${APPURLLINK}"
@@ -202,7 +218,6 @@ Section "!OpenTTD" Section1
 	CreateShortCut "$SMPROGRAMS\$SHORTCUTS\Known-bugs.lnk" "$INSTDIR\known-bugs.txt"
 	CreateDirectory "$SMPROGRAMS\$SHORTCUTS\Docs"
 	CreateShortCut "$SMPROGRAMS\$SHORTCUTS\Docs\Multiplayer.lnk" "$INSTDIR\docs\multiplayer.txt"
-	CreateShortCut "$SMPROGRAMS\$SHORTCUTS\Docs\32bpp.lnk" "$INSTDIR\docs\32bpp.txt"
 	CreateDirectory "$SMPROGRAMS\$SHORTCUTS\Scripts"
 	CreateShortCut "$SMPROGRAMS\$SHORTCUTS\Scripts\Readme.lnk" "$INSTDIR\scripts\readme.txt"
 	!insertmacro MUI_STARTMENU_WRITE_END
@@ -224,17 +239,17 @@ SectionEnd
 Section "Download OpenGFX (free graphics set)" Section3
 	SetOverwrite try
 
-	NSISdl::download "http://binaries.openttd.org/installer/opengfx-${OPENGFX_BASE_VERSION}.7z" "$INSTDIR\data\opengfx.7z"
+	NSISdl::download "http://binaries.openttd.org/installer/opengfx-${OPENGFX_BASE_VERSION}.7z" "$INSTDIR\baseset\opengfx.7z"
 	Pop $R0 ;Get the return value
 	StrCmp $R0 "success" +3
 		MessageBox MB_OK "Downloading of OpenGFX failed"
 		Goto Done
 
 	; Let's extract the files
-	SetOutPath "$INSTDIR\data\"
-	NSIS7z::Extract "$INSTDIR\data\opengfx.7z"
+	SetOutPath "$INSTDIR\baseset\"
+	NSIS7z::Extract "$INSTDIR\baseset\opengfx.7z"
 
-	Delete "$INSTDIR\data\opengfx.7z"
+	Delete "$INSTDIR\baseset\opengfx.7z"
 	SetOutPath "$INSTDIR\"
 Done:
 
@@ -245,17 +260,17 @@ SectionEnd
 Section "Download OpenSFX (free sound set)" Section4
 	SetOverwrite try
 
-	NSISdl::download "http://binaries.openttd.org/installer/opensfx-${OPENSFX_BASE_VERSION}.7z" "$INSTDIR\data\opensfx.7z"
+	NSISdl::download "http://binaries.openttd.org/installer/opensfx-${OPENSFX_BASE_VERSION}.7z" "$INSTDIR\baseset\opensfx.7z"
 	Pop $R0 ;Get the return value
 	StrCmp $R0 "success" +3
 		MessageBox MB_OK "Downloading of OpenSFX failed"
 		Goto Done
 
 	; Let's extract the files
-	SetOutPath "$INSTDIR\data\"
-	NSIS7z::Extract "$INSTDIR\data\opensfx.7z"
+	SetOutPath "$INSTDIR\baseset\"
+	NSIS7z::Extract "$INSTDIR\baseset\opensfx.7z"
 
-	Delete "$INSTDIR\data\opensfx.7z"
+	Delete "$INSTDIR\baseset\opensfx.7z"
 	SetOutPath "$INSTDIR\"
 Done:
 
@@ -266,17 +281,17 @@ SectionEnd
 Section "Download OpenMSX (free music set)" Section5
 	SetOverwrite try
 
-	NSISdl::download "http://binaries.openttd.org/installer/openmsx-${OPENMSX_BASE_VERSION}.7z" "$INSTDIR\gm\openmsx.7z"
+	NSISdl::download "http://binaries.openttd.org/installer/openmsx-${OPENMSX_BASE_VERSION}.7z" "$INSTDIR\baseset\openmsx.7z"
 	Pop $R0 ;Get the return value
 	StrCmp $R0 "success" +3
 		MessageBox MB_OK "Downloading of OpenMSX failed"
 		Goto Done
 
 	; Let's extract the files
-	SetOutPath "$INSTDIR\gm\"
-	NSIS7z::Extract "$INSTDIR\gm\openmsx.7z"
+	SetOutPath "$INSTDIR\baseset\"
+	NSIS7z::Extract "$INSTDIR\baseset\openmsx.7z"
 
-	Delete "$INSTDIR\gm\openmsx.7z"
+	Delete "$INSTDIR\baseset\openmsx.7z"
 	SetOutPath "$INSTDIR\"
 Done:
 
@@ -287,22 +302,21 @@ SectionEnd
 Section /o "Copy data from Transport Tycoon Deluxe CD-ROM" Section2
 	SetOverwrite try
 	; Let's copy the files with size approximation
-	SetOutPath "$INSTDIR\gm"
-	CopyFiles "$CDDRIVE\gm\*.gm" "$INSTDIR\gm\" 1028
-	SetOutPath "$INSTDIR\data\"
-	CopyFiles "$CDDRIVE\sample.cat" "$INSTDIR\data\sample.cat" 1566
+	SetOutPath "$INSTDIR\baseset"
+	CopyFiles "$CDDRIVE\gm\*.gm" "$INSTDIR\baseset\" 1028
+	CopyFiles "$CDDRIVE\sample.cat" "$INSTDIR\baseset\sample.cat" 1566
 	; Copy Windows files
-	CopyFiles "$CDDRIVE\trg1r.grf" "$INSTDIR\data\trg1r.grf" 2365
-	CopyFiles "$CDDRIVE\trgcr.grf" "$INSTDIR\data\trgcr.grf" 260
-	CopyFiles "$CDDRIVE\trghr.grf" "$INSTDIR\data\trghr.grf" 400
-	CopyFiles "$CDDRIVE\trgir.grf" "$INSTDIR\data\trgir.grf" 334
-	CopyFiles "$CDDRIVE\trgtr.grf" "$INSTDIR\data\trgtr.grf" 546
+	CopyFiles "$CDDRIVE\trg1r.grf" "$INSTDIR\baseset\trg1r.grf" 2365
+	CopyFiles "$CDDRIVE\trgcr.grf" "$INSTDIR\baseset\trgcr.grf" 260
+	CopyFiles "$CDDRIVE\trghr.grf" "$INSTDIR\baseset\trghr.grf" 400
+	CopyFiles "$CDDRIVE\trgir.grf" "$INSTDIR\baseset\trgir.grf" 334
+	CopyFiles "$CDDRIVE\trgtr.grf" "$INSTDIR\baseset\trgtr.grf" 546
 	; Copy DOS files
-	CopyFiles "$CDDRIVE\trg1.grf" "$INSTDIR\data\trg1.grf" 2365
-	CopyFiles "$CDDRIVE\trgc.grf" "$INSTDIR\data\trgc.grf" 260
-	CopyFiles "$CDDRIVE\trgh.grf" "$INSTDIR\data\trgh.grf" 400
-	CopyFiles "$CDDRIVE\trgi.grf" "$INSTDIR\data\trgi.grf" 334
-	CopyFiles "$CDDRIVE\trgt.grf" "$INSTDIR\data\trgt.grf" 546
+	CopyFiles "$CDDRIVE\trg1.grf" "$INSTDIR\baseset\trg1.grf" 2365
+	CopyFiles "$CDDRIVE\trgc.grf" "$INSTDIR\baseset\trgc.grf" 260
+	CopyFiles "$CDDRIVE\trgh.grf" "$INSTDIR\baseset\trgh.grf" 400
+	CopyFiles "$CDDRIVE\trgi.grf" "$INSTDIR\baseset\trgi.grf" 334
+	CopyFiles "$CDDRIVE\trgt.grf" "$INSTDIR\baseset\trgt.grf" 546
 	SetOutPath "$INSTDIR\"
 SectionEnd
 
@@ -388,46 +402,52 @@ Section "Uninstall"
 	; AI files
 	Delete "$INSTDIR\ai\compat_*.nut"
 
-	; Data files
-	Delete "$INSTDIR\data\opntitle.dat"
+	; Game Script files
+	Delete "$INSTDIR\game\compat_*.nut"
 
-	Delete "$INSTDIR\data\2ccmap.grf"
-	Delete "$INSTDIR\data\airports.grf"
-	Delete "$INSTDIR\data\autorail.grf"
-	Delete "$INSTDIR\data\canalsw.grf"
-	Delete "$INSTDIR\data\dosdummy.grf"
-	Delete "$INSTDIR\data\elrailsw.grf"
-	Delete "$INSTDIR\data\nsignalsw.grf"
-	Delete "$INSTDIR\data\openttd.grf"
-	Delete "$INSTDIR\data\roadstops.grf"
-	Delete "$INSTDIR\data\trkfoundw.grf"
-	Delete "$INSTDIR\data\openttdd.grf"
-	Delete "$INSTDIR\data\openttdw.grf"
-	Delete "$INSTDIR\data\orig_win.obg"
-	Delete "$INSTDIR\data\orig_dos.obg"
-	Delete "$INSTDIR\data\orig_dos_de.obg"
-	Delete "$INSTDIR\data\orig_win.obs"
-	Delete "$INSTDIR\data\orig_dos.obs"
-	Delete "$INSTDIR\data\no_sound.obs"
+	; Baseset files
+	Delete "$INSTDIR\baseset\opntitle.dat"
+	Delete "$INSTDIR\baseset\openttd.grf"
+	Delete "$INSTDIR\baseset\orig_win.obg"
+	Delete "$INSTDIR\baseset\orig_dos.obg"
+	Delete "$INSTDIR\baseset\orig_dos_de.obg"
+	Delete "$INSTDIR\baseset\orig_win.obs"
+	Delete "$INSTDIR\baseset\orig_dos.obs"
+	Delete "$INSTDIR\baseset\no_sound.obs"
+	Delete "$INSTDIR\baseset\sample.cat"
+	Delete "$INSTDIR\baseset\trg1r.grf"
+	Delete "$INSTDIR\baseset\trghr.grf"
+	Delete "$INSTDIR\baseset\trgtr.grf"
+	Delete "$INSTDIR\baseset\trgcr.grf"
+	Delete "$INSTDIR\baseset\trgir.grf"
+	Delete "$INSTDIR\baseset\trg1.grf"
+	Delete "$INSTDIR\baseset\trgh.grf"
+	Delete "$INSTDIR\baseset\trgt.grf"
+	Delete "$INSTDIR\baseset\trgc.grf"
+	Delete "$INSTDIR\baseset\trgi.grf"
+	Delete "$INSTDIR\baseset\*.gm"
 
 	Delete "$INSTDIR\data\sample.cat"
-	; Windows Data files
 	Delete "$INSTDIR\data\trg1r.grf"
 	Delete "$INSTDIR\data\trghr.grf"
 	Delete "$INSTDIR\data\trgtr.grf"
 	Delete "$INSTDIR\data\trgcr.grf"
 	Delete "$INSTDIR\data\trgir.grf"
-	; Dos Data files
 	Delete "$INSTDIR\data\trg1.grf"
 	Delete "$INSTDIR\data\trgh.grf"
 	Delete "$INSTDIR\data\trgt.grf"
 	Delete "$INSTDIR\data\trgc.grf"
 	Delete "$INSTDIR\data\trgi.grf"
-
-	; Music
 	Delete "$INSTDIR\gm\*.gm"
 
 	; Downloaded OpenGFX/OpenSFX/OpenMSX
+	Delete "$INSTDIR\baseset\opengfx\*"
+	RMDir  "$INSTDIR\baseset\opengfx"
+	Delete "$INSTDIR\baseset\opensfx\*"
+	RMDir  "$INSTDIR\baseset\opensfx"
+	Delete "$INSTDIR\baseset\openmsx\*"
+	RMDir  "$INSTDIR\baseset\openmsx"
+
 	Delete "$INSTDIR\data\opengfx\*"
 	RMDir  "$INSTDIR\data\opengfx"
 	Delete "$INSTDIR\data\opensfx\*"
@@ -447,6 +467,8 @@ Section "Uninstall"
 	; Base sets for music
 	Delete "$INSTDIR\gm\orig_win.obm"
 	Delete "$INSTDIR\gm\no_music.obm"
+	Delete "$INSTDIR\baseset\orig_win.obm"
+	Delete "$INSTDIR\baseset\no_music.obm"
 
 	; Remove remaining directories
 	RMDir "$SMPROGRAMS\$SHORTCUTS\Extras\"
@@ -454,7 +476,9 @@ Section "Uninstall"
 	RMDir "$SMPROGRAMS\$SHORTCUTS\Docs\"
 	RMDir "$SMPROGRAMS\$SHORTCUTS"
 	RMDir "$INSTDIR\ai"
+	RMDir "$INSTDIR\game"
 	RMDir "$INSTDIR\data"
+	RMDir "$INSTDIR\baseset"
 	RMDir "$INSTDIR\gm"
 	RMDir "$INSTDIR\lang"
 	RMDir "$INSTDIR\scripts"

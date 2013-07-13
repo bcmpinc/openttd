@@ -49,20 +49,22 @@ enum WidgetType {
 
 	WWT_PANEL,      ///< Simple depressed panel
 	WWT_INSET,      ///< Pressed (inset) panel, most commonly used as combo box _text_ area
-	WWT_IMGBTN,     ///< Button with image
-	WWT_IMGBTN_2,   ///< Button with diff image when clicked
-	WWT_ARROWBTN,   ///< Button with an arrow
-	WWT_TEXTBTN,    ///< Button with text
-	WWT_TEXTBTN_2,  ///< Button with diff text when clicked
+	WWT_IMGBTN,     ///< (Toggle) Button with image
+	WWT_IMGBTN_2,   ///< (Toggle) Button with diff image when clicked
+	WWT_ARROWBTN,   ///< (Toggle) Button with an arrow
+	WWT_TEXTBTN,    ///< (Toggle) Button with text
+	WWT_TEXTBTN_2,  ///< (Toggle) Button with diff text when clicked
 	WWT_LABEL,      ///< Centered label
 	WWT_TEXT,       ///< Pure simple text
 	WWT_MATRIX,     ///< Grid of rows and columns. @see MatrixWidgetValues
 	WWT_FRAME,      ///< Frame
 	WWT_CAPTION,    ///< Window caption (window title between closebox and stickybox)
 
-	WWT_SHADEBOX,   ///< Shade box (at top-right of a window, between caption and stickybox)
-	WWT_STICKYBOX,  ///< Sticky box (normally at top-right of a window)
-	WWT_DEBUGBOX,   ///< NewGRF debug box (between shade box and caption)
+	WWT_DEBUGBOX,   ///< NewGRF debug box (at top-right of a window, between WWT_CAPTION and WWT_SHADEBOX)
+	WWT_SHADEBOX,   ///< Shade box (at top-right of a window, between WWT_DEBUGBOX and WWT_DEFSIZEBOX)
+	WWT_DEFSIZEBOX, ///< Default window size box (at top-right of a window, between WWT_SHADEBOX and WWT_STICKYBOX)
+	WWT_STICKYBOX,  ///< Sticky box (at top-right of a window, after WWT_DEFSIZEBOX)
+
 	WWT_RESIZEBOX,  ///< Resize box (normally at bottom-right of a window)
 	WWT_CLOSEBOX,   ///< Close box (at top-left of a window)
 	WWT_DROPDOWN,   ///< Drop down list
@@ -98,10 +100,11 @@ enum WidgetType {
 
 	WWB_PUSHBUTTON    = 1 << 7,
 
-	WWT_PUSHBTN       = WWT_PANEL    | WWB_PUSHBUTTON,
-	WWT_PUSHTXTBTN    = WWT_TEXTBTN  | WWB_PUSHBUTTON,
-	WWT_PUSHIMGBTN    = WWT_IMGBTN   | WWB_PUSHBUTTON,
-	WWT_PUSHARROWBTN  = WWT_ARROWBTN | WWB_PUSHBUTTON,
+	WWT_PUSHBTN       = WWT_PANEL    | WWB_PUSHBUTTON,    ///< Normal push-button (no toggle button) with custom drawing
+	WWT_PUSHTXTBTN    = WWT_TEXTBTN  | WWB_PUSHBUTTON,    ///< Normal push-button (no toggle button) with text caption
+	WWT_PUSHIMGBTN    = WWT_IMGBTN   | WWB_PUSHBUTTON,    ///< Normal push-button (no toggle button) with image caption
+	WWT_PUSHARROWBTN  = WWT_ARROWBTN | WWB_PUSHBUTTON,    ///< Normal push-button (no toggle button) with arrow caption
+	NWID_PUSHBUTTON_DROPDOWN = NWID_BUTTON_DROPDOWN | WWB_PUSHBUTTON,
 };
 
 /** Different forms of sizing nested widgets, using NWidgetBase::AssignSizePosition() */
@@ -132,6 +135,10 @@ public:
 	virtual NWidgetCore *GetWidgetFromPos(int x, int y) = 0;
 	virtual NWidgetBase *GetWidgetOfType(WidgetType tp);
 
+	virtual bool IsHighlighted() const { return false; }
+	virtual TextColour GetHighlightColour() const { return TC_INVALID; }
+	virtual void SetHighlighted(TextColour highlight_colour) {}
+
 	/**
 	 * Set additional space (padding) around the widget.
 	 * @param top    Amount of additional space above the widget.
@@ -139,7 +146,7 @@ public:
 	 * @param bottom Amount of additional space below the widget.
 	 * @param left   Amount of additional space left of the widget.
 	 */
-	FORCEINLINE void SetPadding(uint8 top, uint8 right, uint8 bottom, uint8 left)
+	inline void SetPadding(uint8 top, uint8 right, uint8 bottom, uint8 left)
 	{
 		this->padding_top = top;
 		this->padding_right = right;
@@ -147,8 +154,8 @@ public:
 		this->padding_left = left;
 	}
 
-	FORCEINLINE uint GetHorizontalStepSize(SizingType sizing) const;
-	FORCEINLINE uint GetVerticalStepSize(SizingType sizing) const;
+	inline uint GetHorizontalStepSize(SizingType sizing) const;
+	inline uint GetVerticalStepSize(SizingType sizing) const;
 
 	virtual void Draw(const Window *w) = 0;
 	virtual void SetDirty(const Window *w) const;
@@ -179,14 +186,14 @@ public:
 	uint8 padding_left;   ///< Paddings added to the left of the widget. Managed by parent container widget.
 
 protected:
-	FORCEINLINE void StoreSizePosition(SizingType sizing, uint x, uint y, uint given_width, uint given_height);
+	inline void StoreSizePosition(SizingType sizing, uint x, uint y, uint given_width, uint given_height);
 };
 
 /**
  * Get the horizontal sizing step.
  * @param sizing Type of resize being performed.
  */
-FORCEINLINE uint NWidgetBase::GetHorizontalStepSize(SizingType sizing) const
+inline uint NWidgetBase::GetHorizontalStepSize(SizingType sizing) const
 {
 	return (sizing == ST_RESIZE) ? this->resize_x : this->fill_x;
 }
@@ -195,7 +202,7 @@ FORCEINLINE uint NWidgetBase::GetHorizontalStepSize(SizingType sizing) const
  * Get the vertical sizing step.
  * @param sizing Type of resize being performed.
  */
-FORCEINLINE uint NWidgetBase::GetVerticalStepSize(SizingType sizing) const
+inline uint NWidgetBase::GetVerticalStepSize(SizingType sizing) const
 {
 	return (sizing == ST_RESIZE) ? this->resize_y : this->fill_y;
 }
@@ -208,7 +215,7 @@ FORCEINLINE uint NWidgetBase::GetVerticalStepSize(SizingType sizing) const
  * @param given_width  Width allocated to the widget.
  * @param given_height Height allocated to the widget.
  */
-FORCEINLINE void NWidgetBase::StoreSizePosition(SizingType sizing, uint x, uint y, uint given_width, uint given_height)
+inline void NWidgetBase::StoreSizePosition(SizingType sizing, uint x, uint y, uint given_width, uint given_height)
 {
 	this->pos_x = x;
 	this->pos_y = y;
@@ -254,9 +261,12 @@ enum NWidgetDisplay {
 	/* Scrollbar widget. */
 	NDB_SCROLLBAR_UP    = 6, ///< Up-button is lowered bit.
 	NDB_SCROLLBAR_DOWN  = 7, ///< Down-button is lowered bit.
+	/* Generic. */
+	NDB_HIGHLIGHT       = 8, ///< Highlight of widget is on.
 
 	ND_LOWERED  = 1 << NDB_LOWERED,                ///< Bit value of the lowered flag.
 	ND_DISABLED = 1 << NDB_DISABLED,               ///< Bit value of the disabled flag.
+	ND_HIGHLIGHT = 1 << NDB_HIGHLIGHT,             ///< Bit value of the highlight flag.
 	ND_NO_TRANSPARENCY = 1 << NDB_NO_TRANSPARENCY, ///< Bit value of the 'no transparency' flag.
 	ND_SHADE_GREY      = 1 << NDB_SHADE_GREY,      ///< Bit value of the 'shade to grey' flag.
 	ND_SHADE_DIMMED    = 1 << NDB_SHADE_DIMMED,    ///< Bit value of the 'dimmed colours' flag.
@@ -273,10 +283,10 @@ DECLARE_ENUM_AS_BIT_SET(NWidgetDisplay)
  */
 class NWidgetCore : public NWidgetResizeBase {
 public:
-	NWidgetCore(WidgetType tp, Colours colour, uint fill_x, uint fill_y, uint16 widget_data, StringID tool_tip);
+	NWidgetCore(WidgetType tp, Colours colour, uint fill_x, uint fill_y, uint32 widget_data, StringID tool_tip);
 
 	void SetIndex(int index);
-	void SetDataTip(uint16 widget_data, StringID tool_tip);
+	void SetDataTip(uint32 widget_data, StringID tool_tip);
 
 	inline void SetLowered(bool lowered);
 	inline bool IsLowered() const;
@@ -285,14 +295,40 @@ public:
 
 	/* virtual */ void FillNestedArray(NWidgetBase **array, uint length);
 	/* virtual */ NWidgetCore *GetWidgetFromPos(int x, int y);
+	/* virtual */ bool IsHighlighted() const;
+	/* virtual */ TextColour GetHighlightColour() const;
+	/* virtual */ void SetHighlighted(TextColour highlight_colour);
 
 	NWidgetDisplay disp_flags; ///< Flags that affect display and interaction with the widget.
 	Colours colour;            ///< Colour of this widget.
 	int index;                 ///< Index of the nested widget in the widget array of the window (\c -1 means 'not used').
-	uint16 widget_data;        ///< Data of the widget. @see Widget::data
+	uint32 widget_data;        ///< Data of the widget. @see Widget::data
 	StringID tool_tip;         ///< Tooltip of the widget. @see Widget::tootips
 	int scrollbar_index;       ///< Index of an attached scrollbar.
+	TextColour highlight_colour; ///< Colour of highlight.
 };
+
+/**
+ * Highlight the widget or not.
+ * @param highlight_colour Widget must be highlighted (blink).
+ */
+inline void NWidgetCore::SetHighlighted(TextColour highlight_colour)
+{
+	this->disp_flags = highlight_colour != TC_INVALID ? SETBITS(this->disp_flags, ND_HIGHLIGHT) : CLRBITS(this->disp_flags, ND_HIGHLIGHT);
+	this->highlight_colour = highlight_colour;
+}
+
+/** Return whether the widget is highlighted. */
+inline bool NWidgetCore::IsHighlighted() const
+{
+	return HasBit(this->disp_flags, NDB_HIGHLIGHT);
+}
+
+/** Return the colour of the highlight. */
+inline TextColour NWidgetCore::GetHighlightColour() const
+{
+	return this->highlight_colour;
+}
 
 /**
  * Lower or raise the widget.
@@ -574,7 +610,7 @@ public:
 	 * Gets the number of elements in the list
 	 * @return the number of elements
 	 */
-	FORCEINLINE uint16 GetCount() const
+	inline uint16 GetCount() const
 	{
 		return this->count;
 	}
@@ -583,7 +619,7 @@ public:
 	 * Gets the number of visible elements of the scrollbar
 	 * @return the number of visible elements
 	 */
-	FORCEINLINE uint16 GetCapacity() const
+	inline uint16 GetCapacity() const
 	{
 		return this->cap;
 	}
@@ -592,7 +628,7 @@ public:
 	 * Gets the position of the first visible element in the list
 	 * @return the position of the element
 	 */
-	FORCEINLINE uint16 GetPosition() const
+	inline uint16 GetPosition() const
 	{
 		return this->pos;
 	}
@@ -602,7 +638,7 @@ public:
 	 * @param item to check
 	 * @return true iff the item is visible
 	 */
-	FORCEINLINE bool IsVisible(uint16 item) const
+	inline bool IsVisible(uint16 item) const
 	{
 		return IsInsideBS(item, this->GetPosition(), this->GetCapacity());
 	}
@@ -611,7 +647,7 @@ public:
 	 * Is the scrollbar vertical or not?
 	 * @return True iff the scrollbar is vertical.
 	 */
-	FORCEINLINE bool IsVertical() const
+	inline bool IsVertical() const
 	{
 		return this->is_vertical;
 	}
@@ -717,6 +753,14 @@ public:
 
 	/* virtual */ void SetupSmallestSize(Window *w, bool init_array);
 	/* virtual */ void Draw(const Window *w);
+
+	static void InvalidateDimensionCache();
+	static Dimension GetVerticalDimension();
+	static Dimension GetHorizontalDimension();
+
+private:
+	static Dimension vertical_dimension;   ///< Cached size of vertical scrollbar button.
+	static Dimension horizontal_dimension; ///< Cached size of horizontal scrollbar button.
 };
 
 /**
@@ -736,6 +780,7 @@ public:
 private:
 	static Dimension shadebox_dimension;  ///< Cached size of a shadebox widget.
 	static Dimension debugbox_dimension;  ///< Cached size of a debugbox widget.
+	static Dimension defsizebox_dimension; ///< Cached size of a defsizebox widget.
 	static Dimension stickybox_dimension; ///< Cached size of a stickybox widget.
 	static Dimension resizebox_dimension; ///< Cached size of a resizebox widget.
 	static Dimension closebox_dimension;  ///< Cached size of a closebox widget.
@@ -748,7 +793,7 @@ private:
  * @param step      Stepsize of the widget.
  * @return Biggest possible size of the widget, assuming that \a base may only be incremented by \a step size steps.
  */
-static FORCEINLINE uint ComputeMaxSize(uint base, uint max_space, uint step)
+static inline uint ComputeMaxSize(uint base, uint max_space, uint step)
 {
 	if (base >= max_space || step == 0) return base;
 	if (step == 1) return max_space;
@@ -788,7 +833,7 @@ static FORCEINLINE uint ComputeMaxSize(uint base, uint max_space, uint step)
  *   the child widgets (it has no meaning for the compiler but it makes the widget parts easier to read).
  *   Below the last child widget, use an #EndContainer part. This part should be aligned with the #NWidget part that started the container.
  *
- * - Stacked widgets #NWidgetStacked map each of their childs onto the same space. It behaves like a container, except there is no pre/inter/post space,
+ * - Stacked widgets #NWidgetStacked map each of their children onto the same space. It behaves like a container, except there is no pre/inter/post space,
  *   so the widget does not support #SetPIP. #SetPadding is allowed though.
  *   Like the other container widgets, below the last child widgets, a #EndContainer part should be used to denote the end of the stacked widget.
  *
@@ -976,6 +1021,18 @@ static inline NWidgetPart SetDataTip(uint16 data, StringID tip)
 }
 
 /**
+ * Widget part function for setting the data and tooltip of WWT_MATRIX widgets
+ * @param cols Number of columns. \c 0 means to use draw columns with width according to the resize step size.
+ * @param rows Number of rows. \c 0 means to use draw rows with height according to the resize step size.
+ * @param tip  Tooltip of the widget.
+ * @ingroup NestedWidgetParts
+ */
+static inline NWidgetPart SetMatrixDataTip(uint8 cols, uint8 rows, StringID tip)
+{
+	return SetDataTip((rows << MAT_ROW_START) | (cols << MAT_COL_START), tip);
+}
+
+/**
  * Widget part function for setting additional space around a widget.
  * Parameters start above the widget, and are specified in clock-wise direction.
  * @param top The padding above the widget.
@@ -1029,7 +1086,7 @@ static inline NWidgetPart SetPIP(uint8 pre, uint8 inter, uint8 post)
 /**
  * Attach a scrollbar to a widget.
  * The scrollbar is controlled when using the mousewheel on the widget.
- * Multipe widgets can refer to the same scrollbar to make the mousewheel work in all of them.
+ * Multiple widgets can refer to the same scrollbar to make the mousewheel work in all of them.
  * @param index Widget index of the scrollbar.
  * @ingroup NestedWidgetParts
  */

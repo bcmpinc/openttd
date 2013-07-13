@@ -73,7 +73,7 @@ NetworkHTTPSocketHandler::~NetworkHTTPSocketHandler()
 
 	if (this->sock != INVALID_SOCKET) closesocket(this->sock);
 	this->sock = INVALID_SOCKET;
-	free((void*)this->data);
+	free(this->data);
 }
 
 NetworkRecvStatus NetworkHTTPSocketHandler::CloseConnection(bool error)
@@ -177,7 +177,7 @@ int NetworkHTTPSocketHandler::HandleHeader()
 	int ret = NetworkHTTPSocketHandler::Connect(uri, this->callback, this->data, this->redirect_depth + 1);
 	if (ret != 0) return ret;
 
-	/* We've relinguished control of data now. */
+	/* We've relinquished control of data now. */
 	this->data = NULL;
 
 	/* Restore the header. */

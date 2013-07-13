@@ -48,6 +48,8 @@ struct TileArea {
 
 	bool Intersects(const TileArea &ta) const;
 
+	bool Contains(TileIndex tile) const;
+
 	void ClampToMap();
 
 	/**
@@ -83,15 +85,20 @@ public:
 	 * Get the tile we are currently at.
 	 * @return The tile we are at, or INVALID_TILE when we're done.
 	 */
-	FORCEINLINE operator TileIndex () const
+	inline operator TileIndex () const
 	{
 		return this->tile;
 	}
 
 	/**
-	 * Move ourselves to the next tile in the rectange on the map.
+	 * Move ourselves to the next tile in the rectangle on the map.
 	 */
 	virtual TileIterator& operator ++() = 0;
+
+	/**
+	 * Allocate a new iterator that is a copy of this one.
+	 */
+	virtual TileIterator *Clone() const = 0;
 };
 
 /** Iterator to iterate over a tile area (rectangle) of the map. */
@@ -111,9 +118,9 @@ public:
 	}
 
 	/**
-	 * Move ourselves to the next tile in the rectange on the map.
+	 * Move ourselves to the next tile in the rectangle on the map.
 	 */
-	FORCEINLINE TileIterator& operator ++()
+	inline TileIterator& operator ++()
 	{
 		assert(this->tile != INVALID_TILE);
 
@@ -127,6 +134,11 @@ public:
 		}
 		return *this;
 	}
+
+	virtual TileIterator *Clone() const
+	{
+		return new OrthogonalTileIterator(*this);
+	}
 };
 
 /** Iterator to iterate over a diagonal area of the map. */
@@ -136,13 +148,18 @@ private:
 	uint base_y; ///< The base tile y coordinate from where the iterating happens.
 	int a_cur;   ///< The current (rotated) x coordinate of the iteration.
 	int b_cur;   ///< The current (rotated) y coordinate of the iteration.
-	int a_max;   ///< The (rotated) x coordinats of the end of the iteration.
+	int a_max;   ///< The (rotated) x coordinate of the end of the iteration.
 	int b_max;   ///< The (rotated) y coordinate of the end of the iteration.
 
 public:
 	DiagonalTileIterator(TileIndex begin, TileIndex end);
 
 	TileIterator& operator ++();
+
+	virtual TileIterator *Clone() const
+	{
+		return new DiagonalTileIterator(*this);
+	}
 };
 
 /**

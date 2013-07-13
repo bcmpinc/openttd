@@ -18,7 +18,6 @@
 #include "pathfinder/npf/npf_func.h"
 #include "depot_base.h"
 #include "station_base.h"
-#include "vehicle_gui.h"
 #include "newgrf_engine.h"
 #include "pathfinder/yapf/yapf.h"
 #include "newgrf_sound.h"
@@ -33,6 +32,7 @@
 #include "engine_base.h"
 #include "company_base.h"
 #include "tunnelbridge_map.h"
+#include "zoom_func.h"
 
 #include "table/strings.h"
 
@@ -62,13 +62,13 @@ static inline TrackBits GetTileShipTrackStatus(TileIndex tile)
 	return TrackStatusToTrackBits(GetTileTrackStatus(tile, TRANSPORT_WATER, 0));
 }
 
-static SpriteID GetShipIcon(EngineID engine)
+static SpriteID GetShipIcon(EngineID engine, EngineImageType image_type)
 {
 	const Engine *e = Engine::Get(engine);
 	uint8 spritenum = e->u.ship.image_index;
 
 	if (is_custom_sprite(spritenum)) {
-		SpriteID sprite = GetCustomVehicleIcon(engine, DIR_W);
+		SpriteID sprite = GetCustomVehicleIcon(engine, DIR_W, image_type);
 		if (sprite != 0) return sprite;
 
 		spritenum = e->original_image_index;
@@ -77,37 +77,42 @@ static SpriteID GetShipIcon(EngineID engine)
 	return DIR_W + _ship_sprites[spritenum];
 }
 
-void DrawShipEngine(int left, int right, int preferred_x, int y, EngineID engine, PaletteID pal)
+void DrawShipEngine(int left, int right, int preferred_x, int y, EngineID engine, PaletteID pal, EngineImageType image_type)
 {
-	SpriteID sprite = GetShipIcon(engine);
+	SpriteID sprite = GetShipIcon(engine, image_type);
 	const Sprite *real_sprite = GetSprite(sprite, ST_NORMAL);
-	preferred_x = Clamp(preferred_x, left - real_sprite->x_offs, right - real_sprite->width - real_sprite->x_offs);
+	preferred_x = Clamp(preferred_x, left - UnScaleByZoom(real_sprite->x_offs, ZOOM_LVL_GUI), right - UnScaleByZoom(real_sprite->width, ZOOM_LVL_GUI) - UnScaleByZoom(real_sprite->x_offs, ZOOM_LVL_GUI));
 	DrawSprite(sprite, pal, preferred_x, y);
 }
 
 /**
- * Get the size of the sprite of a ship sprite heading west (used for lists)
- * @param engine The engine to get the sprite from
- * @param width The width of the sprite
- * @param height The height of the sprite
+ * Get the size of the sprite of a ship sprite heading west (used for lists).
+ * @param engine The engine to get the sprite from.
+ * @param[out] width The width of the sprite.
+ * @param[out] height The height of the sprite.
+ * @param[out] xoffs Number of pixels to shift the sprite to the right.
+ * @param[out] yoffs Number of pixels to shift the sprite downwards.
+ * @param image_type Context the sprite is used in.
  */
-void GetShipSpriteSize(EngineID engine, uint &width, uint &height)
+void GetShipSpriteSize(EngineID engine, uint &width, uint &height, int &xoffs, int &yoffs, EngineImageType image_type)
 {
-	const Sprite *spr = GetSprite(GetShipIcon(engine), ST_NORMAL);
+	const Sprite *spr = GetSprite(GetShipIcon(engine, image_type), ST_NORMAL);
 
-	width  = spr->width;
-	height = spr->height;
+	width  = UnScaleByZoom(spr->width, ZOOM_LVL_GUI);
+	height = UnScaleByZoom(spr->height, ZOOM_LVL_GUI);
+	xoffs  = UnScaleByZoom(spr->x_offs, ZOOM_LVL_GUI);
+	yoffs  = UnScaleByZoom(spr->y_offs, ZOOM_LVL_GUI);
 }
 
-SpriteID Ship::GetImage(Direction direction) const
+SpriteID Ship::GetImage(Direction direction, EngineImageType image_type) const
 {
 	uint8 spritenum = this->spritenum;
 
 	if (is_custom_sprite(spritenum)) {
-		SpriteID sprite = GetCustomVehicleSprite(this, direction);
+		SpriteID sprite = GetCustomVehicleSprite(this, direction, image_type);
 		if (sprite != 0) return sprite;
 
-		spritenum = Engine::Get(this->engine_type)->original_image_index;
+		spritenum = this->GetEngine()->original_image_index;
 	}
 
 	return _ship_sprites[spritenum] + direction;
@@ -142,7 +147,7 @@ static const Depot *FindClosestShipDepot(const Vehicle *v, uint max_distance)
 static void CheckIfShipNeedsService(Vehicle *v)
 {
 	if (Company::Get(v->owner)->settings.vehicle.servint_ships == 0 || !v->NeedsAutomaticServicing()) return;
-	if (v->IsInDepot()) {
+	if (v->IsChainInDepot()) {
 		VehicleServiceInDepot(v);
 		return;
 	}
@@ -160,14 +165,14 @@ static void CheckIfShipNeedsService(Vehicle *v)
 	if (depot == NULL) {
 		if (v->current_order.IsType(OT_GOTO_DEPOT)) {
 			v->current_order.MakeDummy();
-			SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, VVW_WIDGET_START_STOP_VEH);
+			SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, WID_VV_START_STOP);
 		}
 		return;
 	}
 
 	v->current_order.MakeGoToDepot(depot->index, ODTFB_SERVICE);
 	v->dest_tile = depot->xy;
-	SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, VVW_WIDGET_START_STOP_VEH);
+	SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, WID_VV_START_STOP);
 }
 
 /**
@@ -190,9 +195,9 @@ void Ship::UpdateCache()
 
 Money Ship::GetRunningCost() const
 {
-	const Engine *e = Engine::Get(this->engine_type);
+	const Engine *e = this->GetEngine();
 	uint cost_factor = GetVehicleProperty(this, PROP_SHIP_RUNNING_COST_FACTOR, e->u.ship.running_cost);
-	return GetPrice(PR_RUNNING_SHIP, cost_factor, e->grf_prop.grffile);
+	return GetPrice(PR_RUNNING_SHIP, cost_factor, e->GetGRF());
 }
 
 void Ship::OnNewDay()
@@ -271,24 +276,23 @@ TileIndex Ship::GetOrderStationLocation(StationID station)
 
 void Ship::UpdateDeltaXY(Direction direction)
 {
-#define MKIT(a, b, c, d) ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((c & 0xFF) << 8) | ((d & 0xFF) << 0)
-	static const uint32 _delta_xy_table[8] = {
-		MKIT( 6,  6,  -3,  -3),
-		MKIT( 6, 32,  -3, -16),
-		MKIT( 6,  6,  -3,  -3),
-		MKIT(32,  6, -16,  -3),
-		MKIT( 6,  6,  -3,  -3),
-		MKIT( 6, 32,  -3, -16),
-		MKIT( 6,  6,  -3,  -3),
-		MKIT(32,  6, -16,  -3),
+	static const int8 _delta_xy_table[8][4] = {
+		/* y_extent, x_extent, y_offs, x_offs */
+		{ 6,  6,  -3,  -3}, // N
+		{ 6, 32,  -3, -16}, // NE
+		{ 6,  6,  -3,  -3}, // E
+		{32,  6, -16,  -3}, // SE
+		{ 6,  6,  -3,  -3}, // S
+		{ 6, 32,  -3, -16}, // SW
+		{ 6,  6,  -3,  -3}, // W
+		{32,  6, -16,  -3}, // NW
 	};
-#undef MKIT
 
-	uint32 x = _delta_xy_table[direction];
-	this->x_offs        = GB(x,  0, 8);
-	this->y_offs        = GB(x,  8, 8);
-	this->x_extent      = GB(x, 16, 8);
-	this->y_extent      = GB(x, 24, 8);
+	const int8 *bb = _delta_xy_table[direction];
+	this->x_offs        = bb[3];
+	this->y_offs        = bb[2];
+	this->x_extent      = bb[1];
+	this->y_extent      = bb[0];
 	this->z_extent      = 6;
 }
 
@@ -299,7 +303,7 @@ static const TileIndexDiffC _ship_leave_depot_offs[] = {
 
 static bool CheckShipLeaveDepot(Ship *v)
 {
-	if (!v->IsInDepot()) return false;
+	if (!v->IsChainInDepot()) return false;
 
 	/* We are leaving a depot, but have to go to the exact same one; re-enter */
 	if (v->current_order.IsType(OT_GOTO_DEPOT) &&
@@ -311,13 +315,34 @@ static bool CheckShipLeaveDepot(Ship *v)
 	TileIndex tile = v->tile;
 	Axis axis = GetShipDepotAxis(tile);
 
-	/* Check first (north) side */
-	if (DiagdirReachesTracks((DiagDirection)axis) & GetTileShipTrackStatus(TILE_ADD(tile, ToTileIndexDiff(_ship_leave_depot_offs[axis])))) {
-		v->direction = ReverseDir(AxisToDirection(axis));
-	/* Check second (south) side */
-	} else if (DiagdirReachesTracks((DiagDirection)(axis + 2)) & GetTileShipTrackStatus(TILE_ADD(tile, -2 * ToTileIndexDiff(_ship_leave_depot_offs[axis])))) {
-		v->direction = AxisToDirection(axis);
+	DiagDirection north_dir = ReverseDiagDir(AxisToDiagDir(axis));
+	TileIndex north_neighbour = TILE_ADD(tile, ToTileIndexDiff(_ship_leave_depot_offs[axis]));
+	DiagDirection south_dir = AxisToDiagDir(axis);
+	TileIndex south_neighbour = TILE_ADD(tile, -2 * ToTileIndexDiff(_ship_leave_depot_offs[axis]));
+
+	TrackBits north_tracks = DiagdirReachesTracks(north_dir) & GetTileShipTrackStatus(north_neighbour);
+	TrackBits south_tracks = DiagdirReachesTracks(south_dir) & GetTileShipTrackStatus(south_neighbour);
+	if (north_tracks && south_tracks) {
+		/* Ask pathfinder for best direction */
+		bool reverse = false;
+		bool path_found;
+		switch (_settings_game.pf.pathfinder_for_ships) {
+			case VPF_OPF: reverse = OPFShipChooseTrack(v, north_neighbour, north_dir, north_tracks, path_found) == INVALID_TRACK; break; // OPF always allows reversing
+			case VPF_NPF: reverse = NPFShipCheckReverse(v); break;
+			case VPF_YAPF: reverse = YapfShipCheckReverse(v); break;
+			default: NOT_REACHED();
+		}
+		if (reverse) north_tracks = TRACK_BIT_NONE;
+	}
+
+	if (north_tracks) {
+		/* Leave towards north */
+		v->direction = DiagDirToDir(north_dir);
+	} else if (south_tracks) {
+		/* Leave towards south */
+		v->direction = DiagDirToDir(south_dir);
 	} else {
+		/* Both ways blocked */
 		return false;
 	}
 
@@ -325,7 +350,7 @@ static bool CheckShipLeaveDepot(Ship *v)
 	v->vehstatus &= ~VS_HIDDEN;
 
 	v->cur_speed = 0;
-	v->UpdateViewport(false, true);
+	v->UpdateViewport(true, true);
 	SetWindowDirty(WC_VEHICLE_DEPOT, v->tile);
 
 	PlayShipSound(v);
@@ -342,14 +367,15 @@ static bool ShipAccelerate(Vehicle *v)
 	byte t;
 
 	spd = min(v->cur_speed + 1, v->vcache.cached_max_speed);
+	spd = min(spd, v->current_order.max_speed * 2);
 
 	/* updates statusbar only if speed have changed to save CPU time */
 	if (spd != v->cur_speed) {
 		v->cur_speed = spd;
-		SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, VVW_WIDGET_START_STOP_VEH);
+		SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, WID_VV_START_STOP);
 	}
 
-	/* Convert direction-indepenent speed into direction-dependent speed. (old movement method) */
+	/* Convert direction-independent speed into direction-dependent speed. (old movement method) */
 	spd = v->GetOldAdvanceSpeed(spd);
 
 	if (spd == 0) return false;
@@ -374,19 +400,23 @@ static void ShipArrivesAt(const Vehicle *v, Station *st)
 		SetDParam(0, st->index);
 		AddVehicleNewsItem(
 			STR_NEWS_FIRST_SHIP_ARRIVAL,
-			(v->owner == _local_company) ? NS_ARRIVAL_COMPANY : NS_ARRIVAL_OTHER,
+			(v->owner == _local_company) ? NT_ARRIVAL_COMPANY : NT_ARRIVAL_OTHER,
 			v->index,
 			st->index
 		);
-		AI::NewEvent(v->owner, new AIEventStationFirstVehicle(st->index, v->index));
+		AI::NewEvent(v->owner, new ScriptEventStationFirstVehicle(st->index, v->index));
 	}
 }
 
 
 /**
- * returns the track to choose on the next tile, or -1 when it's better to
- * reverse. The tile given is the tile we are about to enter, enterdir is the
- * direction in which we are entering the tile
+ * Runs the pathfinder to choose a track to continue along.
+ *
+ * @param v Ship to navigate
+ * @param tile Tile, the ship is about to enter
+ * @param enterdir Direction of entering
+ * @param tracks Available track choices on \a tile
+ * @return Track to choose, or INVALID_TRACK when to reverse.
  */
 static Track ChooseShipTrack(Ship *v, TileIndex tile, DiagDirection enterdir, TrackBits tracks)
 {
@@ -509,7 +539,7 @@ static void ShipController(Ship *v)
 				 * always skip ahead. */
 				if (v->current_order.IsType(OT_LEAVESTATION)) {
 					v->current_order.Free();
-					SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, VVW_WIDGET_START_STOP_VEH);
+					SetWindowWidgetDirty(WC_VEHICLE_VIEW, v->index, WID_VV_START_STOP);
 				} else if (v->dest_tile != 0) {
 					/* We have a target, let's see if we reached it... */
 					if (v->current_order.IsType(OT_GOTO_WAYPOINT) &&
@@ -545,15 +575,12 @@ static void ShipController(Ship *v)
 				}
 			}
 		} else {
-			DiagDirection diagdir;
 			/* New tile */
-			if (TileX(gp.new_tile) >= MapMaxX() || TileY(gp.new_tile) >= MapMaxY()) {
-				goto reverse_direction;
-			}
+			if (!IsValidTile(gp.new_tile)) goto reverse_direction;
 
 			dir = ShipGetNewDirectionFromTiles(gp.new_tile, gp.old_tile);
 			assert(dir == DIR_NE || dir == DIR_SE || dir == DIR_SW || dir == DIR_NW);
-			diagdir = DirToDiagDir(dir);
+			DiagDirection diagdir = DirToDiagDir(dir);
 			tracks = GetAvailShipTracks(gp.new_tile, diagdir);
 			if (tracks == TRACK_BIT_NONE) goto reverse_direction;
 
@@ -587,7 +614,8 @@ static void ShipController(Ship *v)
 		if (!IsTileType(gp.new_tile, MP_TUNNELBRIDGE) || !HasBit(VehicleEnterTile(v, gp.new_tile, gp.x, gp.y), VETS_ENTERED_WORMHOLE)) {
 			v->x_pos = gp.x;
 			v->y_pos = gp.y;
-			VehicleMove(v, !(v->vehstatus & VS_HIDDEN));
+			VehicleUpdatePosition(v);
+			if ((v->vehstatus & VS_HIDDEN) == 0) VehicleUpdateViewport(v, true);
 			return;
 		}
 	}
@@ -596,9 +624,10 @@ static void ShipController(Ship *v)
 	dir = ShipGetNewDirection(v, gp.x, gp.y);
 	v->x_pos = gp.x;
 	v->y_pos = gp.y;
-	v->z_pos = GetSlopeZ(gp.x, gp.y);
+	v->z_pos = GetSlopePixelZ(gp.x, gp.y);
 
 getout:
+	VehicleUpdatePosition(v);
 	v->UpdateViewport(true, true);
 	return;
 
@@ -644,7 +673,7 @@ CommandCost CmdBuildShip(TileIndex tile, DoCommandFlag flags, const Engine *e, u
 		y = TileY(tile) * TILE_SIZE + TILE_SIZE / 2;
 		v->x_pos = x;
 		v->y_pos = y;
-		v->z_pos = GetSlopeZ(x, y);
+		v->z_pos = GetSlopePixelZ(x, y);
 
 		v->UpdateDeltaXY(v->direction);
 		v->vehstatus = VS_HIDDEN | VS_STOPPED | VS_DEFPAL;
@@ -652,8 +681,10 @@ CommandCost CmdBuildShip(TileIndex tile, DoCommandFlag flags, const Engine *e, u
 		v->spritenum = svi->image_index;
 		v->cargo_type = e->GetDefaultCargoType();
 		v->cargo_cap = svi->capacity;
+		v->refit_cap = 0;
 
 		v->last_station_visited = INVALID_STATION;
+		v->last_loading_station = INVALID_STATION;
 		v->engine_type = e->index;
 
 		v->reliability = e->reliability;
@@ -663,7 +694,7 @@ CommandCost CmdBuildShip(TileIndex tile, DoCommandFlag flags, const Engine *e, u
 
 		v->state = TRACK_BIT_DEPOT;
 
-		v->service_interval = Company::Get(_current_company)->settings.vehicle.servint_ships;
+		v->SetServiceInterval(Company::Get(_current_company)->settings.vehicle.servint_ships);
 		v->date_of_last_service = _date;
 		v->build_year = _cur_year;
 		v->cur_image = SPR_IMG_QUERY;
@@ -672,14 +703,15 @@ CommandCost CmdBuildShip(TileIndex tile, DoCommandFlag flags, const Engine *e, u
 		v->UpdateCache();
 
 		if (e->flags & ENGINE_EXCLUSIVE_PREVIEW) SetBit(v->vehicle_flags, VF_BUILT_AS_PROTOTYPE);
+		v->SetServiceIntervalIsPercent(Company::Get(_current_company)->settings.vehicle.servint_ispercent);
 
 		v->InvalidateNewGRFCacheOfChain();
 
-		v->cargo_cap = GetVehicleCapacity(v);
+		v->cargo_cap = e->DetermineCapacity(v);
 
 		v->InvalidateNewGRFCacheOfChain();
 
-		VehicleMove(v, false);
+		VehicleUpdatePosition(v);
 	}
 
 	return CommandCost();

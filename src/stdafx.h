@@ -28,31 +28,54 @@
 
 /* It seems that we need to include stdint.h before anything else
  * We need INT64_MAX, which for most systems comes from stdint.h. However, MSVC
- * does not have stdint.h and apparently neither does MorphOS, so define
- * INT64_MAX for them ourselves. */
-#if defined(__APPLE__)
-	/* Already done in osx_stdafx.h */
-#elif !defined(_MSC_VER) && !defined( __MORPHOS__) && !defined(_STDINT_H_)
+ * does not have stdint.h and apparently neither does MorphOS.
+ * For OSX the inclusion is already done in osx_stdafx.h. */
+#if !defined(__APPLE__) && (!defined(_MSC_VER) || _MSC_VER >= 1600) && !defined(__MORPHOS__)
 	#if defined(SUNOS)
 		/* SunOS/Solaris does not have stdint.h, but inttypes.h defines everything
 		 * stdint.h defines and we need. */
 		#include <inttypes.h>
-	# else
+	#else
 		#define __STDC_LIMIT_MACROS
 		#include <stdint.h>
 	#endif
-#else
+#endif
+
+/* The conditions for these constants to be available are way too messy; so check them one by one */
+#if !defined(UINT64_MAX)
 	#define UINT64_MAX (18446744073709551615ULL)
+#endif
+#if !defined(INT64_MAX)
 	#define INT64_MAX  (9223372036854775807LL)
+#endif
+#if !defined(INT64_MIN)
 	#define INT64_MIN  (-INT64_MAX - 1)
+#endif
+#if !defined(UINT32_MAX)
 	#define UINT32_MAX (4294967295U)
+#endif
+#if !defined(INT32_MAX)
 	#define INT32_MAX  (2147483647)
+#endif
+#if !defined(INT32_MIN)
 	#define INT32_MIN  (-INT32_MAX - 1)
+#endif
+#if !defined(UINT16_MAX)
 	#define UINT16_MAX (65535U)
+#endif
+#if !defined(INT16_MAX)
 	#define INT16_MAX  (32767)
+#endif
+#if !defined(INT16_MIN)
 	#define INT16_MIN  (-INT16_MAX - 1)
+#endif
+#if !defined(UINT8_MAX)
 	#define UINT8_MAX  (255)
+#endif
+#if !defined(INT8_MAX)
 	#define INT8_MAX   (127)
+#endif
+#if !defined(INT8_MIN)
 	#define INT8_MIN   (-INT8_MAX - 1)
 #endif
 
@@ -121,21 +144,25 @@
 /* Stuff for GCC */
 #if defined(__GNUC__)
 	#define NORETURN __attribute__ ((noreturn))
-	#define FORCEINLINE inline
 	#define CDECL
 	#define __int64 long long
 	#define GCC_PACK __attribute__((packed))
 	/* Warn about functions using 'printf' format syntax. First argument determines which parameter
 	 * is the format string, second argument is start of values passed to printf. */
 	#define WARN_FORMAT(string, args) __attribute__ ((format (printf, string, args)))
+	#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
+		#define FINAL final
+	#else
+		#define FINAL
+	#endif
 #endif /* __GNUC__ */
 
 #if defined(__WATCOMC__)
 	#define NORETURN
-	#define FORCEINLINE inline
 	#define CDECL
 	#define GCC_PACK
 	#define WARN_FORMAT(string, args)
+	#define FINAL
 	#include <malloc.h>
 #endif /* __WATCOMC__ */
 
@@ -159,10 +186,12 @@
 		#define WINVER 0x0400     // Windows NT 4.0 / Windows 95
 	#endif
 	#define _WIN32_IE_ 0x0401         // 4.01 (win98 and NT4SP5+)
+	#define NOMINMAX                // Disable min/max macros in windows.h.
 
 	#pragma warning(disable: 4244)  // 'conversion' conversion from 'type1' to 'type2', possible loss of data
 	#pragma warning(disable: 4761)  // integral size mismatch in argument : conversion supplied
 	#pragma warning(disable: 4200)  // nonstandard extension used : zero-sized array in struct/union
+	#pragma warning(disable: 4355)  // 'this' : used in base member initializer list
 
 	#if (_MSC_VER < 1400)                   // MSVC 2005 safety checks
 		#error "Only MSVC 2005 or higher are supported. MSVC 2003 and earlier are not! Upgrade your compiler."
@@ -176,18 +205,18 @@
 	#pragma warning(disable: 6031)   // code analyzer: Return value ignored: 'ReadFile'
 	#pragma warning(disable: 6255)   // code analyzer: _alloca indicates failure by raising a stack overflow exception. Consider using _malloca instead
 	#pragma warning(disable: 6246)   // code analyzer: Local declaration of 'statspec' hides declaration of the same name in outer scope. For additional information, see previous declaration at ...
-	#define WARN_FORMAT(string, args)
 
 	#include <malloc.h> // alloca()
 	#define NORETURN __declspec(noreturn)
-	#define FORCEINLINE __forceinline
-	#define inline _inline
+	#define inline __forceinline
 
 	#if !defined(WINCE)
 		#define CDECL _cdecl
 	#endif
 
 	#define GCC_PACK
+	#define WARN_FORMAT(string, args)
+	#define FINAL sealed
 
 	int CDECL snprintf(char *str, size_t size, const char *format, ...) WARN_FORMAT(3, 4);
 	#if defined(WINCE)
@@ -436,6 +465,15 @@ void NORETURN CDECL error(const char *str, ...) WARN_FORMAT(1, 2);
 	/* If all else fails, hardcode something :( */
 	#define MAX_PATH 260
 #endif
+
+/**
+ * Version of the standard free that accepts const pointers.
+ * @param ptr The data to free.
+ */
+static inline void free(const void *ptr)
+{
+	free(const_cast<void *>(ptr));
+}
 
 /**
  * The largest value that can be entered in a variable

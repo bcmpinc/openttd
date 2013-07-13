@@ -14,7 +14,6 @@
 #include "tunnel_map.h"
 #include "bridge_map.h"
 #include "viewport_func.h"
-#include "economy_func.h"
 #include "genworld.h"
 #include "object_base.h"
 #include "company_base.h"
@@ -24,14 +23,14 @@
 
 /*
  * In one terraforming command all four corners of a initial tile can be raised/lowered (though this is not available to the player).
- * The maximal amount of height modifications is archieved when raising a complete flat land from sea level to MAX_TILE_HEIGHT or vice versa.
+ * The maximal amount of height modifications is achieved when raising a complete flat land from sea level to MAX_TILE_HEIGHT or vice versa.
  * This affects all corners with a manhatten distance smaller than MAX_TILE_HEIGHT to one of the initial 4 corners.
  * Their maximal amount is computed to 4 * \sum_{i=1}^{h_max} i  =  2 * h_max * (h_max + 1).
  */
 static const int TERRAFORMER_MODHEIGHT_SIZE = 2 * MAX_TILE_HEIGHT * (MAX_TILE_HEIGHT + 1);
 
 /*
- * The maximal amount of affected tiles (i.e. the tiles that incident with one of the corners above, is computed similiar to
+ * The maximal amount of affected tiles (i.e. the tiles that incident with one of the corners above, is computed similar to
  * 1 + 4 * \sum_{i=1}^{h_max} (i+1)  =  1 + 2 * h_max + (h_max + 3).
  */
 static const int TERRAFORMER_TILE_TABLE_SIZE = 1 + 2 * MAX_TILE_HEIGHT * (MAX_TILE_HEIGHT + 3);
@@ -292,14 +291,14 @@ CommandCost CmdTerraformLand(TileIndex tile, DoCommandFlag flags, uint32 p1, uin
 			if (IsTileType(tile, MP_VOID)) continue;
 
 			/* Find new heights of tile corners */
-			uint z_N = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(0, 0));
-			uint z_W = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(1, 0));
-			uint z_S = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(1, 1));
-			uint z_E = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(0, 1));
+			int z_N = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(0, 0));
+			int z_W = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(1, 0));
+			int z_S = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(1, 1));
+			int z_E = TerraformGetHeightOfTile(&ts, tile + TileDiffXY(0, 1));
 
 			/* Find min and max height of tile */
-			uint z_min = min(min(z_N, z_W), min(z_S, z_E));
-			uint z_max = max(max(z_N, z_W), max(z_S, z_E));
+			int z_min = min(min(z_N, z_W), min(z_S, z_E));
+			int z_max = max(max(z_N, z_W), max(z_S, z_E));
 
 			/* Compute tile slope */
 			Slope tileh = (z_max > z_min + 1 ? SLOPE_STEEP : SLOPE_FLAT);
@@ -311,12 +310,12 @@ CommandCost CmdTerraformLand(TileIndex tile, DoCommandFlag flags, uint32 p1, uin
 			if (pass == 0) {
 				/* Check if bridge would take damage */
 				if (direction == 1 && MayHaveBridgeAbove(tile) && IsBridgeAbove(tile) &&
-						GetBridgeHeight(GetSouthernBridgeEnd(tile)) <= z_max * TILE_HEIGHT) {
+						GetBridgeHeight(GetSouthernBridgeEnd(tile)) <= z_max) {
 					_terraform_err_tile = tile; // highlight the tile under the bridge
 					return_cmd_error(STR_ERROR_MUST_DEMOLISH_BRIDGE_FIRST);
 				}
 				/* Check if tunnel would take damage */
-				if (direction == -1 && IsTunnelInWay(tile, z_min * TILE_HEIGHT)) {
+				if (direction == -1 && IsTunnelInWay(tile, z_min)) {
 					_terraform_err_tile = tile; // highlight the tile above the tunnel
 					return_cmd_error(STR_ERROR_EXCAVATION_WOULD_DAMAGE);
 				}
@@ -338,7 +337,7 @@ CommandCost CmdTerraformLand(TileIndex tile, DoCommandFlag flags, uint32 p1, uin
 			if (indirectly_cleared) {
 				cost = DoCommand(tile, 0, 0, tile_flags, CMD_LANDSCAPE_CLEAR);
 			} else {
-				cost = _tile_type_procs[GetTileType(tile)]->terraform_tile_proc(tile, tile_flags, z_min * TILE_HEIGHT, tileh);
+				cost = _tile_type_procs[GetTileType(tile)]->terraform_tile_proc(tile, tile_flags, z_min, tileh);
 			}
 			_generating_world = curr_gen;
 			if (cost.Failed()) {

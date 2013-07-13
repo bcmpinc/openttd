@@ -39,21 +39,39 @@ public:
 	 * Copy constructor.
 	 * @param other The other vector to copy.
 	 */
+	SmallVector(const SmallVector &other) : data(NULL), items(0), capacity(0)
+	{
+		this->Assign(other);
+	}
+
+	/**
+	 * Generic copy constructor.
+	 * @param other The other vector to copy.
+	 */
 	template <uint X>
 	SmallVector(const SmallVector<T, X> &other) : data(NULL), items(0), capacity(0)
 	{
-		MemCpyT<T>(this->Append(other.Length()), other.Begin(), other.Length());
+		this->Assign(other);
 	}
 
 	/**
 	 * Assignment.
-	 * @param other The new vector that.
+	 * @param other The other vector to assign.
+	 */
+	SmallVector &operator=(const SmallVector &other)
+	{
+		this->Assign(other);
+		return *this;
+	}
+
+	/**
+	 * Generic assignment.
+	 * @param other The other vector to assign.
 	 */
 	template <uint X>
 	SmallVector &operator=(const SmallVector<T, X> &other)
 	{
-		this->Reset();
-		MemCpyT<T>(this->Append(other.Length()), other.Begin(), other.Length());
+		this->Assign(other);
 		return *this;
 	}
 
@@ -63,9 +81,21 @@ public:
 	}
 
 	/**
+	 * Assign items from other vector.
+	 */
+	template <uint X>
+	inline void Assign(const SmallVector<T, X> &other)
+	{
+		if ((const void *)&other == (void *)this) return;
+
+		this->Clear();
+		if (other.Length() > 0) MemCpyT<T>(this->Append(other.Length()), other.Begin(), other.Length());
+	}
+
+	/**
 	 * Remove all items from the list.
 	 */
-	FORCEINLINE void Clear()
+	inline void Clear()
 	{
 		/* In fact we just reset the item counter avoiding the need to
 		 * probably reallocate the same amount of memory the list was
@@ -76,7 +106,7 @@ public:
 	/**
 	 * Remove all items from the list and free allocated memory.
 	 */
-	FORCEINLINE void Reset()
+	inline void Reset()
 	{
 		this->items = 0;
 		this->capacity = 0;
@@ -87,7 +117,7 @@ public:
 	/**
 	 * Compact the list down to the smallest block size boundary.
 	 */
-	FORCEINLINE void Compact()
+	inline void Compact()
 	{
 		uint capacity = Align(this->items, S);
 		if (capacity >= this->capacity) return;
@@ -101,7 +131,7 @@ public:
 	 * @param to_add the number of items to append
 	 * @return pointer to newly allocated item
 	 */
-	FORCEINLINE T *Append(uint to_add = 1)
+	inline T *Append(uint to_add = 1)
 	{
 		uint begin = this->items;
 		this->items += to_add;
@@ -115,12 +145,26 @@ public:
 	}
 
 	/**
+	 * Set the size of the vector, effectively truncating items from the end or appending uninitialised ones.
+	 * @param num_items Target size.
+	 */
+	inline void Resize(uint num_items)
+	{
+		this->items = num_items;
+
+		if (this->items > this->capacity) {
+			this->capacity = Align(this->items, S);
+			this->data = ReallocT(this->data, this->capacity);
+		}
+	}
+
+	/**
 	 * Search for the first occurrence of an item.
 	 * The '!=' operator of T is used for comparison.
 	 * @param item Item to search for
 	 * @return The position of the item, or End() when not present
 	 */
-	FORCEINLINE const T *Find(const T &item) const
+	inline const T *Find(const T &item) const
 	{
 		const T *pos = this->Begin();
 		const T *end = this->End();
@@ -134,7 +178,7 @@ public:
 	 * @param item Item to search for
 	 * @return The position of the item, or End() when not present
 	 */
-	FORCEINLINE T *Find(const T &item)
+	inline T *Find(const T &item)
 	{
 		T *pos = this->Begin();
 		const T *end = this->End();
@@ -148,10 +192,10 @@ public:
 	 * @param item Item to search for
 	 * @return The position of the item, or -1 when not present
 	 */
-	FORCEINLINE int FindIndex(const T &item)
+	inline int FindIndex(const T &item) const
 	{
 		int index = 0;
-		T *pos = this->Begin();
+		const T *pos = this->Begin();
 		const T *end = this->End();
 		while (pos != end && *pos != item) {
 			pos++;
@@ -166,7 +210,7 @@ public:
 	 * @param item Item to test for
 	 * @return true iff the item is present
 	 */
-	FORCEINLINE bool Contains(const T &item) const
+	inline bool Contains(const T &item) const
 	{
 		return this->Find(item) != this->End();
 	}
@@ -176,10 +220,25 @@ public:
 	 * @param item item to remove
 	 * @note it has to be pointer to item in this map. It is overwritten by the last item.
 	 */
-	FORCEINLINE void Erase(T *item)
+	inline void Erase(T *item)
 	{
 		assert(item >= this->Begin() && item < this->End());
 		*item = this->data[--this->items];
+	}
+
+	/**
+	 * Remove items from the vector while preserving the order of other items.
+	 * @param pos First item to remove.
+	 * @param count Number of consecutive items to remove.
+	 */
+	void ErasePreservingOrder(uint pos, uint count = 1)
+	{
+		if (count == 0) return;
+		assert(pos < this->items);
+		assert(pos + count <= this->items);
+		this->items -= count;
+		uint to_move = this->items - pos;
+		if (to_move > 0) MemMoveT(this->data + pos, this->data + pos + count, to_move);
 	}
 
 	/**
@@ -188,7 +247,7 @@ public:
 	 * @param item Item to test for
 	 * @return true iff the item is was already present
 	 */
-	FORCEINLINE bool Include(const T &item)
+	inline bool Include(const T &item)
 	{
 		bool is_member = this->Contains(item);
 		if (!is_member) *this->Append() = item;
@@ -198,7 +257,7 @@ public:
 	/**
 	 * Get the number of items in the list.
 	 */
-	FORCEINLINE uint Length() const
+	inline uint Length() const
 	{
 		return this->items;
 	}
@@ -208,7 +267,7 @@ public:
 	 *
 	 * @return the pointer to the first item
 	 */
-	FORCEINLINE const T *Begin() const
+	inline const T *Begin() const
 	{
 		return this->data;
 	}
@@ -218,7 +277,7 @@ public:
 	 *
 	 * @return the pointer to the first item
 	 */
-	FORCEINLINE T *Begin()
+	inline T *Begin()
 	{
 		return this->data;
 	}
@@ -228,7 +287,7 @@ public:
 	 *
 	 * @return the pointer behind the last valid item
 	 */
-	FORCEINLINE const T *End() const
+	inline const T *End() const
 	{
 		return &this->data[this->items];
 	}
@@ -238,7 +297,7 @@ public:
 	 *
 	 * @return the pointer behind the last valid item
 	 */
-	FORCEINLINE T *End()
+	inline T *End()
 	{
 		return &this->data[this->items];
 	}
@@ -249,7 +308,7 @@ public:
 	 * @param index the position of the item
 	 * @return the pointer to the item
 	 */
-	FORCEINLINE const T *Get(uint index) const
+	inline const T *Get(uint index) const
 	{
 		/* Allow access to the 'first invalid' item */
 		assert(index <= this->items);
@@ -262,7 +321,7 @@ public:
 	 * @param index the position of the item
 	 * @return the pointer to the item
 	 */
-	FORCEINLINE T *Get(uint index)
+	inline T *Get(uint index)
 	{
 		/* Allow access to the 'first invalid' item */
 		assert(index <= this->items);
@@ -275,7 +334,7 @@ public:
 	 * @param index the position of the item
 	 * @return the item
 	 */
-	FORCEINLINE const T &operator[](uint index) const
+	inline const T &operator[](uint index) const
 	{
 		assert(index < this->items);
 		return this->data[index];
@@ -287,7 +346,7 @@ public:
 	 * @param index the position of the item
 	 * @return the item
 	 */
-	FORCEINLINE T &operator[](uint index)
+	inline T &operator[](uint index)
 	{
 		assert(index < this->items);
 		return this->data[index];
@@ -316,10 +375,41 @@ public:
 	/**
 	 * Remove all items from the list.
 	 */
-	FORCEINLINE void Clear()
+	inline void Clear()
 	{
 		for (uint i = 0; i < this->items; i++) {
 			free(this->data[i]);
+		}
+
+		this->items = 0;
+	}
+};
+
+/**
+ * Simple vector template class, with automatic delete.
+ *
+ * @note There are no asserts in the class so you have
+ *       to care about that you grab an item which is
+ *       inside the list.
+ *
+ * @param T The type of the items stored, must be a pointer
+ * @param S The steps of allocation
+ */
+template <typename T, uint S>
+class AutoDeleteSmallVector : public SmallVector<T, S> {
+public:
+	~AutoDeleteSmallVector()
+	{
+		this->Clear();
+	}
+
+	/**
+	 * Remove all items from the list.
+	 */
+	inline void Clear()
+	{
+		for (uint i = 0; i < this->items; i++) {
+			delete this->data[i];
 		}
 
 		this->items = 0;

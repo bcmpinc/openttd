@@ -42,16 +42,16 @@ private:
 	DestinationID dest;   ///< The destination of the order.
 
 	CargoID refit_cargo;  ///< Refit CargoID
-	byte refit_subtype;   ///< Refit subtype
 
 public:
 	Order *next;          ///< Pointer to next order. If NULL, end of list
 
 	uint16 wait_time;    ///< How long in ticks to wait at the destination.
 	uint16 travel_time;  ///< How long in ticks the journey to this destination should take.
+	uint16 max_speed;    ///< How fast the vehicle may go on the way to the destination.
 
-	Order() : refit_cargo(CT_NO_REFIT) {}
-	~Order() {}
+	Order() : refit_cargo(CT_NO_REFIT), max_speed(UINT16_MAX) {}
+	~Order();
 
 	Order(uint32 packed);
 
@@ -71,13 +71,22 @@ public:
 	void Free();
 
 	void MakeGoToStation(StationID destination);
-	void MakeGoToDepot(DepotID destination, OrderDepotTypeFlags order, OrderNonStopFlags non_stop_type = ONSF_NO_STOP_AT_INTERMEDIATE_STATIONS, OrderDepotActionFlags action = ODATF_SERVICE_ONLY, CargoID cargo = CT_NO_REFIT, byte subtype = 0);
+	void MakeGoToDepot(DepotID destination, OrderDepotTypeFlags order, OrderNonStopFlags non_stop_type = ONSF_NO_STOP_AT_INTERMEDIATE_STATIONS, OrderDepotActionFlags action = ODATF_SERVICE_ONLY, CargoID cargo = CT_NO_REFIT);
 	void MakeGoToWaypoint(StationID destination);
 	void MakeLoading(bool ordered);
 	void MakeLeaveStation();
 	void MakeDummy();
 	void MakeConditional(VehicleOrderID order);
 	void MakeImplicit(StationID destination);
+
+	/**
+	 * Is this a 'goto' order with a real destination?
+	 * @return True if the type is either #OT_GOTO_WAYPOINT, #OT_GOTO_DEPOT or #OT_GOTO_STATION.
+	 */
+	inline bool IsGotoOrder() const
+	{
+		return IsType(OT_GOTO_WAYPOINT) || IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION);
+	}
 
 	/**
 	 * Gets the destination of this order.
@@ -95,26 +104,26 @@ public:
 
 	/**
 	 * Is this order a refit order.
-	 * @pre IsType(OT_GOTO_DEPOT)
+	 * @pre IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION)
 	 * @return true if a refit should happen.
 	 */
-	inline bool IsRefit() const { return this->refit_cargo < NUM_CARGO; }
+	inline bool IsRefit() const { return this->refit_cargo < NUM_CARGO || this->refit_cargo == CT_AUTO_REFIT; }
+
+	/**
+	 * Is this order a auto-refit order.
+	 * @pre IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION)
+	 * @return true if a auto-refit should happen.
+	 */
+	inline bool IsAutoRefit() const { return this->refit_cargo == CT_AUTO_REFIT; }
 
 	/**
 	 * Get the cargo to to refit to.
-	 * @pre IsType(OT_GOTO_DEPOT)
+	 * @pre IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION)
 	 * @return the cargo type.
 	 */
 	inline CargoID GetRefitCargo() const { return this->refit_cargo; }
 
-	/**
-	 * Get the cargo subtype to to refit to.
-	 * @pre IsType(OT_GOTO_DEPOT)
-	 * @return the cargo subtype.
-	 */
-	inline byte GetRefitSubtype() const { return this->refit_subtype; }
-
-	void SetRefit(CargoID cargo, byte subtype = 0);
+	void SetRefit(CargoID cargo);
 
 	/** How must the consist be loaded? */
 	inline OrderLoadFlags GetLoadType() const { return (OrderLoadFlags)GB(this->flags, 4, 4); }
@@ -159,7 +168,10 @@ public:
 	inline void SetConditionValue(uint16 value) { SB(this->dest, 0, 11, value); }
 
 	bool ShouldStopAtStation(const Vehicle *v, StationID station) const;
-	TileIndex GetLocation(const Vehicle *v) const;
+	bool CanLoadOrUnload() const;
+	bool CanLeaveWithCargo(bool has_cargo) const;
+
+	TileIndex GetLocation(const Vehicle *v, bool airport = false) const;
 
 	/** Checks if this order has travel_time and if needed wait_time set. */
 	inline bool IsCompletelyTimetabled() const
@@ -188,6 +200,8 @@ struct OrderList : OrderListPool::PoolItem<&_orderlist_pool> {
 private:
 	friend void AfterLoadVehicles(bool part_of_load); ///< For instantiating the shared vehicle chain
 	friend const struct SaveLoad *GetOrderListDescription(); ///< Saving and loading of order lists.
+
+	const Order *GetBestLoadableNext(const Vehicle *v, const Order *o1, const Order *o2) const;
 
 	Order *first;                     ///< First order of the order list.
 	VehicleOrderID num_orders;        ///< NOSAVE: How many orders there are in the list.
@@ -230,6 +244,14 @@ public:
 	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
 
 	/**
+	 * Get the order after the given one or the first one, if the given one is the
+	 * last one.
+	 * @param curr Order to find the next one for.
+	 * @return Next order.
+	 */
+	inline const Order *GetNext(const Order *curr) const { return (curr->next == NULL) ? this->GetFirstOrder() : curr->next; }
+
+	/**
 	 * Get number of orders in the order list.
 	 * @return number of orders in the chain.
 	 */
@@ -240,6 +262,9 @@ public:
 	 * @return number of manual orders in the chain.
 	 */
 	inline VehicleOrderID GetNumManualOrders() const { return this->num_manual_orders; }
+
+	StationID GetNextStoppingStation(const Vehicle *v) const;
+	const Order *GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops, bool is_loading = false) const;
 
 	void InsertOrderAt(Order *new_order, int index);
 	void DeleteOrderAt(int index);

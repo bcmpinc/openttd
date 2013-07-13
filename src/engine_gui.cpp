@@ -11,7 +11,6 @@
 
 #include "stdafx.h"
 #include "window_gui.h"
-#include "gfx_func.h"
 #include "engine_base.h"
 #include "command_func.h"
 #include "strings_func.h"
@@ -21,6 +20,8 @@
 #include "company_func.h"
 #include "rail.h"
 #include "settings_type.h"
+
+#include "widgets/engine_widget.h"
 
 #include "table/strings.h"
 
@@ -42,23 +43,16 @@ StringID GetEngineCategoryName(EngineID engine)
 	}
 }
 
-/** Widgets used for the engine preview window */
-enum EnginePreviewWidgets {
-	EPW_QUESTION,   ///< The container for the question
-	EPW_NO,         ///< No button
-	EPW_YES,        ///< Yes button
-};
-
 static const NWidgetPart _nested_engine_preview_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_LIGHT_BLUE),
 		NWidget(WWT_CAPTION, COLOUR_LIGHT_BLUE), SetDataTip(STR_ENGINE_PREVIEW_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_LIGHT_BLUE),
-		NWidget(WWT_EMPTY, INVALID_COLOUR, EPW_QUESTION), SetMinimalSize(300, 0), SetPadding(8, 8, 8, 8), SetFill(1, 0),
+		NWidget(WWT_EMPTY, INVALID_COLOUR, WID_EP_QUESTION), SetMinimalSize(300, 0), SetPadding(8, 8, 8, 8), SetFill(1, 0),
 		NWidget(NWID_HORIZONTAL, NC_EQUALSIZE), SetPIP(85, 10, 85),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_LIGHT_BLUE, EPW_NO), SetDataTip(STR_QUIT_NO, STR_NULL), SetFill(1, 0),
-			NWidget(WWT_PUSHTXTBTN, COLOUR_LIGHT_BLUE, EPW_YES), SetDataTip(STR_QUIT_YES, STR_NULL), SetFill(1, 0),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_LIGHT_BLUE, WID_EP_NO), SetDataTip(STR_QUIT_NO, STR_NULL), SetFill(1, 0),
+			NWidget(WWT_PUSHTXTBTN, COLOUR_LIGHT_BLUE, WID_EP_YES), SetDataTip(STR_QUIT_YES, STR_NULL), SetFill(1, 0),
 		EndContainer(),
 		NWidget(NWID_SPACER), SetMinimalSize(0, 8),
 	EndContainer(),
@@ -67,14 +61,17 @@ static const NWidgetPart _nested_engine_preview_widgets[] = {
 struct EnginePreviewWindow : Window {
 	static const int VEHICLE_SPACE = 40; // The space to show the vehicle image
 
-	EnginePreviewWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	EnginePreviewWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
-		this->InitNested(desc, window_number);
+		this->InitNested(window_number);
+
+		/* There is no way to recover the window; so disallow closure via DEL; unless SHIFT+DEL */
+		this->flags |= WF_STICKY;
 	}
 
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
-		if (widget != EPW_QUESTION) return;
+		if (widget != WID_EP_QUESTION) return;
 
 		EngineID engine = this->window_number;
 		SetDParam(0, GetEngineCategoryName(engine));
@@ -85,7 +82,7 @@ struct EnginePreviewWindow : Window {
 
 	virtual void DrawWidget(const Rect &r, int widget) const
 	{
-		if (widget != EPW_QUESTION) return;
+		if (widget != WID_EP_QUESTION) return;
 
 		EngineID engine = this->window_number;
 		SetDParam(0, GetEngineCategoryName(engine));
@@ -96,7 +93,7 @@ struct EnginePreviewWindow : Window {
 		DrawString(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, STR_ENGINE_NAME, TC_BLACK, SA_HOR_CENTER);
 		y += FONT_HEIGHT_NORMAL;
 
-		DrawVehicleEngine(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, this->width >> 1, y + VEHICLE_SPACE / 2, engine, GetEnginePalette(engine, _local_company));
+		DrawVehicleEngine(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, this->width >> 1, y + VEHICLE_SPACE / 2, engine, GetEnginePalette(engine, _local_company), EIT_PREVIEW);
 
 		y += VEHICLE_SPACE;
 		DrawStringMultiLine(r.left + WD_FRAMERECT_LEFT, r.right - WD_FRAMERECT_RIGHT, y, r.bottom, GetEngineInfoString(engine), TC_FROMSTRING, SA_CENTER);
@@ -105,18 +102,26 @@ struct EnginePreviewWindow : Window {
 	virtual void OnClick(Point pt, int widget, int click_count)
 	{
 		switch (widget) {
-			case EPW_YES:
+			case WID_EP_YES:
 				DoCommandP(0, this->window_number, 0, CMD_WANT_ENGINE_PREVIEW);
 				/* FALL THROUGH */
-			case EPW_NO:
+			case WID_EP_NO:
 				delete this;
 				break;
 		}
 	}
+
+	virtual void OnInvalidateData(int data = 0, bool gui_scope = true)
+	{
+		if (!gui_scope) return;
+
+		EngineID engine = this->window_number;
+		if (Engine::Get(engine)->preview_company != _local_company) delete this;
+	}
 };
 
-static const WindowDesc _engine_preview_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _engine_preview_desc(
+	WDP_CENTER, "engine_preview", 0, 0,
 	WC_ENGINE_PREVIEW, WC_NONE,
 	WDF_CONSTRUCTION,
 	_nested_engine_preview_widgets, lengthof(_nested_engine_preview_widgets)
@@ -170,20 +175,23 @@ static StringID GetAircraftEngineInfoString(const Engine *e)
 	CargoID cargo = e->GetDefaultCargoType();
 	uint16 mail_capacity;
 	uint capacity = e->GetDisplayDefaultCapacity(&mail_capacity);
+	uint16 range = e->GetRange();
 
-	SetDParam(0, e->GetCost());
-	SetDParam(1, e->GetDisplayMaxSpeed());
-	SetDParam(2, cargo);
-	SetDParam(3, capacity);
+	uint i = 0;
+	SetDParam(i++, e->GetCost());
+	SetDParam(i++, e->GetDisplayMaxSpeed());
+	if (range > 0) SetDParam(i++, range);
+	SetDParam(i++, cargo);
+	SetDParam(i++, capacity);
 
 	if (mail_capacity > 0) {
-		SetDParam(4, CT_MAIL);
-		SetDParam(5, mail_capacity);
-		SetDParam(6, e->GetRunningCost());
-		return STR_ENGINE_PREVIEW_COST_MAX_SPEED_CAPACITY_CAPACITY_RUNCOST;
+		SetDParam(i++, CT_MAIL);
+		SetDParam(i++, mail_capacity);
+		SetDParam(i++, e->GetRunningCost());
+		return range > 0 ? STR_ENGINE_PREVIEW_COST_MAX_SPEED_RANGE_CAPACITY_CAPACITY_RUNCOST : STR_ENGINE_PREVIEW_COST_MAX_SPEED_CAPACITY_CAPACITY_RUNCOST;
 	} else {
-		SetDParam(4, e->GetRunningCost());
-		return STR_ENGINE_PREVIEW_COST_MAX_SPEED_CAPACITY_RUNCOST;
+		SetDParam(i++, e->GetRunningCost());
+		return range > 0 ? STR_ENGINE_PREVIEW_COST_MAX_SPEED_RANGE_CAPACITY_RUNCOST : STR_ENGINE_PREVIEW_COST_MAX_SPEED_CAPACITY_RUNCOST;
 	}
 }
 
@@ -268,25 +276,25 @@ StringID GetEngineInfoString(EngineID engine)
  * @param engine Engine to draw.
  * @param pal    Palette to use for drawing.
  */
-void DrawVehicleEngine(int left, int right, int preferred_x, int y, EngineID engine, PaletteID pal)
+void DrawVehicleEngine(int left, int right, int preferred_x, int y, EngineID engine, PaletteID pal, EngineImageType image_type)
 {
 	const Engine *e = Engine::Get(engine);
 
 	switch (e->type) {
 		case VEH_TRAIN:
-			DrawTrainEngine(left, right, preferred_x, y, engine, pal);
+			DrawTrainEngine(left, right, preferred_x, y, engine, pal, image_type);
 			break;
 
 		case VEH_ROAD:
-			DrawRoadVehEngine(left, right, preferred_x, y, engine, pal);
+			DrawRoadVehEngine(left, right, preferred_x, y, engine, pal, image_type);
 			break;
 
 		case VEH_SHIP:
-			DrawShipEngine(left, right, preferred_x, y, engine, pal);
+			DrawShipEngine(left, right, preferred_x, y, engine, pal, image_type);
 			break;
 
 		case VEH_AIRCRAFT:
-			DrawAircraftEngine(left, right, preferred_x, y, engine, pal);
+			DrawAircraftEngine(left, right, preferred_x, y, engine, pal, image_type);
 			break;
 
 		default: NOT_REACHED();

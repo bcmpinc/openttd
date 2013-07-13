@@ -13,7 +13,7 @@
 #include "heightmap.h"
 #include "clear_map.h"
 #include "void_map.h"
-#include "gui.h"
+#include "error.h"
 #include "saveload/saveload.h"
 #include "bmp.h"
 #include "gfx_func.h"
@@ -24,12 +24,11 @@
 
 /**
  * Convert RGB colours to Grayscale using 29.9% Red, 58.7% Green, 11.4% Blue
- *  (average luminosity formula) -- Dalestan
- * This in fact is the NTSC Colour Space -- TrueLight
+ *  (average luminosity formula, NTSC Colour Space)
  */
 static inline byte RGBToGrayscale(byte red, byte green, byte blue)
 {
-	/* To avoid doubles and stuff, multiple it with a total of 65536 (16bits), then
+	/* To avoid doubles and stuff, multiply it with a total of 65536 (16bits), then
 	 *  divide by it to normalize the value to a byte again. */
 	return ((red * 19595) + (green * 38470) + (blue * 7471)) / 65536;
 }
@@ -345,7 +344,7 @@ static void GrayscaleToMapHeights(uint img_width, uint img_height, byte *map)
 					(col < col_pad) || (col >= (width  - col_pad - (_settings_game.construction.freeform_edges ? 0 : 1)))) {
 				SetTileHeight(tile, 0);
 			} else {
-				/* Use nearest neighbor resizing to scale map data.
+				/* Use nearest neighbour resizing to scale map data.
 				 *  We rotate the map 45 degrees (counter)clockwise */
 				img_row = (((row - row_pad) * num_div) / img_scale);
 				switch (_settings_game.game_creation.heightmap_rotation) {
@@ -465,7 +464,7 @@ bool GetHeightmapDimensions(char *filename, uint *x, uint *y)
  * Load a heightmap from file and change the map in his current dimensions
  *  to a landscape representing the heightmap.
  * It converts pixels to height. The brighter, the higher.
- * @param filename of the heighmap file to be imported
+ * @param filename of the heightmap file to be imported
  */
 void LoadHeightmap(char *filename)
 {

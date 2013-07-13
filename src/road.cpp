@@ -23,7 +23,7 @@
 /**
  * Return if the tile is a valid tile for a crossing.
  *
- * @param tile the curent tile
+ * @param tile the current tile
  * @param ax the axis of the road over the rail
  * @return true if it is a valid tile
  */
@@ -32,11 +32,11 @@ static bool IsPossibleCrossing(const TileIndex tile, Axis ax)
 	return (IsTileType(tile, MP_RAILWAY) &&
 		GetRailTileType(tile) == RAIL_TILE_NORMAL &&
 		GetTrackBits(tile) == (ax == AXIS_X ? TRACK_BIT_Y : TRACK_BIT_X) &&
-		GetFoundationSlope(tile, NULL) == SLOPE_FLAT);
+		GetFoundationSlope(tile) == SLOPE_FLAT);
 }
 
 /**
- * Clean up unneccesary RoadBits of a planed tile.
+ * Clean up unnecessary RoadBits of a planed tile.
  * @param tile current tile
  * @param org_rb planed RoadBits
  * @return optimised RoadBits
@@ -56,7 +56,7 @@ RoadBits CleanUpRoadBits(const TileIndex tile, RoadBits org_rb)
 			const RoadBits mirrored_rb = MirrorRoadBits(target_rb);
 
 			switch (GetTileType(neighbor_tile)) {
-				/* Allways connective ones */
+				/* Always connective ones */
 				case MP_CLEAR: case MP_TREES:
 					connective = true;
 					break;
@@ -83,11 +83,11 @@ RoadBits CleanUpRoadBits(const TileIndex tile, RoadBits org_rb)
 					connective = !IsWater(neighbor_tile);
 					break;
 
-				/* The defentetly not connective ones */
+				/* The definitely not connective ones */
 				default: break;
 			}
 
-			/* If the neighbor tile is inconnective remove the planed road connection to it */
+			/* If the neighbor tile is inconnective, remove the planed road connection to it */
 			if (!connective) org_rb ^= target_rb;
 
 		}
@@ -106,7 +106,7 @@ bool HasRoadTypesAvail(const CompanyID company, const RoadTypes rts)
 {
 	RoadTypes avail_roadtypes;
 
-	if (company == OWNER_TOWN || _game_mode == GM_EDITOR || _generating_world) {
+	if (company == OWNER_DEITY || company == OWNER_TOWN || _game_mode == GM_EDITOR || _generating_world) {
 		avail_roadtypes = ROADTYPES_ROAD;
 	} else {
 		Company *c = Company::GetIfValid(company);

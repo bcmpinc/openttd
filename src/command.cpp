@@ -11,14 +11,13 @@
 
 #include "stdafx.h"
 #include "landscape.h"
+#include "error.h"
 #include "gui.h"
 #include "command_func.h"
 #include "network/network_type.h"
 #include "network/network.h"
 #include "genworld.h"
-#include "newgrf_storage.h"
 #include "strings_func.h"
-#include "gfx_func.h"
 #include "texteff.hpp"
 #include "town.h"
 #include "date_func.h"
@@ -127,6 +126,9 @@ CommandProc CmdBuyCompany;
 CommandProc CmdFoundTown;
 CommandProc CmdRenameTown;
 CommandProc CmdDoTownAction;
+CommandProc CmdTownGrowthRate;
+CommandProc CmdTownCargoGoal;
+CommandProc CmdTownSetText;
 CommandProc CmdExpandTown;
 CommandProc CmdDeleteTown;
 
@@ -143,7 +145,22 @@ CommandProc CmdMoneyCheat;
 CommandProc CmdBuildCanal;
 CommandProc CmdBuildLock;
 
+CommandProc CmdCreateSubsidy;
 CommandProc CmdCompanyCtrl;
+CommandProc CmdCustomNewsItem;
+CommandProc CmdCreateGoal;
+CommandProc CmdRemoveGoal;
+CommandProc CmdSetGoalText;
+CommandProc CmdSetGoalProgress;
+CommandProc CmdSetGoalCompleted;
+CommandProc CmdGoalQuestion;
+CommandProc CmdGoalQuestionAnswer;
+CommandProc CmdCreateStoryPage;
+CommandProc CmdCreateStoryPageElement;
+CommandProc CmdUpdateStoryPageElement;
+CommandProc CmdSetStoryPageTitle;
+CommandProc CmdShowStoryPage;
+CommandProc CmdRemoveStoryPage;
 
 CommandProc CmdLevelLand;
 
@@ -173,7 +190,9 @@ CommandProc CmdSetVehicleOnTime;
 CommandProc CmdAutofillTimetable;
 CommandProc CmdSetTimetableStart;
 
-#define DEF_CMD(proc, flags, type) {proc, #proc, flags, type}
+CommandProc CmdOpenCloseAirport;
+
+#define DEF_CMD(proc, flags, type) {proc, #proc, (CommandFlags)flags, type}
 
 /**
  * The master command table
@@ -188,25 +207,25 @@ static const Command _command_proc_table[] = {
 	DEF_CMD(CmdBuildSingleRail,          CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_SINGLE_RAIL
 	DEF_CMD(CmdRemoveSingleRail,                        CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_SINGLE_RAIL
 	DEF_CMD(CmdLandscapeClear,                                 0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_LANDSCAPE_CLEAR
-	DEF_CMD(CmdBuildBridge,              CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_BRIDGE
+	DEF_CMD(CmdBuildBridge,  CMD_DEITY | CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_BRIDGE
 	DEF_CMD(CmdBuildRailStation,         CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_RAIL_STATION
 	DEF_CMD(CmdBuildTrainDepot,          CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_TRAIN_DEPOT
 	DEF_CMD(CmdBuildSingleSignal,                       CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_SIGNALS
 	DEF_CMD(CmdRemoveSingleSignal,                      CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_SIGNALS
 	DEF_CMD(CmdTerraformLand,           CMD_ALL_TILES | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_TERRAFORM_LAND
 	DEF_CMD(CmdBuildObject,              CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_OBJECT
-	DEF_CMD(CmdBuildTunnel,                             CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_TUNNEL
+	DEF_CMD(CmdBuildTunnel,                 CMD_DEITY | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_TUNNEL
 	DEF_CMD(CmdRemoveFromRailStation,                          0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_FROM_RAIL_STATION
 	DEF_CMD(CmdConvertRail,                                    0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_CONVERT_RAILD
 	DEF_CMD(CmdBuildRailWaypoint,                              0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_RAIL_WAYPOINT
-	DEF_CMD(CmdRenameWaypoint,                                 0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_WAYPOINT
+	DEF_CMD(CmdRenameWaypoint,                      CMD_STR_CTRL, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_WAYPOINT
 	DEF_CMD(CmdRemoveFromRailWaypoint,                         0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_FROM_RAIL_WAYPOINT
 
 	DEF_CMD(CmdBuildRoadStop,            CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_ROAD_STOP
 	DEF_CMD(CmdRemoveRoadStop,                                 0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_ROAD_STOP
-	DEF_CMD(CmdBuildLongRoad,            CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_LONG_ROAD
+	DEF_CMD(CmdBuildLongRoad,CMD_DEITY | CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_LONG_ROAD
 	DEF_CMD(CmdRemoveLongRoad,            CMD_NO_TEST | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_REMOVE_LONG_ROAD; towns may disallow removing road bits (as they are connected) in test, but in exec they're removed and thus removing is allowed.
-	DEF_CMD(CmdBuildRoad,                CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_ROAD
+	DEF_CMD(CmdBuildRoad,    CMD_DEITY | CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_ROAD
 	DEF_CMD(CmdBuildRoadDepot,           CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_ROAD_DEPOT
 
 	DEF_CMD(CmdBuildAirport,             CMD_NO_WATER | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_AIRPORT
@@ -232,7 +251,7 @@ static const Command _command_proc_table[] = {
 
 	DEF_CMD(CmdChangeServiceInt,                               0, CMDT_VEHICLE_MANAGEMENT    ), // CMD_CHANGE_SERVICE_INT
 
-	DEF_CMD(CmdBuildIndustry,                                  0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_INDUSTRY
+	DEF_CMD(CmdBuildIndustry,                          CMD_DEITY, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_INDUSTRY
 	DEF_CMD(CmdSetCompanyManagerFace,                          0, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_COMPANY_MANAGER_FACE
 	DEF_CMD(CmdSetCompanyColour,                               0, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_COMPANY_COLOUR
 
@@ -242,7 +261,7 @@ static const Command _command_proc_table[] = {
 	DEF_CMD(CmdWantEnginePreview,                              0, CMDT_VEHICLE_MANAGEMENT    ), // CMD_WANT_ENGINE_PREVIEW
 
 	DEF_CMD(CmdRenameVehicle,                                  0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_VEHICLE
-	DEF_CMD(CmdRenameEngine,                                   0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_ENGINE
+	DEF_CMD(CmdRenameEngine,                          CMD_SERVER, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_ENGINE
 
 	DEF_CMD(CmdRenameCompany,                                  0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_COMPANY
 	DEF_CMD(CmdRenamePresident,                                0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_PRESIDENT
@@ -250,8 +269,8 @@ static const Command _command_proc_table[] = {
 	DEF_CMD(CmdRenameStation,                                  0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_STATION
 	DEF_CMD(CmdRenameDepot,                                    0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_DEPOT
 
-	DEF_CMD(CmdPlaceSign,                                      0, CMDT_OTHER_MANAGEMENT      ), // CMD_PLACE_SIGN
-	DEF_CMD(CmdRenameSign,                                     0, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_SIGN
+	DEF_CMD(CmdPlaceSign,                              CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_PLACE_SIGN
+	DEF_CMD(CmdRenameSign,                             CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_SIGN
 
 	DEF_CMD(CmdTurnRoadVeh,                                    0, CMDT_VEHICLE_MANAGEMENT    ), // CMD_TURN_ROADVEH
 
@@ -264,7 +283,10 @@ static const Command _command_proc_table[] = {
 	DEF_CMD(CmdFoundTown,                            CMD_NO_TEST, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_FOUND_TOWN; founding random town can fail only in exec run
 	DEF_CMD(CmdRenameTown,                            CMD_SERVER, CMDT_OTHER_MANAGEMENT      ), // CMD_RENAME_TOWN
 	DEF_CMD(CmdDoTownAction,                                   0, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_DO_TOWN_ACTION
-	DEF_CMD(CmdExpandTown,                           CMD_OFFLINE, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_EXPAND_TOWN
+	DEF_CMD(CmdTownCargoGoal,                          CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_TOWN_CARGO_GOAL
+	DEF_CMD(CmdTownGrowthRate,                         CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_TOWN_GROWTH_RATE
+	DEF_CMD(CmdTownSetText,             CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_TOWN_SET_TEXT
+	DEF_CMD(CmdExpandTown,                             CMD_DEITY, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_EXPAND_TOWN
 	DEF_CMD(CmdDeleteTown,                           CMD_OFFLINE, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_DELETE_TOWN
 
 	DEF_CMD(CmdOrderRefit,                                     0, CMDT_ROUTE_MANAGEMENT      ), // CMD_ORDER_REFIT
@@ -274,7 +296,22 @@ static const Command _command_proc_table[] = {
 
 	DEF_CMD(CmdMoneyCheat,                           CMD_OFFLINE, CMDT_CHEAT                 ), // CMD_MONEY_CHEAT
 	DEF_CMD(CmdBuildCanal,                              CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_BUILD_CANAL
+	DEF_CMD(CmdCreateSubsidy,                          CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_CREATE_SUBSIDY
 	DEF_CMD(CmdCompanyCtrl,        CMD_SPECTATOR | CMD_CLIENT_ID, CMDT_SERVER_SETTING        ), // CMD_COMPANY_CTRL
+	DEF_CMD(CmdCustomNewsItem,          CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_CUSTOM_NEWS_ITEM
+	DEF_CMD(CmdCreateGoal,              CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_CREATE_GOAL
+	DEF_CMD(CmdRemoveGoal,                             CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_REMOVE_GOAL
+	DEF_CMD(CmdSetGoalText,             CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_GOAL_TEXT
+	DEF_CMD(CmdSetGoalProgress,         CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_GOAL_PROGRESS
+	DEF_CMD(CmdSetGoalCompleted,        CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_GOAL_COMPLETED
+	DEF_CMD(CmdGoalQuestion,            CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_GOAL_QUESTION
+	DEF_CMD(CmdGoalQuestionAnswer,                     CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_GOAL_QUESTION_ANSWER
+	DEF_CMD(CmdCreateStoryPage,         CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_CREATE_STORY_PAGE
+	DEF_CMD(CmdCreateStoryPageElement,  CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_CREATE_STORY_PAGE_ELEMENT
+	DEF_CMD(CmdUpdateStoryPageElement,  CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_UPDATE_STORY_PAGE_ELEMENT
+	DEF_CMD(CmdSetStoryPageTitle,       CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_SET_STORY_PAGE_TITLE
+	DEF_CMD(CmdShowStoryPage,                          CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_SHOW_STORY_PAGE
+	DEF_CMD(CmdRemoveStoryPage,         CMD_STR_CTRL | CMD_DEITY, CMDT_OTHER_MANAGEMENT      ), // CMD_REMOVE_STORY_PAGE
 
 	DEF_CMD(CmdLevelLand, CMD_ALL_TILES | CMD_NO_TEST | CMD_AUTO, CMDT_LANDSCAPE_CONSTRUCTION), // CMD_LEVEL_LAND; test run might clear tiles multiple times, in execution that only happens once
 
@@ -305,12 +342,14 @@ static const Command _command_proc_table[] = {
 	DEF_CMD(CmdSetVehicleOnTime,                               0, CMDT_ROUTE_MANAGEMENT      ), // CMD_SET_VEHICLE_ON_TIME
 	DEF_CMD(CmdAutofillTimetable,                              0, CMDT_ROUTE_MANAGEMENT      ), // CMD_AUTOFILL_TIMETABLE
 	DEF_CMD(CmdSetTimetableStart,                              0, CMDT_ROUTE_MANAGEMENT      ), // CMD_SET_TIMETABLE_START
+
+	DEF_CMD(CmdOpenCloseAirport,                               0, CMDT_ROUTE_MANAGEMENT      ), // CMD_OPEN_CLOSE_AIRPORT
 };
 
 /*!
  * This function range-checks a cmd, and checks if the cmd is not NULL
  *
- * @param cmd The integervalue of a command
+ * @param cmd The integer value of a command
  * @return true if the command is valid (and got a CommandProc function)
  */
 bool IsValidCommand(uint32 cmd)
@@ -327,7 +366,7 @@ bool IsValidCommand(uint32 cmd)
  * @param cmd The integer value of the command
  * @return The flags for this command
  */
-byte GetCommandFlags(uint32 cmd)
+CommandFlags GetCommandFlags(uint32 cmd)
 {
 	assert(IsValidCommand(cmd));
 
@@ -540,7 +579,7 @@ bool DoCommandP(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd, CommandCallbac
 		 * the server, when it has cost the local company
 		 * something. Furthermore in the editor there is no
 		 * concept of cost, so don't show it there either. */
-		ShowCostOrIncomeAnimation(x, y, GetSlopeZ(x, y), res.GetCost());
+		ShowCostOrIncomeAnimation(x, y, GetSlopePixelZ(x, y), res.GetCost());
 	}
 
 	if (!estimate_only && !only_sending && callback != NULL) {
@@ -590,7 +629,7 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 	assert(proc != NULL);
 
 	/* Command flags are used internally */
-	uint cmd_flags = GetCommandFlags(cmd);
+	CommandFlags cmd_flags = GetCommandFlags(cmd);
 	/* Flags get send to the DoCommand */
 	DoCommandFlag flags = CommandFlagsToDCFlags(cmd_flags);
 
@@ -608,7 +647,7 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 	/* If the company isn't valid it may only do server command or start a new company!
 	 * The server will ditch any server commands a client sends to it, so effectively
 	 * this guards the server from executing functions for an invalid company. */
-	if (_game_mode == GM_NORMAL && !exec_as_spectator && !Company::IsValidID(_current_company)) {
+	if (_game_mode == GM_NORMAL && !exec_as_spectator && !Company::IsValidID(_current_company) && !(_current_company == OWNER_DEITY && (cmd_flags & CMD_DEITY) != 0)) {
 		return_dcpi(CMD_ERROR, false);
 	}
 
@@ -616,39 +655,31 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 	if (exec_as_spectator) cur_company.Change(COMPANY_SPECTATOR);
 
 	bool test_and_exec_can_differ = (cmd_flags & CMD_NO_TEST) != 0;
-	bool skip_test = _networking && (cmd & CMD_NO_TEST_IF_IN_NETWORK) != 0;
 
-	/* Do we need to do a test run?
-	 * Basically we need to always do this, except when
-	 * the no-test-in-network flag is giving and we're
-	 * in a network game (e.g. restoring orders would
-	 * fail this test because the first order does not
-	 * exist yet when inserting the second, giving that
-	 * a wrong insert location and ignoring the command
-	 * and thus breaking restoring). However, when we
-	 * just want to do cost estimation we don't care
-	 * because it's only done once anyway. */
-	CommandCost res;
-	if (estimate_only || !skip_test) {
-		/* Test the command. */
-		_cleared_object_areas.Clear();
-		SetTownRatingTestMode(true);
-		res = proc(tile, flags, p1, p2, text);
-		SetTownRatingTestMode(false);
+	/* Test the command. */
+	_cleared_object_areas.Clear();
+	SetTownRatingTestMode(true);
+	ClearStorageChanges(false);
+	CommandCost res = proc(tile, flags, p1, p2, text);
+	SetTownRatingTestMode(false);
 
-		/* Make sure we're not messing things up here. */
-		assert(exec_as_spectator ? _current_company == COMPANY_SPECTATOR : cur_company.Verify());
+	/* Make sure we're not messing things up here. */
+	assert(exec_as_spectator ? _current_company == COMPANY_SPECTATOR : cur_company.Verify());
 
-		/* If the command fails, we're doing an estimate
-		 * or the player does not have enough money
-		 * (unless it's a command where the test and
-		 * execution phase might return different costs)
-		 * we bail out here. */
-		if (res.Failed() || estimate_only ||
-				(!test_and_exec_can_differ && !CheckCompanyHasMoney(res))) {
-			cur_company.Restore();
-			return_dcpi(res, false);
+	/* If the command fails, we're doing an estimate
+	 * or the player does not have enough money
+	 * (unless it's a command where the test and
+	 * execution phase might return different costs)
+	 * we bail out here. */
+	if (res.Failed() || estimate_only ||
+			(!test_and_exec_can_differ && !CheckCompanyHasMoney(res))) {
+		if (!_networking || _generating_world || (cmd & CMD_NETWORK_COMMAND) != 0) {
+			/* Log the failed command as well. Just to be able to be find
+			 * causes of desyncs due to bad command test implementations. */
+			DEBUG(desync, 1, "cmdf: %08x; %02x; %02x; %06x; %08x; %08x; %08x; \"%s\" (%s)", _date, _date_fract, (int)_current_company, tile, p1, p2, cmd & ~CMD_NETWORK_COMMAND, text, GetCommandName(cmd));
 		}
+		cur_company.Restore();
+		return_dcpi(res, false);
 	}
 
 #ifdef ENABLE_NETWORK
@@ -656,7 +687,7 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 	 * If we are in network, and the command is not from the network
 	 * send it to the command-queue and abort execution
 	 */
-	if (_networking && !(cmd & CMD_NETWORK_COMMAND)) {
+	if (_networking && !_generating_world && !(cmd & CMD_NETWORK_COMMAND)) {
 		NetworkSendCommand(tile, p1, p2, cmd & ~CMD_FLAGS_MASK, callback, text, _current_company);
 		cur_company.Restore();
 
@@ -672,6 +703,7 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 	/* Actually try and execute the command. If no cost-type is given
 	 * use the construction one */
 	_cleared_object_areas.Clear();
+	ClearStorageChanges(false);
 	CommandCost res2 = proc(tile, flags | DC_EXEC, p1, p2, text);
 
 	if (cmd_id == CMD_COMPANY_CTRL) {
@@ -686,11 +718,11 @@ CommandCost DoCommandPInternal(TileIndex tile, uint32 p1, uint32 p2, uint32 cmd,
 		cur_company.Restore();
 	}
 
-	/* If the test and execution can differ, or we skipped the test
-	 * we have to check the return of the command. Otherwise we can
-	 * check whether the test and execution have yielded the same
-	 * result, i.e. cost and error state are the same. */
-	if (!test_and_exec_can_differ && !skip_test) {
+	/* If the test and execution can differ we have to check the
+	 * return of the command. Otherwise we can check whether the
+	 * test and execution have yielded the same result,
+	 * i.e. cost and error state are the same. */
+	if (!test_and_exec_can_differ) {
 		assert(res.GetCost() == res2.GetCost() && res.Failed() == res2.Failed()); // sanity check
 	} else if (res2.Failed()) {
 		return_dcpi(res2, false);

@@ -10,8 +10,7 @@
 /** @file gfx.cpp Handling of drawing text and other gfx related stuff. */
 
 #include "stdafx.h"
-#include "gfx_func.h"
-#include "fontcache.h"
+#include "gfx_layout.h"
 #include "progress.h"
 #include "zoom_func.h"
 #include "blitter/factory.hpp"
@@ -20,7 +19,6 @@
 #include "settings_type.h"
 #include "network/network.h"
 #include "network/network_func.h"
-#include "thread/thread.h"
 #include "window_func.h"
 #include "newgrf_debug.h"
 
@@ -44,55 +42,14 @@ bool _exit_game;
 GameMode _game_mode;
 SwitchMode _switch_mode;  ///< The next mainloop command.
 PauseModeByte _pause_mode;
-int _pal_first_dirty;
-int _pal_count_dirty;
+Palette _cur_palette;
 
-Colour _cur_palette[256];
-
-static int _max_char_height; ///< Cache of the height of the largest font
-static int _max_char_width;  ///< Cache of the width of the largest font
 static byte _stringwidth_table[FS_END][224]; ///< Cache containing width of often used characters. @see GetCharacterWidth()
 DrawPixelInfo *_cur_dpi;
 byte _colour_gradient[COLOUR_END][8];
 
-static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub = NULL, SpriteID sprite_id = SPR_CURSOR_MOUSE);
-
-/**
- * Text drawing parameters, which can change while drawing a line, but are kept between multiple parts
- * of the same text, e.g. on line breaks.
- */
-struct DrawStringParams {
-	FontSize fontsize;
-	TextColour cur_colour, prev_colour;
-
-	DrawStringParams(TextColour colour) : fontsize(FS_NORMAL), cur_colour(colour), prev_colour(colour) {}
-
-	/**
-	 * Switch to new colour \a c.
-	 * @param c New colour to use.
-	 */
-	FORCEINLINE void SetColour(TextColour c)
-	{
-		assert(c >=  TC_BLUE && c <= TC_BLACK);
-		this->prev_colour = this->cur_colour;
-		this->cur_colour = c;
-	}
-
-	/** Switch to previous colour. */
-	FORCEINLINE void SetPreviousColour()
-	{
-		Swap(this->cur_colour, this->prev_colour);
-	}
-
-	/**
-	 * Switch to using a new font \a f.
-	 * @param f New font to use.
-	 */
-	FORCEINLINE void SetFontSize(FontSize f)
-	{
-		this->fontsize = f;
-	}
-};
+static void GfxMainBlitterViewport(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub = NULL, SpriteID sprite_id = SPR_CURSOR_MOUSE);
+static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub = NULL, SpriteID sprite_id = SPR_CURSOR_MOUSE, ZoomLevel zoom = ZOOM_LVL_NORMAL);
 
 static ReusableBuffer<uint8> _cursor_backup;
 
@@ -112,6 +69,7 @@ static const uint DIRTY_BLOCK_WIDTH    = 64;
 
 static uint _dirty_bytes_per_line = 0;
 static byte *_dirty_blocks = NULL;
+extern uint _dirty_block_colour;
 
 void GfxScroll(int left, int top, int width, int height, int xo, int yo)
 {
@@ -192,46 +150,114 @@ void GfxFillRect(int left, int top, int right, int bottom, int colour, FillRectM
 	}
 }
 
-void GfxDrawLine(int x, int y, int x2, int y2, int colour, int width)
+/**
+ * Check line clipping by using a linear equation and draw the visible part of
+ * the line given by x/y and x2/y2.
+ * @param video Destination pointer to draw into.
+ * @param x X coordinate of first point.
+ * @param y Y coordinate of first point.
+ * @param x2 X coordinate of second point.
+ * @param y2 Y coordinate of second point.
+ * @param screen_width With of the screen to check clipping against.
+ * @param screen_height Height of the screen to check clipping against.
+ * @param colour Colour of the line.
+ * @param width Width of the line.
+ */
+static inline void GfxDoDrawLine(void *video, int x, int y, int x2, int y2, int screen_width, int screen_height, uint8 colour, int width)
 {
 	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
-	DrawPixelInfo *dpi = _cur_dpi;
 
 	assert(width > 0);
 
+	if (y2 == y) {
+		/* Special case: horizontal line. */
+		blitter->DrawLine(video,
+				Clamp(x, 0, screen_width), y,
+				Clamp(x2, 0, screen_width), y2,
+				screen_width, screen_height, colour, width);
+		return;
+	}
+	if (x2 == x) {
+		/* Special case: vertical line. */
+		blitter->DrawLine(video,
+				x, Clamp(y, 0, screen_height),
+				x2, Clamp(y2, 0, screen_height),
+				screen_width, screen_height, colour, width);
+		return;
+	}
+
+	int grade_y = y2 - y;
+	int grade_x = x2 - x;
+
+	/* prevent integer overflows. */
+	int margin = 1;
+	while (INT_MAX / abs(grade_y) < max(abs(x), abs(screen_width - x))) {
+		grade_y /= 2;
+		grade_x /= 2;
+		margin  *= 2; // account for rounding errors
+	}
+
+	/* If the line is outside the screen on the same side at X positions 0
+	 * and screen_width, we don't need to draw anything. */
+	int offset_0 = y - x * grade_y / grade_x;
+	int offset_width = y + (screen_width - x) * grade_y / grade_x;
+	if ((offset_0 > screen_height + width / 2 + margin && offset_width > screen_height + width / 2 + margin) ||
+			(offset_0 < -width / 2 - margin && offset_width < -width / 2 - margin)) {
+		return;
+	}
+
+	/* It is possible to use the line equation to further reduce the amount of
+	 * work the blitter has to do by shortening the effective line segment.
+	 * However, in order to get that right and prevent the flickering effects
+	 * of rounding errors so much additional code has to be run here that in
+	 * the general case the effect is not noticable. */
+
+	blitter->DrawLine(video, x, y, x2, y2, screen_width, screen_height, colour, width);
+}
+
+/**
+ * Align parameters of a line to the given DPI and check simple clipping.
+ * @param dpi Screen parameters to align with.
+ * @param x X coordinate of first point.
+ * @param y Y coordinate of first point.
+ * @param x2 X coordinate of second point.
+ * @param y2 Y coordinate of second point.
+ * @param width Width of the line.
+ * @return True if the line is likely to be visible, false if it's certainly
+ *         invisible.
+ */
+static inline bool GfxPreprocessLine(DrawPixelInfo *dpi, int &x, int &y, int &x2, int &y2, int width)
+{
 	x -= dpi->left;
 	x2 -= dpi->left;
 	y -= dpi->top;
 	y2 -= dpi->top;
 
-	/* Check clipping */
-	if (x + width / 2 < 0           && x2 + width / 2 < 0          ) return;
-	if (y + width / 2 < 0           && y2 + width / 2 < 0          ) return;
-	if (x - width / 2 > dpi->width  && x2 - width / 2 > dpi->width ) return;
-	if (y - width / 2 > dpi->height && y2 - width / 2 > dpi->height) return;
+	/* Check simple clipping */
+	if (x + width / 2 < 0           && x2 + width / 2 < 0          ) return false;
+	if (y + width / 2 < 0           && y2 + width / 2 < 0          ) return false;
+	if (x - width / 2 > dpi->width  && x2 - width / 2 > dpi->width ) return false;
+	if (y - width / 2 > dpi->height && y2 - width / 2 > dpi->height) return false;
+	return true;
+}
 
-	blitter->DrawLine(dpi->dst_ptr, x, y, x2, y2, dpi->width, dpi->height, colour, width);
+void GfxDrawLine(int x, int y, int x2, int y2, int colour, int width)
+{
+	DrawPixelInfo *dpi = _cur_dpi;
+	if (GfxPreprocessLine(dpi, x, y, x2, y2, width)) {
+		GfxDoDrawLine(dpi->dst_ptr, x, y, x2, y2, dpi->width, dpi->height, colour, width);
+	}
 }
 
 void GfxDrawLineUnscaled(int x, int y, int x2, int y2, int colour)
 {
-	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
 	DrawPixelInfo *dpi = _cur_dpi;
-
-	x -= dpi->left;
-	x2 -= dpi->left;
-	y -= dpi->top;
-	y2 -= dpi->top;
-
-	/* Check clipping */
-	if (x < 0 && x2 < 0) return;
-	if (y < 0 && y2 < 0) return;
-	if (x > dpi->width  && x2 > dpi->width)  return;
-	if (y > dpi->height && y2 > dpi->height) return;
-
-	blitter->DrawLine(dpi->dst_ptr, UnScaleByZoom(x, dpi->zoom), UnScaleByZoom(y, dpi->zoom),
-			UnScaleByZoom(x2, dpi->zoom), UnScaleByZoom(y2, dpi->zoom),
-			UnScaleByZoom(dpi->width, dpi->zoom), UnScaleByZoom(dpi->height, dpi->zoom), colour, 1);
+	if (GfxPreprocessLine(dpi, x, y, x2, y2, 1)) {
+		GfxDoDrawLine(dpi->dst_ptr,
+				UnScaleByZoom(x, dpi->zoom), UnScaleByZoom(y, dpi->zoom),
+				UnScaleByZoom(x2, dpi->zoom), UnScaleByZoom(y2, dpi->zoom),
+				UnScaleByZoom(dpi->width, dpi->zoom), UnScaleByZoom(dpi->height, dpi->zoom), colour, 1);
+	}
 }
 
 /**
@@ -297,319 +323,152 @@ static void SetColourRemap(TextColour colour)
 	_colour_remap_ptr = _string_colourremap;
 }
 
-#if !defined(WITH_ICU)
-typedef WChar UChar;
-static UChar *HandleBiDiAndArabicShapes(UChar *text) { return text; }
-#else
-#include <unicode/ubidi.h>
-#include <unicode/ushape.h>
-
 /**
- * Function to be able to handle right-to-left text and Arabic chars properly.
- *
- * First: right-to-left (RTL) is stored 'logically' in almost all applications
- *        and so do we. This means that their text is stored from right to the
- *        left in memory and any non-RTL text (like numbers or English) are
- *        then stored from left-to-right. When we want to actually draw the
- *        text we need to reverse the RTL text in memory, which is what
- *        happens in ubidi_writeReordered.
- * Second: Arabic characters "differ" based on their context. To draw the
- *        correct variant we pass it through u_shapeArabic. This function can
- *        add or remove some characters. This is the reason for the lastof
- *        so we know till where we can fill the output.
- *
- * Sadly enough these functions work with a custom character format, UChar,
- * which isn't the same size as WChar. Because of that we need to transform
- * our text first to UChars and then back to something we can use.
- *
- * To be able to truncate strings properly you must truncate before passing to
- * this function. This way the logical begin of the string remains and the end
- * gets chopped of instead of the other way around.
- *
- * The reshaping of Arabic characters might increase or decrease the width of
- * the characters/string. So it might still overflow after truncation, though
- * the chance is fairly slim as most characters get shorter instead of longer.
- * @param buffer the buffer to read from/to
- * @param lastof the end of the buffer
- * @return the buffer to draw from
- */
-static UChar *HandleBiDiAndArabicShapes(UChar *buffer)
-{
-	static UChar input_output[DRAW_STRING_BUFFER];
-	UChar intermediate[DRAW_STRING_BUFFER];
-
-	UChar *t = buffer;
-	size_t length = 0;
-	while (*t != '\0' && length < lengthof(input_output) - 1) {
-		input_output[length++] = *t++;
-	}
-	input_output[length] = 0;
-
-	UErrorCode err = U_ZERO_ERROR;
-	UBiDi *para = ubidi_openSized((int32_t)length, 0, &err);
-	if (para == NULL) return buffer;
-
-	ubidi_setPara(para, input_output, (int32_t)length, _current_text_dir == TD_RTL ? UBIDI_DEFAULT_RTL : UBIDI_DEFAULT_LTR, NULL, &err);
-	ubidi_writeReordered(para, intermediate, (int32_t)length, UBIDI_REMOVE_BIDI_CONTROLS, &err);
-	length = u_shapeArabic(intermediate, (int32_t)length, input_output, lengthof(input_output), U_SHAPE_TEXT_DIRECTION_VISUAL_LTR | U_SHAPE_LETTERS_SHAPE, &err);
-	ubidi_close(para);
-
-	if (U_FAILURE(err)) return buffer;
-
-	input_output[length] = '\0';
-	return input_output;
-}
-#endif /* WITH_ICU */
-
-
-/**
- * Truncate a given string to a maximum width if neccessary.
- * If the string is truncated, add three dots ('...') to show this.
- * @param *str string that is checked and possibly truncated
- * @param maxw maximum width in pixels of the string
- * @param ignore_setxy whether to ignore SETX(Y) or not
- * @param start_fontsize Fontsize to start the text with
- * @return new width of (truncated) string
- */
-static int TruncateString(char *str, int maxw, bool ignore_setxy, FontSize start_fontsize)
-{
-	int w = 0;
-	FontSize size = start_fontsize;
-	int ddd, ddd_w;
-
-	WChar c;
-	char *ddd_pos;
-
-	ddd_w = ddd = GetCharacterWidth(size, '.') * 3;
-
-	for (ddd_pos = str; (c = Utf8Consume(const_cast<const char **>(&str))) != '\0'; ) {
-		if (IsPrintable(c) && !IsTextDirectionChar(c)) {
-			w += GetCharacterWidth(size, c);
-
-			if (w > maxw) {
-				/* string got too big... insert dotdotdot, but make sure we do not
-				 * print anything beyond the string termination character. */
-				for (int i = 0; *ddd_pos != '\0' && i < 3; i++, ddd_pos++) *ddd_pos = '.';
-				*ddd_pos = '\0';
-				return ddd_w;
-			}
-		} else {
-			if (c == SCC_SETX) {
-				if (!ignore_setxy) w = *str;
-				str++;
-			} else if (c == SCC_SETXY) {
-				if (!ignore_setxy) w = *str;
-				str += 2;
-			} else if (c == SCC_TINYFONT) {
-				size = FS_SMALL;
-				ddd = GetCharacterWidth(size, '.') * 3;
-			} else if (c == SCC_BIGFONT) {
-				size = FS_LARGE;
-				ddd = GetCharacterWidth(size, '.') * 3;
-			} else if (c == '\n') {
-				DEBUG(misc, 0, "Drawing string using newlines with DrawString instead of DrawStringMultiLine. Please notify the developers of this: [%s]", str);
-			}
-		}
-
-		/* Remember the last position where three dots fit. */
-		if (w + ddd < maxw) {
-			ddd_w = w + ddd;
-			ddd_pos = str;
-		}
-	}
-
-	return w;
-}
-
-static int ReallyDoDrawString(const UChar *string, int x, int y, DrawStringParams &params, bool parse_string_also_when_clipped = false);
-
-/**
- * Get the real width of the string.
- * @param str the string to draw
- * @param start_fontsize Fontsize to start the text with
- * @return the width.
- */
-static int GetStringWidth(const UChar *str, FontSize start_fontsize)
-{
-	FontSize size = start_fontsize;
-	int max_width;
-	int width;
-	WChar c;
-
-	width = max_width = 0;
-	for (;;) {
-		c = *str++;
-		if (c == 0) break;
-		if (IsPrintable(c) && !IsTextDirectionChar(c)) {
-			width += GetCharacterWidth(size, c);
-		} else {
-			switch (c) {
-				case SCC_SETX:
-				case SCC_SETXY:
-					/* At this point there is no SCC_SETX(Y) anymore */
-					NOT_REACHED();
-					break;
-				case SCC_TINYFONT: size = FS_SMALL; break;
-				case SCC_BIGFONT:  size = FS_LARGE; break;
-				case '\n':
-					max_width = max(max_width, width);
-					break;
-			}
-		}
-	}
-
-	return max(max_width, width);
-}
-
-/**
- * Draw string, possibly truncated to make it fit in its allocated space
- *
- * @param left   The left most position to draw on.
- * @param right  The right most position to draw on.
- * @param top    The top most position to draw on.
- * @param str    String to draw.
- * @param last   The end of the string buffer to draw.
- * @param params Text drawing parameters.
- * @param align  The alignment of the string when drawing left-to-right. In the
- *               case a right-to-left language is chosen this is inverted so it
- *               will be drawn in the right direction.
+ * Drawing routine for drawing a laid out line of text.
+ * @param line      String to draw.
+ * @param y         The top most position to draw on.
+ * @param left      The left most position to draw on.
+ * @param right     The right most position to draw on.
+ * @param align     The alignment of the string when drawing left-to-right. In the
+ *                  case a right-to-left language is chosen this is inverted so it
+ *                  will be drawn in the right direction.
  * @param underline Whether to underline what has been drawn or not.
- * @param truncate  Whether to truncate the string or not.
+ * @param truncation Whether to perform string truncation or not.
  *
  * @return In case of left or center alignment the right most pixel we have drawn to.
  *         In case of right alignment the left most pixel we have drawn to.
  */
-static int DrawString(int left, int right, int top, char *str, const char *last, DrawStringParams &params, StringAlignment align, bool underline = false, bool truncate = true)
+static int DrawLayoutLine(ParagraphLayout::Line *line, int y, int left, int right, StringAlignment align, bool underline, bool truncation)
 {
-	/* We need the outer limits of both left/right */
-	int min_left = INT32_MAX;
-	int max_right = INT32_MIN;
+	if (line->countRuns() == 0) return 0;
 
-	int initial_left = left;
-	int initial_right = right;
-	int initial_top = top;
-
-	if (truncate) TruncateString(str, right - left + 1, (align & SA_STRIP) == SA_STRIP, params.fontsize);
+	int w = line->getWidth();
+	int h = line->getLeading();
 
 	/*
-	 * To support SETX and SETXY properly with RTL languages we have to
-	 * calculate the offsets from the right. To do this we need to split
-	 * the string and draw the parts separated by SETX(Y).
-	 * So here we split
+	 * The following is needed for truncation.
+	 * Depending on the text direction, we either remove bits at the rear
+	 * or the front. For this we shift the entire area to draw so it fits
+	 * within the left/right bounds and the side we do not truncate it on.
+	 * Then we determine the truncation location, i.e. glyphs that fall
+	 * outside of the range min_x - max_x will not be drawn; they are thus
+	 * the truncated glyphs.
+	 *
+	 * At a later step we insert the dots.
 	 */
-	static SmallVector<UChar *, 4> setx_offsets;
-	setx_offsets.Clear();
 
-	UChar draw_buffer[DRAW_STRING_BUFFER];
-	UChar *p = draw_buffer;
+	int max_w = right - left + 1; // The maximum width.
 
-	*setx_offsets.Append() = p;
+	int offset_x = 0;  // The offset we need for positioning the glyphs
+	int min_x = left;  // The minimum x position to draw normal glyphs on.
+	int max_x = right; // The maximum x position to draw normal glyphs on.
 
-	char *loc = str;
-	for (;;) {
-		WChar c;
-		/* We cannot use Utf8Consume as we need the location of the SETX(Y) */
-		size_t len = Utf8Decode(&c, loc);
-		*p++ = c;
+	truncation &= max_w < w;         // Whether we need to do truncation.
+	int dot_width = 0;               // Cache for the width of the dot.
+	const Sprite *dot_sprite = NULL; // Cache for the sprite of the dot.
 
-		if (c == '\0') break;
-		if (p >= lastof(draw_buffer) - 3) {
-			/* Make sure we never overflow (even if copying SCC_SETX(Y)). */
-			*p = '\0';
-			break;
-		}
-		if (c != SCC_SETX && c != SCC_SETXY) {
-			loc += len;
-			continue;
-		}
+	if (truncation) {
+		/*
+		 * Assumption may be made that all fonts of a run are of the same size.
+		 * In any case, we'll use these dots for the abbreviation, so even if
+		 * another size would be chosen it won't have truncated too little for
+		 * the truncation dots.
+		 */
+		FontCache *fc = ((const Font*)line->getVisualRun(0)->getFont())->fc;
+		GlyphID dot_glyph = fc->MapCharToGlyph('.');
+		dot_width = fc->GetGlyphWidth(dot_glyph);
+		dot_sprite = fc->GetGlyph(dot_glyph);
 
-		if (align & SA_STRIP) {
-			/* We do not want to keep the SETX(Y)!. It was already copied, so
-			 * remove it and undo the incrementing of the pointer! */
-			*p-- = '\0';
-			loc += len + (c == SCC_SETXY ? 2 : 1);
-			continue;
+		if (_current_text_dir == TD_RTL) {
+			min_x += 3 * dot_width;
+			offset_x = w - 3 * dot_width - max_w;
+		} else {
+			max_x -= 3 * dot_width;
 		}
 
-		if ((align & SA_HOR_MASK) != SA_LEFT) {
-			DEBUG(grf, 1, "Using SETX and/or SETXY when not aligned to the left. Fixing alignment...");
-
-			/* For left alignment and change the left so it will roughly be in the
-			 * middle. This will never cause the string to be completely centered,
-			 * but once SETX is used you cannot be sure the actual content of the
-			 * string is centered, so it doesn't really matter. */
-			align = SA_LEFT | SA_FORCE;
-			initial_left = left = max(left, (left + right - (int)GetStringBoundingBox(str).width) / 2);
-		}
-
-		/* We add the begin of the string, but don't add it twice */
-		if (p != draw_buffer) {
-			*setx_offsets.Append() = p;
-			p[-1] = '\0';
-			*p++ = c;
-		}
-
-		/* Skip the SCC_SETX(Y) ... */
-		loc += len;
-		/* ... copy the x coordinate ... */
-		*p++ = *loc++;
-		/* ... and finally copy the y coordinate if it exists */
-		if (c == SCC_SETXY) *p++ = *loc++;
+		w = max_w;
 	}
 
 	/* In case we have a RTL language we swap the alignment. */
-	if (!(align & SA_FORCE) && _current_text_dir == TD_RTL && !(align & SA_STRIP) && (align & SA_HOR_MASK) != SA_HOR_CENTER) align ^= SA_RIGHT;
+	if (!(align & SA_FORCE) && _current_text_dir == TD_RTL && (align & SA_HOR_MASK) != SA_HOR_CENTER) align ^= SA_RIGHT;
 
-	for (UChar **iter = setx_offsets.Begin(); iter != setx_offsets.End(); iter++) {
-		UChar *to_draw = *iter;
-		int offset = 0;
+	/* right is the right most position to draw on. In this case we want to do
+	 * calculations with the width of the string. In comparison right can be
+	 * seen as lastof(todraw) and width as lengthof(todraw). They differ by 1.
+	 * So most +1/-1 additions are to move from lengthof to 'indices'.
+	 */
+	switch (align & SA_HOR_MASK) {
+		case SA_LEFT:
+			/* right + 1 = left + w */
+			right = left + w - 1;
+			break;
 
-		/* Skip the SETX(Y) and set the appropriate offsets. */
-		if (*to_draw == SCC_SETX || *to_draw == SCC_SETXY) {
-			to_draw++;
-			offset = *to_draw++;
-			if (*to_draw == SCC_SETXY) top = initial_top + *to_draw++;
-		}
+		case SA_HOR_CENTER:
+			left  = RoundDivSU(right + 1 + left - w, 2);
+			/* right + 1 = left + w */
+			right = left + w - 1;
+			break;
 
-		to_draw = HandleBiDiAndArabicShapes(to_draw);
-		int w = GetStringWidth(to_draw, params.fontsize);
+		case SA_RIGHT:
+			left = right + 1 - w;
+			break;
 
-		/* right is the right most position to draw on. In this case we want to do
-		 * calculations with the width of the string. In comparison right can be
-		 * seen as lastof(todraw) and width as lengthof(todraw). They differ by 1.
-		 * So most +1/-1 additions are to move from lengthof to 'indices'.
-		 */
-		switch (align & SA_HOR_MASK) {
-			case SA_LEFT:
-				/* right + 1 = left + w */
-				left = initial_left + offset;
-				right = left + w - 1;
-				break;
+		default:
+			NOT_REACHED();
+	}
 
-			case SA_HOR_CENTER:
-				left  = RoundDivSU(initial_right + 1 + initial_left - w, 2);
-				/* right + 1 = left + w */
-				right = left + w - 1;
-				break;
+	for (int run_index = 0; run_index < line->countRuns(); run_index++) {
+		const ParagraphLayout::VisualRun *run = line->getVisualRun(run_index);
+		const Font *f = (const Font*)run->getFont();
 
-			case SA_RIGHT:
-				left = initial_right + 1 - w - offset;
-				break;
+		FontCache *fc = f->fc;
+		TextColour colour = f->colour;
+		SetColourRemap(colour);
 
-			default:
-				NOT_REACHED();
-		}
+		DrawPixelInfo *dpi = _cur_dpi;
+		int dpi_left  = dpi->left;
+		int dpi_right = dpi->left + dpi->width - 1;
 
-		min_left  = min(left, min_left);
-		max_right = max(right, max_right);
+		bool draw_shadow = fc->GetDrawGlyphShadow() && colour != TC_BLACK;
 
-		ReallyDoDrawString(to_draw, left, top, params, !truncate);
-		if (underline) {
-			GfxFillRect(left, top + FONT_HEIGHT_NORMAL, right, top + FONT_HEIGHT_NORMAL, _string_colourremap[1]);
+		for (int i = 0; i < run->getGlyphCount(); i++) {
+			GlyphID glyph = run->getGlyphs()[i];
+
+			/* Not a valid glyph (empty) */
+			if (glyph == 0xFFFF) continue;
+
+			int begin_x = run->getPositions()[i * 2]     + left - offset_x;
+			int end_x   = run->getPositions()[i * 2 + 2] + left - offset_x  - 1;
+			int top     = run->getPositions()[i * 2 + 1] + y;
+
+			/* Truncated away. */
+			if (truncation && (begin_x < min_x || end_x > max_x)) continue;
+
+			const Sprite *sprite = fc->GetGlyph(glyph);
+			/* Check clipping (the "+ 1" is for the shadow). */
+			if (begin_x + sprite->x_offs > dpi_right || begin_x + sprite->x_offs + sprite->width /* - 1 + 1 */ < dpi_left) continue;
+
+			if (draw_shadow && (glyph & SPRITE_GLYPH) == 0) {
+				SetColourRemap(TC_BLACK);
+				GfxMainBlitter(sprite, begin_x + 1, top + 1, BM_COLOUR_REMAP);
+				SetColourRemap(colour);
+			}
+			GfxMainBlitter(sprite, begin_x, top, BM_COLOUR_REMAP);
 		}
 	}
 
-	return (align & SA_HOR_MASK) == SA_RIGHT ? min_left : max_right;
+	if (truncation) {
+		int x = (_current_text_dir == TD_RTL) ? left : (right - 3 * dot_width);
+		for (int i = 0; i < 3; i++, x += dot_width) {
+			GfxMainBlitter(dot_sprite, x, y, BM_COLOUR_REMAP);
+		}
+	}
+
+	if (underline) {
+		GfxFillRect(left, y + h, right, y + h, _string_colourremap[1]);
+	}
+
+	return (align & SA_HOR_MASK) == SA_RIGHT ? left : right;
 }
 
 /**
@@ -624,13 +483,27 @@ static int DrawString(int left, int right, int top, char *str, const char *last,
  *               case a right-to-left language is chosen this is inverted so it
  *               will be drawn in the right direction.
  * @param underline Whether to underline what has been drawn or not.
+ * @param fontsize The size of the initial characters.
+ * @return In case of left or center alignment the right most pixel we have drawn to.
+ *         In case of right alignment the left most pixel we have drawn to.
  */
-int DrawString(int left, int right, int top, const char *str, TextColour colour, StringAlignment align, bool underline)
+int DrawString(int left, int right, int top, const char *str, TextColour colour, StringAlignment align, bool underline, FontSize fontsize)
 {
-	char buffer[DRAW_STRING_BUFFER];
-	strecpy(buffer, str, lastof(buffer));
-	DrawStringParams params(colour);
-	return DrawString(left, right, top, buffer, lastof(buffer), params, align, underline);
+	/* The string may contain control chars to change the font, just use the biggest font for clipping. */
+	int max_height = max(max(FONT_HEIGHT_SMALL, FONT_HEIGHT_NORMAL), max(FONT_HEIGHT_LARGE, FONT_HEIGHT_MONO));
+
+	/* Funny glyphs may extent outside the usual bounds, so relax the clipping somewhat. */
+	int extra = max_height / 2;
+
+	if (_cur_dpi->top + _cur_dpi->height + extra < top || _cur_dpi->top > top + max_height + extra ||
+			_cur_dpi->left + _cur_dpi->width + extra < left || _cur_dpi->left > right + extra) {
+		return 0;
+	}
+
+	Layouter layout(str, INT32_MAX, colour, fontsize);
+	if (layout.Length() == 0) return 0;
+
+	return DrawLayoutLine(*layout.Begin(), top, left, right, align, underline, true);
 }
 
 /**
@@ -645,153 +518,28 @@ int DrawString(int left, int right, int top, const char *str, TextColour colour,
  *               case a right-to-left language is chosen this is inverted so it
  *               will be drawn in the right direction.
  * @param underline Whether to underline what has been drawn or not.
+ * @param fontsize The size of the initial characters.
+ * @return In case of left or center alignment the right most pixel we have drawn to.
+ *         In case of right alignment the left most pixel we have drawn to.
  */
-int DrawString(int left, int right, int top, StringID str, TextColour colour, StringAlignment align, bool underline)
+int DrawString(int left, int right, int top, StringID str, TextColour colour, StringAlignment align, bool underline, FontSize fontsize)
 {
 	char buffer[DRAW_STRING_BUFFER];
 	GetString(buffer, str, lastof(buffer));
-	DrawStringParams params(colour);
-	return DrawString(left, right, top, buffer, lastof(buffer), params, align, underline);
+	return DrawString(left, right, top, buffer, colour, align, underline, fontsize);
 }
 
 /**
- * 'Correct' a string to a maximum length. Longer strings will be cut into
- * additional lines at whitespace characters if possible. The string parameter
- * is modified with terminating characters mid-string which are the
- * placeholders for the newlines.
- * The string WILL be truncated if there was no whitespace for the current
- * line's maximum width.
- *
- * @note To know if the terminating '\0' is the string end or just a
- * newline, the returned 'num' value should be consulted. The num'th '\0',
- * starting with index 0 is the real string end.
- *
- * @param str string to check and correct for length restrictions
- * @param last the last valid location (for '\0') in the buffer of str
- * @param maxw the maximum width the string can have on one line
- * @param size Fontsize to start the text with
- * @return return a 32bit wide number consisting of 2 packed values:
- *  0 - 15 the number of lines ADDED to the string
- * 16 - 31 the fontsize in which the length calculation was done at
- */
-uint32 FormatStringLinebreaks(char *str, const char *last, int maxw, FontSize size)
-{
-	int num = 0;
-
-	assert(maxw > 0);
-
-	for (;;) {
-		/* The character *after* the last space. */
-		char *last_space = NULL;
-		int w = 0;
-
-		for (;;) {
-			WChar c = Utf8Consume(const_cast<const char **>(&str));
-			/* whitespace is where we will insert the line-break */
-			if (IsWhitespace(c)) last_space = str;
-
-			if (IsPrintable(c) && !IsTextDirectionChar(c)) {
-				int char_w = GetCharacterWidth(size, c);
-				w += char_w;
-				if (w > maxw) {
-					/* The string is longer than maximum width so we need to decide
-					 * what to do with it. */
-					if (w == char_w) {
-						/* The character is wider than allowed width; don't know
-						 * what to do with this case... bail out! */
-						return num + (size << 16);
-					}
-					if (last_space == NULL) {
-						/* No space has been found. Just terminate at our current
-						 * location. This usually happens for languages that do not
-						 * require spaces in strings, like Chinese, Japanese and
-						 * Korean. For other languages terminating mid-word might
-						 * not be the best, but terminating the whole string instead
-						 * of continuing the word at the next line is worse. */
-						str = Utf8PrevChar(str);
-						size_t len = strlen(str);
-						char *terminator = str + len;
-
-						/* The string location + length of the string + 1 for '\0'
-						 * always fits; otherwise there's no trailing '\0' and it
-						 * it not a valid string. */
-						assert(terminator <= last);
-						assert(*terminator == '\0');
-
-						/* If the string is too long we have to terminate it earlier. */
-						if (terminator == last) {
-							/* Get the 'begin' of the previous character and make that
-							 * the terminator of the string; we truncate it 'early'. */
-							*Utf8PrevChar(terminator) = '\0';
-							len = strlen(str);
-						}
-						/* Also move the terminator! */
-						memmove(str + 1, str, len + 1);
-						*str = '\0';
-						/* str needs to point to the character *after* the last space */
-						str++;
-					} else {
-						/* A space is found; perfect place to terminate */
-						str = last_space;
-					}
-					break;
-				}
-			} else {
-				switch (c) {
-					case '\0': return num + (size << 16);
-					case SCC_SETX:  str++; break;
-					case SCC_SETXY: str += 2; break;
-					case SCC_TINYFONT: size = FS_SMALL; break;
-					case SCC_BIGFONT:  size = FS_LARGE; break;
-					case '\n': goto end_of_inner_loop;
-				}
-			}
-		}
-end_of_inner_loop:
-		/* String didn't fit on line (or a '\n' was encountered), so 'dummy' terminate
-		 * and increase linecount. We use Utf8PrevChar() as also non 1 char long
-		 * whitespace seperators are supported */
-		num++;
-		char *s = Utf8PrevChar(str);
-		*s++ = '\0';
-
-		/* In which case (see above) we will shift remainder to left and close the gap */
-		if (str - s >= 1) {
-			for (; str[-1] != '\0';) *s++ = *str++;
-		}
-	}
-}
-
-
-/**
- * Calculates height of string (in pixels). Accepts multiline string with '\0' as separators.
- * @param src string to check
- * @param num number of extra lines (output of FormatStringLinebreaks())
- * @param start_fontsize Fontsize to start the text with
- * @note assumes text won't be truncated. FormatStringLinebreaks() is a good way to ensure that.
+ * Calculates height of string (in pixels). The string is changed to a multiline string if needed.
+ * @param str string to check
+ * @param maxw maximum string width
  * @return height of pixels of string when it is drawn
  */
-static int GetMultilineStringHeight(const char *src, int num, FontSize start_fontsize)
+static int GetStringHeight(const char *str, int maxw)
 {
-	int maxy = 0;
-	int y = 0;
-	int fh = GetCharacterHeight(start_fontsize);
-
-	for (;;) {
-		WChar c = Utf8Consume(&src);
-
-		switch (c) {
-			case 0:            y += fh; if (--num < 0) return maxy; break;
-			case '\n':         y += fh;                             break;
-			case SCC_SETX:     src++;                               break;
-			case SCC_SETXY:    src++; y = (int)*src++;              break;
-			case SCC_TINYFONT: fh = GetCharacterHeight(FS_SMALL);   break;
-			case SCC_BIGFONT:  fh = GetCharacterHeight(FS_LARGE);   break;
-			default:           maxy = max<int>(maxy, y + fh);       break;
-		}
-	}
+	Layouter layout(str, maxw);
+	return layout.GetBounds().height;
 }
-
 
 /**
  * Calculates height of string (in pixels). The string is changed to a multiline string if needed.
@@ -802,12 +550,23 @@ static int GetMultilineStringHeight(const char *src, int num, FontSize start_fon
 int GetStringHeight(StringID str, int maxw)
 {
 	char buffer[DRAW_STRING_BUFFER];
+	GetString(buffer, str, lastof(buffer));
+	return GetStringHeight(buffer, maxw);
+}
 
+/**
+ * Calculates number of lines of string. The string is changed to a multiline string if needed.
+ * @param str string to check
+ * @param maxw maximum string width
+ * @return number of lines of string when it is drawn
+ */
+int GetStringLineCount(StringID str, int maxw)
+{
+	char buffer[DRAW_STRING_BUFFER];
 	GetString(buffer, str, lastof(buffer));
 
-	uint32 tmp = FormatStringLinebreaks(buffer, lastof(buffer), maxw);
-
-	return GetMultilineStringHeight(buffer, GB(tmp, 0, 16), FS_NORMAL);
+	Layouter layout(buffer, maxw);
+	return layout.Length();
 }
 
 /**
@@ -823,6 +582,18 @@ Dimension GetStringMultiLineBoundingBox(StringID str, const Dimension &suggestio
 }
 
 /**
+ * Calculate string bounding box for multi-line strings.
+ * @param str        String to check.
+ * @param suggestion Suggested bounding box.
+ * @return Bounding box for the multi-line string, may be bigger than \a suggestion.
+ */
+Dimension GetStringMultiLineBoundingBox(const char *str, const Dimension &suggestion)
+{
+	Dimension box = {suggestion.width, GetStringHeight(str, suggestion.width)};
+	return box;
+}
+
+/**
  * Draw string, possibly over multiple lines.
  *
  * @param left   The left most position to draw on.
@@ -830,14 +601,14 @@ Dimension GetStringMultiLineBoundingBox(StringID str, const Dimension &suggestio
  * @param top    The top most position to draw on.
  * @param bottom The bottom most position to draw on.
  * @param str    String to draw.
- * @param last   The end of the string buffer to draw.
  * @param colour Colour used for drawing the string, see DoDrawString() for details
  * @param align  The horizontal and vertical alignment of the string.
  * @param underline Whether to underline all strings
+ * @param fontsize The size of the initial characters.
  *
  * @return If \a align is #SA_BOTTOM, the top to where we have written, else the bottom to where we have written.
  */
-static int DrawStringMultiLine(int left, int right, int top, int bottom, char *str, const char *last, TextColour colour, StringAlignment align, bool underline)
+int DrawStringMultiLine(int left, int right, int top, int bottom, const char *str, TextColour colour, StringAlignment align, bool underline, FontSize fontsize)
 {
 	int maxw = right - left + 1;
 	int maxh = bottom - top + 1;
@@ -846,25 +617,8 @@ static int DrawStringMultiLine(int left, int right, int top, int bottom, char *s
 	 * do we really want to support fonts of 0 or less pixels high? */
 	if (maxh <= 0) return top;
 
-	uint32 tmp = FormatStringLinebreaks(str, last, maxw);
-	int num = GB(tmp, 0, 16) + 1;
-
-	int mt = GetCharacterHeight((FontSize)GB(tmp, 16, 16));
-	int total_height = num * mt;
-
-	int skip_lines = 0;
-	if (total_height > maxh) {
-		if (maxh < mt) return top; //  Not enough room for a single line.
-		if ((align & SA_VERT_MASK) == SA_BOTTOM) {
-			skip_lines = num;
-			num = maxh / mt;
-			skip_lines -= num;
-		} else {
-			num = maxh / mt;
-		}
-		total_height = num * mt;
-	}
-
+	Layouter layout(str, maxw, colour, fontsize);
+	int total_height = layout.GetBounds().height;
 	int y;
 	switch (align & SA_VERT_MASK) {
 		case SA_TOP:
@@ -882,44 +636,23 @@ static int DrawStringMultiLine(int left, int right, int top, int bottom, char *s
 		default: NOT_REACHED();
 	}
 
-	const char *src = str;
-	DrawStringParams params(colour);
-	int written_top = bottom; // Uppermost position of rendering a line of text
-	for (;;) {
-		if (skip_lines == 0) {
-			char buf2[DRAW_STRING_BUFFER];
-			strecpy(buf2, src, lastof(buf2));
-			DrawString(left, right, y, buf2, lastof(buf2), params, align, underline, false);
-			if (written_top > y) written_top = y;
-			y += mt;
-			num--;
-		}
+	int last_line = top;
+	int first_line = bottom;
 
-		for (;;) {
-			WChar c = Utf8Consume(&src);
-			if (c == 0) {
-				break;
-			} else if (c == SCC_SETX) {
-				src++;
-			} else if (c == SCC_SETXY) {
-				src += 2;
-			} else if (skip_lines > 0) {
-				/* Skipped drawing, so do additional processing to update params. */
-				if (c >= SCC_BLUE && c <= SCC_BLACK) {
-					params.SetColour((TextColour)(c - SCC_BLUE));
-				} else if (c == SCC_PREVIOUS_COLOUR) { // Revert to the previous colour.
-					params.SetPreviousColour();
-				} else if (c == SCC_TINYFONT) {
-					params.SetFontSize(FS_SMALL);
-				} else if (c == SCC_BIGFONT) {
-					params.SetFontSize(FS_LARGE);
-				}
+	for (ParagraphLayout::Line **iter = layout.Begin(); iter != layout.End(); iter++) {
+		ParagraphLayout::Line *line = *iter;
 
-			}
+		int line_height = line->getLeading();
+		if (y >= top && y < bottom) {
+			last_line = y + line_height;
+			if (first_line > y) first_line = y;
+
+			DrawLayoutLine(line, y, left, right, align, underline, false);
 		}
-		if (skip_lines > 0) skip_lines--;
-		if (num == 0) return ((align & SA_VERT_MASK) == SA_BOTTOM) ? written_top : y;
+		y += line_height;
 	}
+
+	return ((align & SA_VERT_MASK) == SA_BOTTOM) ? first_line : last_line;
 }
 
 /**
@@ -933,35 +666,15 @@ static int DrawStringMultiLine(int left, int right, int top, int bottom, char *s
  * @param colour Colour used for drawing the string, see DoDrawString() for details
  * @param align  The horizontal and vertical alignment of the string.
  * @param underline Whether to underline all strings
+ * @param fontsize The size of the initial characters.
  *
  * @return If \a align is #SA_BOTTOM, the top to where we have written, else the bottom to where we have written.
  */
-int DrawStringMultiLine(int left, int right, int top, int bottom, const char *str, TextColour colour, StringAlignment align, bool underline)
-{
-	char buffer[DRAW_STRING_BUFFER];
-	strecpy(buffer, str, lastof(buffer));
-	return DrawStringMultiLine(left, right, top, bottom, buffer, lastof(buffer), colour, align, underline);
-}
-
-/**
- * Draw string, possibly over multiple lines.
- *
- * @param left   The left most position to draw on.
- * @param right  The right most position to draw on.
- * @param top    The top most position to draw on.
- * @param bottom The bottom most position to draw on.
- * @param str    String to draw.
- * @param colour Colour used for drawing the string, see DoDrawString() for details
- * @param align  The horizontal and vertical alignment of the string.
- * @param underline Whether to underline all strings
- *
- * @return If \a align is #SA_BOTTOM, the top to where we have written, else the bottom to where we have written.
- */
-int DrawStringMultiLine(int left, int right, int top, int bottom, StringID str, TextColour colour, StringAlignment align, bool underline)
+int DrawStringMultiLine(int left, int right, int top, int bottom, StringID str, TextColour colour, StringAlignment align, bool underline, FontSize fontsize)
 {
 	char buffer[DRAW_STRING_BUFFER];
 	GetString(buffer, str, lastof(buffer));
-	return DrawStringMultiLine(left, right, top, bottom, buffer, lastof(buffer), colour, align, underline);
+	return DrawStringMultiLine(left, right, top, bottom, buffer, colour, align, underline, fontsize);
 }
 
 /**
@@ -976,38 +689,8 @@ int DrawStringMultiLine(int left, int right, int top, int bottom, StringID str, 
  */
 Dimension GetStringBoundingBox(const char *str, FontSize start_fontsize)
 {
-	FontSize size = start_fontsize;
-	Dimension br;
-	uint max_width;
-	WChar c;
-
-	br.width = br.height = max_width = 0;
-	for (;;) {
-		c = Utf8Consume(&str);
-		if (c == 0) break;
-		if (IsPrintable(c) && !IsTextDirectionChar(c)) {
-			br.width += GetCharacterWidth(size, c);
-		} else {
-			switch (c) {
-				case SCC_SETX: br.width = max((uint)*str++, br.width); break;
-				case SCC_SETXY:
-					br.width  = max((uint)*str++, br.width);
-					br.height = max((uint)*str++, br.height);
-					break;
-				case SCC_TINYFONT: size = FS_SMALL; break;
-				case SCC_BIGFONT:  size = FS_LARGE; break;
-				case '\n':
-					br.height += GetCharacterHeight(size);
-					if (br.width > max_width) max_width = br.width;
-					br.width = 0;
-					break;
-			}
-		}
-	}
-	br.height += GetCharacterHeight(size);
-
-	br.width  = max(br.width, max_width);
-	return br;
+	Layouter layout(str, INT32_MAX, TC_FROMSTRING, start_fontsize);
+	return layout.GetBounds();
 }
 
 /**
@@ -1038,135 +721,82 @@ void DrawCharCentered(WChar c, int x, int y, TextColour colour)
 }
 
 /**
- * Draw a string at the given coordinates with the given colour.
- *  While drawing the string, parse it in case some formatting is specified,
- *  like new colour, new size or even positionning.
- * @param string              The string to draw. This is already bidi reordered.
- * @param x                   Offset from left side of the screen
- * @param y                   Offset from top side of the screen
- * @param params              Text drawing parameters
- * @param parse_string_also_when_clipped
- *                            By default, always test the available space where to draw the string.
- *                            When in multipline drawing, it would already be done,
- *                            so no need to re-perform the same kind (more or less) of verifications.
- *                            It's not only an optimisation, it's also a way to ensures the string will be parsed
- *                            (as there are certain side effects on global variables, which are important for the next line)
- * @return                    the x-coordinates where the drawing has finished.
- *                            If nothing is drawn, the originally passed x-coordinate is returned
- */
-static int ReallyDoDrawString(const UChar *string, int x, int y, DrawStringParams &params, bool parse_string_also_when_clipped)
-{
-	DrawPixelInfo *dpi = _cur_dpi;
-	UChar c;
-	int xo = x;
-
-	if (!parse_string_also_when_clipped) {
-		/* in "mode multiline", the available space have been verified. Not in regular one.
-		 * So if the string cannot be drawn, return the original start to say so.*/
-		if (x >= dpi->left + dpi->width || y >= dpi->top + dpi->height) return x;
-	}
-
-switch_colour:;
-	SetColourRemap(params.cur_colour);
-
-check_bounds:
-	if (y + _max_char_height <= dpi->top || dpi->top + dpi->height <= y) {
-skip_char:;
-		for (;;) {
-			c = *string++;
-			if (!IsPrintable(c)) goto skip_cont;
-		}
-	}
-
-	for (;;) {
-		c = *string++;
-skip_cont:;
-		if (c == 0) {
-			return x;  // Nothing more to draw, get out. And here is the new x position
-		}
-		if (IsPrintable(c) && !IsTextDirectionChar(c)) {
-			if (x >= dpi->left + dpi->width) goto skip_char;
-			if (x + _max_char_width >= dpi->left) {
-				GfxMainBlitter(GetGlyph(params.fontsize, c), x, y, BM_COLOUR_REMAP);
-			}
-			x += GetCharacterWidth(params.fontsize, c);
-		} else if (c == '\n') { // newline = {}
-			x = xo;  // We require a new line, so the x coordinate is reset
-			y += GetCharacterHeight(params.fontsize);
-			goto check_bounds;
-		} else if (c >= SCC_BLUE && c <= SCC_BLACK) { // change colour?
-			params.SetColour((TextColour)(c - SCC_BLUE));
-			goto switch_colour;
-		} else if (c == SCC_PREVIOUS_COLOUR) { // revert to the previous colour
-			params.SetPreviousColour();
-			goto switch_colour;
-		} else if (c == SCC_SETX || c == SCC_SETXY) { // {SETX}/{SETXY}
-			/* The characters are handled before calling this. */
-			NOT_REACHED();
-		} else if (c == SCC_TINYFONT) { // {TINYFONT}
-			params.SetFontSize(FS_SMALL);
-		} else if (c == SCC_BIGFONT) { // {BIGFONT}
-			params.SetFontSize(FS_LARGE);
-		} else if (!IsTextDirectionChar(c)) {
-			DEBUG(misc, 0, "[utf8] unknown string command character %d", c);
-		}
-	}
-}
-
-/**
  * Get the size of a sprite.
  * @param sprid Sprite to examine.
  * @param [out] offset Optionally returns the sprite position offset.
  * @return Sprite size in pixels.
  * @note The size assumes (0, 0) as top-left coordinate and ignores any part of the sprite drawn at the left or above that position.
  */
-Dimension GetSpriteSize(SpriteID sprid, Point *offset)
+Dimension GetSpriteSize(SpriteID sprid, Point *offset, ZoomLevel zoom)
 {
 	const Sprite *sprite = GetSprite(sprid, ST_NORMAL);
 
 	if (offset != NULL) {
-		offset->x = sprite->x_offs;
-		offset->y = sprite->y_offs;
+		offset->x = UnScaleByZoom(sprite->x_offs, zoom);
+		offset->y = UnScaleByZoom(sprite->y_offs, zoom);
 	}
 
 	Dimension d;
-	d.width  = max<int>(0, sprite->x_offs + sprite->width);
-	d.height = max<int>(0, sprite->y_offs + sprite->height);
+	d.width  = max<int>(0, UnScaleByZoom(sprite->x_offs + sprite->width, zoom));
+	d.height = max<int>(0, UnScaleByZoom(sprite->y_offs + sprite->height, zoom));
 	return d;
 }
 
 /**
- * Draw a sprite.
+ * Draw a sprite in a viewport.
  * @param img  Image number to draw
  * @param pal  Palette to use.
- * @param x    Left coordinate of image
- * @param y    Top coordinate of image
+ * @param x    Left coordinate of image in viewport, scaled by zoom
+ * @param y    Top coordinate of image in viewport, scaled by zoom
  * @param sub  If available, draw only specified part of the sprite
  */
-void DrawSprite(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub)
+void DrawSpriteViewport(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub)
 {
 	SpriteID real_sprite = GB(img, 0, SPRITE_WIDTH);
 	if (HasBit(img, PALETTE_MODIFIER_TRANSPARENT)) {
 		_colour_remap_ptr = GetNonSprite(GB(pal, 0, PALETTE_WIDTH), ST_RECOLOUR) + 1;
-		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_TRANSPARENT, sub, real_sprite);
+		GfxMainBlitterViewport(GetSprite(real_sprite, ST_NORMAL), x, y, BM_TRANSPARENT, sub, real_sprite);
 	} else if (pal != PAL_NONE) {
 		_colour_remap_ptr = GetNonSprite(GB(pal, 0, PALETTE_WIDTH), ST_RECOLOUR) + 1;
-		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_COLOUR_REMAP, sub, real_sprite);
+		GfxMainBlitterViewport(GetSprite(real_sprite, ST_NORMAL), x, y, BM_COLOUR_REMAP, sub, real_sprite);
 	} else {
-		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_NORMAL, sub, real_sprite);
+		GfxMainBlitterViewport(GetSprite(real_sprite, ST_NORMAL), x, y, BM_NORMAL, sub, real_sprite);
 	}
 }
 
-static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub, SpriteID sprite_id)
+/**
+ * Draw a sprite, not in a viewport
+ * @param img  Image number to draw
+ * @param pal  Palette to use.
+ * @param x    Left coordinate of image in pixels
+ * @param y    Top coordinate of image in pixels
+ * @param sub  If available, draw only specified part of the sprite
+ * @param zoom Zoom level of sprite
+ */
+void DrawSprite(SpriteID img, PaletteID pal, int x, int y, const SubSprite *sub, ZoomLevel zoom)
+{
+	SpriteID real_sprite = GB(img, 0, SPRITE_WIDTH);
+	if (HasBit(img, PALETTE_MODIFIER_TRANSPARENT)) {
+		_colour_remap_ptr = GetNonSprite(GB(pal, 0, PALETTE_WIDTH), ST_RECOLOUR) + 1;
+		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_TRANSPARENT, sub, real_sprite, zoom);
+	} else if (pal != PAL_NONE) {
+		_colour_remap_ptr = GetNonSprite(GB(pal, 0, PALETTE_WIDTH), ST_RECOLOUR) + 1;
+		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_COLOUR_REMAP, sub, real_sprite, zoom);
+	} else {
+		GfxMainBlitter(GetSprite(real_sprite, ST_NORMAL), x, y, BM_NORMAL, sub, real_sprite, zoom);
+	}
+}
+
+static void GfxMainBlitterViewport(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub, SpriteID sprite_id)
 {
 	const DrawPixelInfo *dpi = _cur_dpi;
 	Blitter::BlitterParams bp;
 
 	/* Amount of pixels to clip from the source sprite */
-	int clip_left   = (sub != NULL ? max(0,                   -sprite->x_offs + sub->left       ) : 0);
-	int clip_top    = (sub != NULL ? max(0,                   -sprite->y_offs + sub->top        ) : 0);
-	int clip_right  = (sub != NULL ? max(0, sprite->width  - (-sprite->x_offs + sub->right  + 1)) : 0);
-	int clip_bottom = (sub != NULL ? max(0, sprite->height - (-sprite->y_offs + sub->bottom + 1)) : 0);
+	int clip_left   = (sub != NULL ? max(0,                   -sprite->x_offs + sub->left * ZOOM_LVL_BASE       ) : 0);
+	int clip_top    = (sub != NULL ? max(0,                   -sprite->y_offs + sub->top  * ZOOM_LVL_BASE       ) : 0);
+	int clip_right  = (sub != NULL ? max(0, sprite->width  - (-sprite->x_offs + (sub->right + 1)  * ZOOM_LVL_BASE)) : 0);
+	int clip_bottom = (sub != NULL ? max(0, sprite->height - (-sprite->y_offs + (sub->bottom + 1) * ZOOM_LVL_BASE)) : 0);
 
 	if (clip_left + clip_right >= sprite->width) return;
 	if (clip_top + clip_bottom >= sprite->height) return;
@@ -1257,15 +887,116 @@ static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode,
 	BlitterFactoryBase::GetCurrentBlitter()->Draw(&bp, mode, dpi->zoom);
 }
 
+static void GfxMainBlitter(const Sprite *sprite, int x, int y, BlitterMode mode, const SubSprite *sub, SpriteID sprite_id, ZoomLevel zoom)
+{
+	const DrawPixelInfo *dpi = _cur_dpi;
+	Blitter::BlitterParams bp;
+
+	/* Amount of pixels to clip from the source sprite */
+	int clip_left   = (sub != NULL ? max(0,                   -sprite->x_offs + sub->left       ) : 0);
+	int clip_top    = (sub != NULL ? max(0,                   -sprite->y_offs + sub->top        ) : 0);
+	int clip_right  = (sub != NULL ? max(0, sprite->width  - (-sprite->x_offs + sub->right  + 1)) : 0);
+	int clip_bottom = (sub != NULL ? max(0, sprite->height - (-sprite->y_offs + sub->bottom + 1)) : 0);
+
+	if (clip_left + clip_right >= sprite->width) return;
+	if (clip_top + clip_bottom >= sprite->height) return;
+
+	/* Scale it */
+	x = ScaleByZoom(x, zoom);
+	y = ScaleByZoom(y, zoom);
+
+	/* Move to the correct offset */
+	x += sprite->x_offs;
+	y += sprite->y_offs;
+
+	/* Copy the main data directly from the sprite */
+	bp.sprite = sprite->data;
+	bp.sprite_width = sprite->width;
+	bp.sprite_height = sprite->height;
+	bp.width = UnScaleByZoom(sprite->width - clip_left - clip_right, zoom);
+	bp.height = UnScaleByZoom(sprite->height - clip_top - clip_bottom, zoom);
+	bp.top = 0;
+	bp.left = 0;
+	bp.skip_left = UnScaleByZoomLower(clip_left, zoom);
+	bp.skip_top = UnScaleByZoomLower(clip_top, zoom);
+
+	x += ScaleByZoom(bp.skip_left, zoom);
+	y += ScaleByZoom(bp.skip_top, zoom);
+
+	bp.dst = dpi->dst_ptr;
+	bp.pitch = dpi->pitch;
+	bp.remap = _colour_remap_ptr;
+
+	assert(sprite->width > 0);
+	assert(sprite->height > 0);
+
+	if (bp.width <= 0) return;
+	if (bp.height <= 0) return;
+
+	y -= ScaleByZoom(dpi->top, zoom);
+	/* Check for top overflow */
+	if (y < 0) {
+		bp.height -= -UnScaleByZoom(y, zoom);
+		if (bp.height <= 0) return;
+		bp.skip_top += -UnScaleByZoom(y, zoom);
+		y = 0;
+	} else {
+		bp.top = UnScaleByZoom(y, zoom);
+	}
+
+	/* Check for bottom overflow */
+	y += ScaleByZoom(bp.height - dpi->height, zoom);
+	if (y > 0) {
+		bp.height -= UnScaleByZoom(y, zoom);
+		if (bp.height <= 0) return;
+	}
+
+	x -= ScaleByZoom(dpi->left, zoom);
+	/* Check for left overflow */
+	if (x < 0) {
+		bp.width -= -UnScaleByZoom(x, zoom);
+		if (bp.width <= 0) return;
+		bp.skip_left += -UnScaleByZoom(x, zoom);
+		x = 0;
+	} else {
+		bp.left = UnScaleByZoom(x, zoom);
+	}
+
+	/* Check for right overflow */
+	x += ScaleByZoom(bp.width - dpi->width, zoom);
+	if (x > 0) {
+		bp.width -= UnScaleByZoom(x, zoom);
+		if (bp.width <= 0) return;
+	}
+
+	assert(bp.skip_left + bp.width <= UnScaleByZoom(sprite->width, zoom));
+	assert(bp.skip_top + bp.height <= UnScaleByZoom(sprite->height, zoom));
+
+	/* We do not want to catch the mouse. However we also use that spritenumber for unknown (text) sprites. */
+	if (_newgrf_debug_sprite_picker.mode == SPM_REDRAW && sprite_id != SPR_CURSOR_MOUSE) {
+		Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
+		void *topleft = blitter->MoveTo(bp.dst, bp.left, bp.top);
+		void *bottomright = blitter->MoveTo(topleft, bp.width - 1, bp.height - 1);
+
+		void *clicked = _newgrf_debug_sprite_picker.clicked_pixel;
+
+		if (topleft <= clicked && clicked <= bottomright) {
+			uint offset = (((size_t)clicked - (size_t)topleft) / (blitter->GetScreenDepth() / 8)) % bp.pitch;
+			if (offset < (uint)bp.width) {
+				_newgrf_debug_sprite_picker.sprites.Include(sprite_id);
+			}
+		}
+	}
+
+	BlitterFactoryBase::GetCurrentBlitter()->Draw(&bp, mode, zoom);
+}
+
 void DoPaletteAnimations();
 
 void GfxInitPalettes()
 {
-	memcpy(_cur_palette, _palette, sizeof(_cur_palette));
-
+	memcpy(&_cur_palette, &_palette, sizeof(_cur_palette));
 	DoPaletteAnimations();
-	_pal_first_dirty = 0;
-	_pal_count_dirty = 256;
 }
 
 #define EXTR(p, q) (((uint16)(palette_animation_counter * (p)) * (q)) >> 16)
@@ -1289,8 +1020,8 @@ void DoPaletteAnimations()
 		palette_animation_counter = 0;
 	}
 
-	Colour *palette_pos = &_cur_palette[PALETTE_ANIM_START];  // Points to where animations are taking place on the palette
-	/* Makes a copy of the current anmation palette in old_val,
+	Colour *palette_pos = &_cur_palette.palette[PALETTE_ANIM_START];  // Points to where animations are taking place on the palette
+	/* Makes a copy of the current animation palette in old_val,
 	 * so the work on the current palette could be compared, see if there has been any changes */
 	memcpy(old_val, palette_pos, sizeof(old_val));
 
@@ -1373,32 +1104,40 @@ void DoPaletteAnimations()
 	if (blitter != NULL && blitter->UsePaletteAnimation() == Blitter::PALETTE_ANIMATION_NONE) {
 		palette_animation_counter = old_tc;
 	} else {
-		if (memcmp(old_val, &_cur_palette[PALETTE_ANIM_START], sizeof(old_val)) != 0) {
+		if (memcmp(old_val, &_cur_palette.palette[PALETTE_ANIM_START], sizeof(old_val)) != 0 && _cur_palette.count_dirty == 0) {
 			/* Did we changed anything on the palette? Seems so.  Mark it as dirty */
-			_pal_first_dirty = PALETTE_ANIM_START;
-			_pal_count_dirty = PALETTE_ANIM_SIZE;
+			_cur_palette.first_dirty = PALETTE_ANIM_START;
+			_cur_palette.count_dirty = PALETTE_ANIM_SIZE;
 		}
 	}
 }
 
-
-/** Initialize _stringwidth_table cache */
-void LoadStringWidthTable()
+/**
+ * Determine a contrasty text colour for a coloured background.
+ * @param background Background colour.
+ * @return TC_BLACK or TC_WHITE depending on what gives a better contrast.
+ */
+TextColour GetContrastColour(uint8 background)
 {
-	_max_char_height = 0;
-	_max_char_width  = 0;
+	Colour c = _cur_palette.palette[background];
+	/* Compute brightness according to http://www.w3.org/TR/AERT#color-contrast.
+	 * The following formula computes 1000 * brightness^2, with brightness being in range 0 to 255. */
+	uint sq1000_brightness = c.r * c.r * 299 + c.g * c.g * 587 + c.b * c.b * 114;
+	/* Compare with threshold brightness 128 (50%) */
+	return sq1000_brightness < 128 * 128 * 1000 ? TC_WHITE : TC_BLACK;
+}
 
-	for (FontSize fs = FS_BEGIN; fs < FS_END; fs++) {
-		_max_char_height = max<int>(_max_char_height, GetCharacterHeight(fs));
+/**
+ * Initialize _stringwidth_table cache
+ * @param monospace Whether to load the monospace cache or the normal fonts.
+ */
+void LoadStringWidthTable(bool monospace)
+{
+	for (FontSize fs = monospace ? FS_MONO : FS_BEGIN; fs < (monospace ? FS_END : FS_MONO); fs++) {
 		for (uint i = 0; i != 224; i++) {
 			_stringwidth_table[fs][i] = GetGlyphWidth(fs, i + 32);
-			_max_char_width = max<int>(_max_char_width, _stringwidth_table[fs][i]);
 		}
 	}
-
-	/* Needed because they need to be 1 more than the widest. */
-	_max_char_height++;
-	_max_char_width++;
 
 	ReInitAllWindows();
 }
@@ -1431,6 +1170,24 @@ byte GetDigitWidth(FontSize size)
 	return width;
 }
 
+/**
+ * Determine the broadest digits for guessing the maximum width of a n-digit number.
+ * @param [out] front Broadest digit, which is not 0. (Use this digit as first digit for numbers with more than one digit.)
+ * @param [out] next Broadest digit, including 0. (Use this digit for all digits, except the first one; or for numbers with only one digit.)
+ * @param size  Font of the digit
+ */
+void GetBroadestDigit(uint *front, uint *next, FontSize size)
+{
+	int width = -1;
+	for (char c = '9'; c >= '0'; c--) {
+		int w = GetCharacterWidth(size, c);
+		if (w > width) {
+			width = w;
+			*next = c - '0';
+			if (c != '0') *front = c - '0';
+		}
+	}
+}
 
 void ScreenSizeChanged()
 {
@@ -1566,11 +1323,11 @@ void DrawDirtyBlocks()
 		_modal_progress_paint_mutex->BeginCritical();
 		_modal_progress_work_mutex->BeginCritical();
 
-		extern void SwitchToMode(SwitchMode new_mode);
-		if (_switch_mode != SM_NONE && !HasModalProgress()) {
-			SwitchToMode(_switch_mode);
-			_switch_mode = SM_NONE;
-		}
+		/* When we ended with the modal progress, do not draw the blocks.
+		 * Simply let the next run do so, otherwise we would be loading
+		 * the new state (and possibly change the blitter) when we hold
+		 * the drawing lock, which we must not do. */
+		if (_switch_mode != SM_NONE && !HasModalProgress()) return;
 	}
 
 	y = 0;
@@ -1635,6 +1392,7 @@ void DrawDirtyBlocks()
 		} while (b++, (x += DIRTY_BLOCK_WIDTH) != w);
 	} while (b += -(int)(w / DIRTY_BLOCK_WIDTH) + _dirty_bytes_per_line, (y += DIRTY_BLOCK_HEIGHT) != h);
 
+	++_dirty_block_colour;
 	_invalid_rect.left = w;
 	_invalid_rect.top = h;
 	_invalid_rect.right = 0;
@@ -1649,7 +1407,7 @@ void DrawDirtyBlocks()
  * @param left The left edge of the rectangle
  * @param top The top edge of the rectangle
  * @param right The right edge of the rectangle
- * @param bottom The bottm edge of the rectangle
+ * @param bottom The bottom edge of the rectangle
  * @see DrawDirtyBlocks
  *
  * @todo The name of the function should be called like @c AddDirtyBlock as
@@ -1773,10 +1531,10 @@ void UpdateCursorSize()
 	CursorVars *cv = &_cursor;
 	const Sprite *p = GetSprite(GB(cv->sprite, 0, SPRITE_WIDTH), ST_NORMAL);
 
-	cv->size.y = p->height;
-	cv->size.x = p->width;
-	cv->offs.x = p->x_offs;
-	cv->offs.y = p->y_offs;
+	cv->size.y = UnScaleByZoom(p->height, ZOOM_LVL_GUI);
+	cv->size.x = UnScaleByZoom(p->width, ZOOM_LVL_GUI);
+	cv->offs.x = UnScaleByZoom(p->x_offs, ZOOM_LVL_GUI);
+	cv->offs.y = UnScaleByZoom(p->y_offs, ZOOM_LVL_GUI);
 
 	cv->dirty = true;
 }

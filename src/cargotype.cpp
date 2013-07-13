@@ -7,11 +7,10 @@
  * See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with OpenTTD. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/** @file cargotype.cpp Implementation of cargos. */
+/** @file cargotype.cpp Implementation of cargoes. */
 
 #include "stdafx.h"
 #include "cargotype.h"
-#include "core/bitmath_func.hpp"
 #include "newgrf_cargo.h"
 #include "string_func.h"
 #include "strings_func.h"
@@ -24,10 +23,15 @@
 CargoSpec CargoSpec::array[NUM_CARGO];
 
 /**
- * Bitmask of cargo types available.
+ * Bitmask of cargo types available. This includes phony cargoes like regearing cargoes.
  * Initialized during a call to #SetupCargoForClimate.
  */
 uint32 _cargo_mask;
+
+/**
+ * Bitmask of real cargo types available. Phony cargoes like regearing cargoes are excluded.
+ */
+uint32 _standard_cargo_mask;
 
 /**
  * Set up the default cargo types for the given landscape type.
@@ -39,7 +43,12 @@ void SetupCargoForClimate(LandscapeID l)
 
 	/* Reset and disable all cargo types */
 	memset(CargoSpec::array, 0, sizeof(CargoSpec::array));
-	for (CargoID i = 0; i < lengthof(CargoSpec::array); i++) CargoSpec::Get(i)->bitnum = INVALID_CARGO;
+	for (CargoID i = 0; i < lengthof(CargoSpec::array); i++) {
+		CargoSpec::Get(i)->bitnum = INVALID_CARGO;
+
+		/* Set defaults for newer properties, which old GRFs do not know */
+		CargoSpec::Get(i)->multiplier = 0x100;
+	}
 
 	_cargo_mask = 0;
 
@@ -122,7 +131,7 @@ SpriteID CargoSpec::GetCargoIcon() const
 }
 
 const CargoSpec *_sorted_cargo_specs[NUM_CARGO]; ///< Cargo specifications sorted alphabetically by name.
-uint8 _sorted_cargo_specs_size;                  ///< Number of cargo specifications stored at the _sorted_cargo_specs array (including special cargos).
+uint8 _sorted_cargo_specs_size;                  ///< Number of cargo specifications stored at the _sorted_cargo_specs array (including special cargoes).
 uint8 _sorted_standard_cargo_specs_size;         ///< Number of standard cargo specifications stored at the _sorted_cargo_specs array.
 
 
@@ -172,10 +181,13 @@ void InitializeSortedCargoSpecs()
 	/* Sort cargo specifications by cargo class and name. */
 	QSortT(_sorted_cargo_specs, _sorted_cargo_specs_size, &CargoSpecClassSorter);
 
+	_standard_cargo_mask = 0;
+
 	_sorted_standard_cargo_specs_size = 0;
 	FOR_ALL_SORTED_CARGOSPECS(cargo) {
 		if (cargo->classes & CC_SPECIAL) break;
 		_sorted_standard_cargo_specs_size++;
+		SetBit(_standard_cargo_mask, cargo->Index());
 	}
 }
 

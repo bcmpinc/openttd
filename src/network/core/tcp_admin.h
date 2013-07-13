@@ -32,6 +32,8 @@ enum PacketAdminType {
 	ADMIN_PACKET_ADMIN_POLL,             ///< The admin explicitly polls for a piece of information.
 	ADMIN_PACKET_ADMIN_CHAT,             ///< The admin sends a chat message to be distributed.
 	ADMIN_PACKET_ADMIN_RCON,             ///< The admin sends a remote console command.
+	ADMIN_PACKET_ADMIN_GAMESCRIPT,       ///< The admin sends a JSON string for the GameScript.
+	ADMIN_PACKET_ADMIN_PING,             ///< The admin sends a ping to the server, expecting a ping-reply (PONG) packet.
 
 	ADMIN_PACKET_SERVER_FULL = 100,      ///< The server tells the admin it cannot accept the admin.
 	ADMIN_PACKET_SERVER_BANNED,          ///< The server tells the admin it is banned.
@@ -58,6 +60,9 @@ enum PacketAdminType {
 	ADMIN_PACKET_SERVER_CONSOLE,         ///< The server gives the admin the data that got printed to its console.
 	ADMIN_PACKET_SERVER_CMD_NAMES,       ///< The server sends out the names of the DoCommands to the admins.
 	ADMIN_PACKET_SERVER_CMD_LOGGING,     ///< The server gives the admin copies of incoming command packets.
+	ADMIN_PACKET_SERVER_GAMESCRIPT,      ///< The server gives the admin information from the GameScript in JSON.
+	ADMIN_PACKET_SERVER_RCON_END,        ///< The server indicates that the remote console command has completed.
+	ADMIN_PACKET_SERVER_PONG,            ///< The server replies to a ping request from the admin.
 
 	INVALID_ADMIN_PACKET = 0xFF,         ///< An invalid marker for admin packets.
 };
@@ -66,7 +71,7 @@ enum PacketAdminType {
 enum AdminStatus {
 	ADMIN_STATUS_INACTIVE,      ///< The admin is not connected nor active.
 	ADMIN_STATUS_ACTIVE,        ///< The admin is active.
-	ADMIN_STATUS_END            ///< Must ALWAYS be on the end of this list!! (period)
+	ADMIN_STATUS_END,           ///< Must ALWAYS be on the end of this list!! (period)
 };
 
 /** Update types an admin can register a frequency for */
@@ -80,7 +85,8 @@ enum AdminUpdateType {
 	ADMIN_UPDATE_CONSOLE,         ///< The admin would like to have console messages.
 	ADMIN_UPDATE_CMD_NAMES,       ///< The admin would like a list of all DoCommand names.
 	ADMIN_UPDATE_CMD_LOGGING,     ///< The admin would like to have DoCommand information.
-	ADMIN_UPDATE_END              ///< Must ALWAYS be on the end of this list!! (period)
+	ADMIN_UPDATE_GAMESCRIPT,      ///< The admin would like to have gamescript messages.
+	ADMIN_UPDATE_END,             ///< Must ALWAYS be on the end of this list!! (period)
 };
 
 /** Update frequencies an admin can register. */
@@ -99,7 +105,9 @@ DECLARE_ENUM_AS_BIT_SET(AdminUpdateFrequency)
 enum AdminCompanyRemoveReason {
 	ADMIN_CRR_MANUAL,    ///< The company is manually removed.
 	ADMIN_CRR_AUTOCLEAN, ///< The company is removed due to autoclean.
-	ADMIN_CRR_BANKRUPT   ///< The company went belly-up.
+	ADMIN_CRR_BANKRUPT,  ///< The company went belly-up.
+
+	ADMIN_CRR_END,       ///< Sentinel for end.
 };
 
 /** Main socket handler for admin related connections. */
@@ -166,6 +174,22 @@ protected:
 	 * @return The state the network should have.
 	 */
 	virtual NetworkRecvStatus Receive_ADMIN_RCON(Packet *p);
+
+	/**
+	 * Send a JSON string to the current active GameScript.
+	 * json  JSON string for the GameScript.
+	 * @param p The packet that was just received.
+	 * @return The state the network should have.
+	 */
+	virtual NetworkRecvStatus Receive_ADMIN_GAMESCRIPT(Packet *p);
+
+	/**
+	 * Ping the server, requiring the server to reply with a pong packet.
+	 * uint32 Integer value to pass to the server, which is quoted in the reply.
+	 * @param p The packet that was just received.
+	 * @return The state the network should have.
+	 */
+	virtual NetworkRecvStatus Receive_ADMIN_PING(Packet *p);
 
 	/**
 	 * The server is full (connection gets closed).
@@ -326,7 +350,7 @@ protected:
 	virtual NetworkRecvStatus Receive_SERVER_COMPANY_UPDATE(Packet *p);
 
 	/**
-	 * Notification about a removed company (e.g. due to banrkuptcy).
+	 * Notification about a removed company (e.g. due to bankruptcy).
 	 * uint8   ID of the company.
 	 * uint8   Reason for being removed (see #AdminCompanyRemoveReason).
 	 * @param p The packet that was just received.
@@ -440,6 +464,22 @@ protected:
 	 * @return The state the network should have.
 	 */
 	virtual NetworkRecvStatus Receive_SERVER_CMD_LOGGING(Packet *p);
+
+	/**
+	 * Send a ping-reply (pong) to the admin that sent us the ping packet.
+	 * uint32  Integer identifier - should be the same as read from the admins ping packet.
+	 * @param p The packet that was just received.
+	 * @return The state the network should have.
+	 */
+	virtual NetworkRecvStatus Receive_SERVER_PONG(Packet *p);
+
+	/**
+	 * Notify the admin connection that the rcon command has finished.
+	 * string The command as requested by the admin connection.
+	 * @param p The packet that was just received.
+	 * @return The state the network should have.
+	 */
+	virtual NetworkRecvStatus Receive_SERVER_RCON_END(Packet *p);
 
 	NetworkRecvStatus HandlePacket(Packet *p);
 public:

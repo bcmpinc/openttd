@@ -25,7 +25,7 @@
  * @param desc Sort descending.
  */
 template <typename T>
-static FORCEINLINE void QSortT(T *base, uint num, int (CDECL *comparator)(const T*, const T*), bool desc = false)
+static inline void QSortT(T *base, uint num, int (CDECL *comparator)(const T*, const T*), bool desc = false)
 {
 	if (num < 2) return;
 
@@ -37,7 +37,7 @@ static FORCEINLINE void QSortT(T *base, uint num, int (CDECL *comparator)(const 
 /**
  * Type safe Gnome Sort.
  *
- * This is a slightly modifyied Gnome search. The basic
+ * This is a slightly modified Gnome search. The basic
  * Gnome search tries to sort already sorted list parts.
  * The modification skips these.
  *
