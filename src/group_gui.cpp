@@ -328,40 +328,6 @@ public:
 		*this->sorting = this->vehicles.GetListing();
 	}
 
-	/** draw the group profit button in the group list window. */
-	virtual void DrawGroupProfitButton(int x, int y, GroupID gid, VehicleType vtype) const
-	{
-		Date max_age = 0;									///< Age of the oldest vehicle in the group
-		Money this_year_profit = 0;							///< Total profit for the group this year
-		int vehicle_count = 0;								///< Vehicle count in the group
-
-		const Vehicle *v;
-		FOR_ALL_VEHICLES(v) {
-			if (v->owner == this->owner) {
-				if ((gid == ALL_GROUP && v->type == vtype) || v->group_id == gid) {
-					this_year_profit += v->GetDisplayProfitLastYear();
-					if (v->age > max_age) max_age = v->age;
-					vehicle_count++;
-				}
-			}
-		}
-
-		// Draw button
-		SpriteID spr;
-
-		/* draw profit-based coloured icons */
-		if (max_age <= DAYS_IN_YEAR * 2) {
-			spr = SPR_PROFIT_NA;
-		} else if (this_year_profit < 0) {
-			spr = SPR_PROFIT_NEGATIVE;
-		} else if (this_year_profit < 10000 * vehicle_count) {
-			spr = SPR_PROFIT_SOME;
-		} else {
-			spr = SPR_PROFIT_LOT;
-		}
-		DrawSprite(spr, PAL_NONE, x, y);
-	}
-
 	virtual void UpdateWidgetSize(int widget, Dimension *size, const Dimension &padding, Dimension *fill, Dimension *resize)
 	{
 		switch (widget) {
@@ -532,12 +498,10 @@ public:
 		switch (widget) {
 			case WID_GL_ALL_VEHICLES:
 				DrawGroupInfo(r.top + WD_FRAMERECT_TOP, r.left, r.right, ALL_GROUP);
-				this->DrawGroupProfitButton(r.left + WD_FRAMERECT_LEFT, r.top + WD_FRAMERECT_TOP + 1, ALL_GROUP, this->vli.vtype);
 				break;
 
 			case WID_GL_DEFAULT_VEHICLES:
 				DrawGroupInfo(r.top + WD_FRAMERECT_TOP, r.left, r.right, DEFAULT_GROUP);
-				this->DrawGroupProfitButton(r.left + WD_FRAMERECT_LEFT, r.top + WD_FRAMERECT_TOP + 1, DEFAULT_GROUP, this->vli.vtype);
 				break;
 
 			case WID_GL_INFO: {
@@ -572,8 +536,6 @@ public:
 					assert(g->owner == this->owner);
 
 					DrawGroupInfo(y1, r.left, r.right, g->index, g->replace_protection);
-
-					this->DrawGroupProfitButton(r.left + WD_FRAMERECT_LEFT, y1, g->index, this->vli.vtype);
 
 					y1 += this->tiny_step_height;
 				}
