@@ -9,6 +9,7 @@ cargomonitor.cpp
 cargopacket.cpp
 cargotype.cpp
 cheat.cpp
+clipboard.cpp
 command.cpp
 console.cpp
 console_cmds.cpp
@@ -143,6 +144,9 @@ cargotype.h
 cheat_func.h
 cheat_type.h
 clear_func.h
+clipboard_func.h
+clipboard_gui.h
+clipboard_type.h
 cmd_helper.h
 command_func.h
 command_type.h
@@ -155,6 +159,7 @@ console_func.h
 console_gui.h
 console_internal.h
 console_type.h
+copypaste_cmd.h
 crashlog.h
 currency.h
 date_func.h
@@ -351,6 +356,7 @@ textfile_type.h
 tgp.h
 tile_cmd.h
 tile_type.h
+tilearea_func.h
 tilearea_type.h
 tilehighlight_func.h
 tilehighlight_type.h
@@ -442,6 +448,7 @@ bootstrap_gui.cpp
 bridge_gui.cpp
 build_vehicle_gui.cpp
 cheat_gui.cpp
+clipboard_gui.cpp
 company_gui.cpp
 console_gui.cpp
 date_gui.cpp
@@ -501,6 +508,7 @@ widgets/bootstrap_widget.h
 widgets/bridge_widget.h
 widgets/build_vehicle_widget.h
 widgets/cheat_widget.h
+widgets/clipboard_widget.h
 widgets/company_widget.h
 widgets/console_widget.h
 widgets/date_widget.h
@@ -556,6 +564,7 @@ widgets/waypoint_widget.h
 aircraft_cmd.cpp
 autoreplace_cmd.cpp
 clear_cmd.cpp
+copypaste_cmd.cpp
 company_cmd.cpp
 depot_cmd.cpp
 disaster_cmd.cpp
