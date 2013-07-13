@@ -3322,6 +3322,10 @@ STR_GROUP_REMOVE_ALL_VEHICLES                                   :Remove all vehi
 
 STR_GROUP_RENAME_CAPTION                                        :{BLACK}Rename a group
 
+STR_GROUP_PROFIT_THIS_YEAR                                      :{BLACK}Profit this year: {CURRENCY_LONG}
+STR_GROUP_PROFIT_LAST_YEAR                                      :{BLACK}Profit last year: {CURRENCY_LONG}
+
+
 # Build vehicle window
 STR_BUY_VEHICLE_TRAIN_RAIL_CAPTION                              :New Rail Vehicles
 STR_BUY_VEHICLE_TRAIN_ELRAIL_CAPTION                            :New Electric Rail Vehicles
