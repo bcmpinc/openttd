@@ -670,22 +670,22 @@ static inline void MakeRailDepot(GenericTileIndex t, Owner o, DepotID did, DiagD
 static inline void IncreaseStuckCounter(TileIndex t)
 {
 	if (!IsTileType(t, MP_RAILWAY)) return;
-	if (_me[t].m7 == 255) return;
-	_me[t].m7++;
+	if (GetTileEx(t)->m7 == 255) return;
+	GetTileEx(t)->m7++;
 }
 
 
 static inline void ReduceStuckCounter(TileIndex t)
 {
 	if (!IsTileType(t, MP_RAILWAY)) return;
-	_me[t].m7-=(_me[t].m7+15)/16;
+	GetTileEx(t)->m7-=(GetTileEx(t)->m7+15)/16;
 }
 
 
 static inline byte GetStuckCounter(TileIndex t)
 {
 	if (!IsTileType(t, MP_RAILWAY)) return 0;
-	return _me[t].m7;
+	return GetTileEx(t)->m7;
 
 }
 

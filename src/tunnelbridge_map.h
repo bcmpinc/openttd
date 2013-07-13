@@ -143,7 +143,7 @@ static inline TrackBits GetTunnelBridgeReservationTrackBits(TileIndex t)
 static inline void SetBitTunnelBridgeSignal(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	SetBit(_m[t].m5, 5);
+	SetBit(GetTile(t)->m5, 5);
 }
 
 /**
@@ -153,7 +153,7 @@ static inline void SetBitTunnelBridgeSignal(TileIndex t)
 static inline void ClrBitTunnelBridgeSignal(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	ClrBit(_m[t].m5, 5);
+	ClrBit(GetTile(t)->m5, 5);
 }
 
 /**
@@ -163,7 +163,7 @@ static inline void ClrBitTunnelBridgeSignal(TileIndex t)
 static inline void SetBitTunnelBridgeExit(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	SetBit(_m[t].m5, 6);
+	SetBit(GetTile(t)->m5, 6);
 }
 
 /**
@@ -173,7 +173,7 @@ static inline void SetBitTunnelBridgeExit(TileIndex t)
 static inline void ClrBitTunnelBridgeExit(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	ClrBit(_m[t].m5, 6);
+	ClrBit(GetTile(t)->m5, 6);
 }
 
 /**
@@ -184,7 +184,7 @@ static inline void ClrBitTunnelBridgeExit(TileIndex t)
  */
 static inline bool HasWormholeSignals(TileIndex t)
 {
-	return IsTileType(t, MP_TUNNELBRIDGE) && (HasBit(_m[t].m5, 5) || HasBit(_m[t].m5, 6)) ;
+	return IsTileType(t, MP_TUNNELBRIDGE) && (HasBit(GetTile(t)->m5, 5) || HasBit(GetTile(t)->m5, 6)) ;
 }
 
 /**
@@ -196,13 +196,13 @@ static inline bool HasWormholeSignals(TileIndex t)
 static inline bool IsTunnelBridgeWithSignGreen(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	return HasBit(_m[t].m5, 5) && !HasBit(_m[t].m5, 6);
+	return HasBit(GetTile(t)->m5, 5) && !HasBit(GetTile(t)->m5, 6);
 }
 
 static inline bool IsTunnelBridgeWithSignRed(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	return HasBit(_m[t].m5, 5) && HasBit(_m[t].m5, 6);
+	return HasBit(GetTile(t)->m5, 5) && HasBit(GetTile(t)->m5, 6);
 }
 
 /**
@@ -214,7 +214,7 @@ static inline bool IsTunnelBridgeWithSignRed(TileIndex t)
 static inline bool IsTunnelBridgeEntrance(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	return HasBit(_m[t].m5, 5) ;
+	return HasBit(GetTile(t)->m5, 5) ;
 }
 
 /**
@@ -225,7 +225,7 @@ static inline bool IsTunnelBridgeEntrance(TileIndex t)
 static inline bool IsTunnelBridgeExit(TileIndex t)
 {
 	assert(IsTileType(t, MP_TUNNELBRIDGE));
-	return !HasBit(_m[t].m5, 5) && HasBit(_m[t].m5, 6);
+	return !HasBit(GetTile(t)->m5, 5) && HasBit(GetTile(t)->m5, 6);
 }
 
 
