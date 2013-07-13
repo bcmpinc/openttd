@@ -1619,7 +1619,7 @@ static ChangeInfoResult AircraftVehicleChangeInfo(uint engine, int numinfo, int 
 				break;
 
 			case 0x0D: // Acceleration
-				avi->acceleration = (buf->ReadByte() * 128) / 10;
+				avi->acceleration = buf->ReadByte();
 				break;
 
 			case PROP_AIRCRAFT_RUNNING_COST_FACTOR: // 0x0E Running cost factor
@@ -2487,7 +2487,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				StringID newone = GetGRFStringID(_cur.grffile->grfid, buf->ReadWord());
 
-				if ((newone != STR_UNDEFINED) && (curidx < NUM_CURRENCY)) {
+				if ((newone != STR_UNDEFINED) && (curidx < CURRENCY_END)) {
 					_currency_specs[curidx].name = newone;
 				}
 				break;
@@ -2497,7 +2497,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				uint32 rate = buf->ReadDWord();
 
-				if (curidx < NUM_CURRENCY) {
+				if (curidx < CURRENCY_END) {
 					/* TTDPatch uses a multiple of 1000 for its conversion calculations,
 					 * which OTTD does not. For this reason, divide grf value by 1000,
 					 * to be compatible */
@@ -2512,7 +2512,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				uint16 options = buf->ReadWord();
 
-				if (curidx < NUM_CURRENCY) {
+				if (curidx < CURRENCY_END) {
 					_currency_specs[curidx].separator[0] = GB(options, 0, 8);
 					_currency_specs[curidx].separator[1] = '\0';
 					/* By specifying only one bit, we prevent errors,
@@ -2528,7 +2528,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				uint32 tempfix = buf->ReadDWord();
 
-				if (curidx < NUM_CURRENCY) {
+				if (curidx < CURRENCY_END) {
 					memcpy(_currency_specs[curidx].prefix, &tempfix, 4);
 					_currency_specs[curidx].prefix[4] = 0;
 				} else {
@@ -2541,7 +2541,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				uint32 tempfix = buf->ReadDWord();
 
-				if (curidx < NUM_CURRENCY) {
+				if (curidx < CURRENCY_END) {
 					memcpy(&_currency_specs[curidx].suffix, &tempfix, 4);
 					_currency_specs[curidx].suffix[4] = 0;
 				} else {
@@ -2554,7 +2554,7 @@ static ChangeInfoResult GlobalVarChangeInfo(uint gvid, int numinfo, int prop, By
 				uint curidx = GetNewgrfCurrencyIdConverted(gvid + i);
 				Year year_euro = buf->ReadWord();
 
-				if (curidx < NUM_CURRENCY) {
+				if (curidx < CURRENCY_END) {
 					_currency_specs[curidx].to_euro = year_euro;
 				} else {
 					grfmsg(1, "GlobalVarChangeInfo: Euro intro date %d out of range, ignoring", curidx);
@@ -3625,7 +3625,7 @@ static ChangeInfoResult AirportChangeInfo(uint airport, int numinfo, int prop, B
 
 							if (att[k].ti.x == 0 && att[k].ti.y == 0x80) {
 								/*  Not the same terminator.  The one we are using is rather
-								 x= -80, y = 0 .  So, adjust it. */
+								 * x = -80, y = 0 .  So, adjust it. */
 								att[k].ti.x = -0x80;
 								att[k].ti.y =  0;
 								att[k].gfx  =  0;
@@ -6371,6 +6371,14 @@ static uint32 GetPatchVariable(uint8 param)
 		case 0x14:
 			return MAX_TILE_HEIGHT;
 
+		/* Extra foundations base sprite */
+		case 0x15:
+			return SPR_SLOPES_BASE;
+
+		/* Shore base sprite */
+		case 0x16:
+			return SPR_SHORE_BASE;
+
 		default:
 			grfmsg(2, "ParamSet: Unknown Patch variable 0x%02X.", param);
 			return 0;
@@ -9018,6 +9026,9 @@ static void AfterLoadGRFs()
 
 	/* Create dynamic list of industry legends for smallmap_gui.cpp */
 	BuildIndustriesLegend();
+
+	/* Build the routemap legend, based on the available cargos */
+	BuildLinkStatsLegend();
 
 	/* Add all new airports to the airports array. */
 	FinaliseAirportsArray();

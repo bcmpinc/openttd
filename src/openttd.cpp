@@ -61,7 +61,10 @@
 #include "game/game_config.hpp"
 #include "town.h"
 #include "subsidy_func.h"
+#include "gfx_layout.h"
 
+
+#include "linkgraph/linkgraphschedule.h"
 
 #include <stdarg.h>
 
@@ -297,6 +300,7 @@ static void ShutdownGame()
 	free(_config_file);
 #endif
 
+	LinkGraphSchedule::Clear();
 	PoolBase::Clean(PT_ALL);
 
 	/* No NewGRFs were loaded when it was still bootstrapping. */
@@ -425,6 +429,7 @@ struct AfterNewGRFScan : NewGRFScanCallback {
 		CheckConfig();
 		LoadFromHighScore();
 		LoadHotkeysFromConfig();
+		WindowDesc::LoadFromConfig();
 
 		/* We have loaded the config, so we may possibly save it. */
 		*save_config_ptr = save_config;
@@ -520,8 +525,13 @@ static const OptionData _options[] = {
 	GETOPT_END()
 };
 
-
-int ttd_main(int argc, char *argv[])
+/**
+ * Main entry point for this lovely game.
+ * @param argc The number of arguments passed to this game.
+ * @param argv The values of the arguments.
+ * @return 0 when there is no error.
+ */
+int openttd_main(int argc, char *argv[])
 {
 	char *musicdriver = NULL;
 	char *sounddriver = NULL;
@@ -852,6 +862,7 @@ int ttd_main(int argc, char *argv[])
 	if (save_config) {
 		SaveToConfig();
 		SaveHotkeysToConfig();
+		WindowDesc::SaveToConfig();
 		SaveToHighScore();
 	}
 
@@ -916,6 +927,7 @@ static void MakeNewGameDone()
 
 	if (_settings_client.gui.pause_on_newgame) DoCommandP(0, PM_PAUSED_NORMAL, 1, CMD_PAUSE);
 
+	CheckEngines();
 	MarkWholeScreenDirty();
 }
 
@@ -1306,6 +1318,8 @@ void StateGameLoop()
 	if (HasModalProgress()) return;
 
 	ClearStorageChanges(false);
+
+	Layouter::ReduceLineCache();
 
 	if (_game_mode == GM_EDITOR) {
 		RunTileLoop();

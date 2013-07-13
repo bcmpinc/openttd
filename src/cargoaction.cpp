@@ -12,6 +12,7 @@
 #include "stdafx.h"
 #include "economy_base.h"
 #include "cargoaction.h"
+#include "station_base.h"
 
 /**
  * Decides if a packet needs to be split.
@@ -153,7 +154,7 @@ bool CargoReturn::operator()(CargoPacket *cp)
 	assert(cp_new->Count() <= this->destination->reserved_count);
 	this->source->RemoveFromMeta(cp_new, VehicleCargoList::MTA_LOAD, cp_new->Count());
 	this->destination->reserved_count -= cp_new->Count();
-	this->destination->Append(cp_new);
+	this->destination->Append(cp_new, this->next);
 	return cp_new == cp;
 }
 
@@ -167,7 +168,8 @@ bool CargoTransfer::operator()(CargoPacket *cp)
 	CargoPacket *cp_new = this->Preprocess(cp);
 	if (cp_new == NULL) return false;
 	this->source->RemoveFromMeta(cp_new, VehicleCargoList::MTA_TRANSFER, cp_new->Count());
-	this->destination->Append(cp_new);
+	/* No transfer credits here as they were already granted during Stage(). */
+	this->destination->Append(cp_new, cp_new->NextStation());
 	return cp_new == cp;
 }
 
@@ -182,6 +184,52 @@ bool CargoShift::operator()(CargoPacket *cp)
 	if (cp_new == NULL) cp_new = cp;
 	this->source->RemoveFromMeta(cp_new, VehicleCargoList::MTA_KEEP, cp_new->Count());
 	this->destination->Append(cp_new, VehicleCargoList::MTA_KEEP);
+	return cp_new == cp;
+}
+
+/**
+ * Reroutes some cargo from one Station sublist to another.
+ * @param cp Packet to be rerouted.
+ * @return True if the packet was completely rerouted, false if part of it was.
+ */
+bool StationCargoReroute::operator()(CargoPacket *cp)
+{
+	CargoPacket *cp_new = this->Preprocess(cp);
+	if (cp_new == NULL) cp_new = cp;
+	StationID next = this->ge->GetVia(cp_new->SourceStation(), this->avoid, this->avoid2);
+	assert(next != this->avoid && next != this->avoid2);
+	if (this->source != this->destination) {
+		this->source->RemoveFromCache(cp_new, cp_new->Count());
+		this->destination->AddToCache(cp_new);
+	}
+
+	/* Legal, as insert doesn't invalidate iterators in the MultiMap, however
+	 * this might insert the packet between range.first and range.second (which might be end())
+	 * This is why we check for GetKey above to avoid infinite loops. */
+	this->destination->packets.Insert(next, cp_new);
+	return cp_new == cp;
+}
+
+/**
+ * Reroutes some cargo in a VehicleCargoList.
+ * @param cp Packet to be rerouted.
+ * @return True if the packet was completely rerouted, false if part of it was.
+ */
+bool VehicleCargoReroute::operator()(CargoPacket *cp)
+{
+	CargoPacket *cp_new = this->Preprocess(cp);
+	if (cp_new == NULL) cp_new = cp;
+	if (cp_new->NextStation() == this->avoid || cp_new->NextStation() == this->avoid2) {
+		cp->SetNextStation(this->ge->GetVia(cp_new->SourceStation(), this->avoid, this->avoid2));
+	}
+	if (this->source != this->destination) {
+		this->source->RemoveFromMeta(cp_new, VehicleCargoList::MTA_TRANSFER, cp_new->Count());
+		this->source->AddToMeta(cp_new, VehicleCargoList::MTA_TRANSFER);
+		this->destination->action_counts[VehicleCargoList::MTA_TRANSFER] += cp_new->Count();
+	}
+
+	/* Legal, as front pushing doesn't invalidate iterators in std::list. */
+	this->destination->packets.push_front(cp_new);
 	return cp_new == cp;
 }
 

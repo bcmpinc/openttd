@@ -199,21 +199,28 @@ STR_UNITS_POWER_IMPERIAL                                        :{COMMA} pk
 STR_UNITS_POWER_METRIC                                          :{COMMA} pk
 STR_UNITS_POWER_SI                                              :{COMMA} kW
 
+STR_UNITS_WEIGHT_SHORT_IMPERIAL                                 :{COMMA}t
 STR_UNITS_WEIGHT_SHORT_METRIC                                   :{COMMA}t
 STR_UNITS_WEIGHT_SHORT_SI                                       :{COMMA}kg
 
+STR_UNITS_WEIGHT_LONG_IMPERIAL                                  :{COMMA} ton
 STR_UNITS_WEIGHT_LONG_METRIC                                    :{COMMA} ton
 STR_UNITS_WEIGHT_LONG_SI                                        :{COMMA} kg
 
+STR_UNITS_VOLUME_SHORT_IMPERIAL                                 :{COMMA}gal
 STR_UNITS_VOLUME_SHORT_METRIC                                   :{COMMA}l
 STR_UNITS_VOLUME_SHORT_SI                                       :{COMMA}m³
 
+STR_UNITS_VOLUME_LONG_IMPERIAL                                  :{COMMA} gallon{P "" s}
 STR_UNITS_VOLUME_LONG_METRIC                                    :{COMMA} liter
 STR_UNITS_VOLUME_LONG_SI                                        :{COMMA} m³
 
+STR_UNITS_FORCE_IMPERIAL                                        :{COMMA} lbf
+STR_UNITS_FORCE_METRIC                                          :{COMMA} kgf
 STR_UNITS_FORCE_SI                                              :{COMMA} kN
 
 STR_UNITS_HEIGHT_IMPERIAL                                       :{COMMA} ft
+STR_UNITS_HEIGHT_METRIC                                         :{COMMA} m
 STR_UNITS_HEIGHT_SI                                             :{COMMA} m
 
 # Common window strings
@@ -221,6 +228,7 @@ STR_LIST_FILTER_TITLE                                           :{BLACK}Filter t
 STR_LIST_FILTER_OSKTITLE                                        :{BLACK}Voer filtertekst in
 STR_LIST_FILTER_TOOLTIP                                         :{BLACK}Geef een woord waarop gefilterd kan worden in de lijst
 
+STR_TOOLTIP_GROUP_ORDER                                         :{BLACK}Kies groepeervolgorde
 STR_TOOLTIP_SORT_ORDER                                          :{BLACK}Selecteer sorteerrichting (aflopend/oplopend)
 STR_TOOLTIP_SORT_CRITERIA                                       :{BLACK}Selecteer sorteercriteria
 STR_TOOLTIP_FILTER_CRITERIA                                     :{BLACK}Kies filtercriteria
@@ -232,7 +240,8 @@ STR_TOOLTIP_CLOSE_WINDOW                                        :{BLACK}Sluit ve
 STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS                              :{BLACK}Vensternaam - sleep om venster te verplaatsen
 STR_TOOLTIP_SHADE                                               :{BLACK}Klap venster in - toon alleen de titelbalk
 STR_TOOLTIP_DEBUG                                               :{BLACK}Toon NewGRF debug informatie
-STR_TOOLTIP_STICKY                                              :{BLACK}Markeer dit venster als niet-sluitbaar door de 'Sluit alle vensters'-knop
+STR_TOOLTIP_DEFSIZE                                             :{BLACK}wijzig venster naar standaardgrootte. Ctrl+Klik om de huidige grootte als standaard op te slaan
+STR_TOOLTIP_STICKY                                              :{BLACK}Markeer dit venster als niet-sluitbaar door de 'Sluit alle vensters'-knop. Ctrl+Klik om status als default op te slaan
 STR_TOOLTIP_RESIZE                                              :{BLACK}Klik en sleep om de grootte van dit venster te veranderen
 STR_TOOLTIP_TOGGLE_LARGE_SMALL_WINDOW                           :{BLACK}Schakel tussen groot/klein venster
 STR_TOOLTIP_VSCROLL_BAR_SCROLLS_LIST                            :{BLACK}Schuifbalk - scroll verticaal door de lijst
@@ -256,7 +265,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Gebied: 
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Inwoners
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Naam
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Datum
 # These are used in dropdowns
@@ -277,7 +285,8 @@ STR_SORT_BY_LENGTH                                              :Lengte
 STR_SORT_BY_LIFE_TIME                                           :Resterende levensverwachting
 STR_SORT_BY_TIMETABLE_DELAY                                     :Vertraging in dienstregeling
 STR_SORT_BY_FACILITY                                            :Stationstype
-STR_SORT_BY_WAITING                                             :Waarde van wachtende vracht
+STR_SORT_BY_WAITING_TOTAL                                       :Totaal wachtende vracht
+STR_SORT_BY_WAITING_AVAILABLE                                   :Beschikbare wachtende lading
 STR_SORT_BY_RATING_MAX                                          :Hoogste vrachtwaardering
 STR_SORT_BY_RATING_MIN                                          :Laagste vrachtwaardering
 STR_SORT_BY_ENGINE_ID                                           :Voertuig-ID (klassieke sortering)
@@ -289,6 +298,8 @@ STR_SORT_BY_RUNNING_COST                                        :Bedrijfskosten
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Vermogen/Bedrijfskosten
 STR_SORT_BY_CARGO_CAPACITY                                      :Vrachtcapaciteit
 STR_SORT_BY_RANGE                                               :Bereik
+STR_SORT_BY_POPULATION                                          :Inwoners
+STR_SORT_BY_RATING                                              :Waardering
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Pauzeer spel
@@ -301,6 +312,8 @@ STR_TOOLBAR_TOOLTIP_DISPLAY_SUBSIDIES                           :{BLACK}Toon sub
 STR_TOOLBAR_TOOLTIP_DISPLAY_LIST_OF_COMPANY_STATIONS            :{BLACK}Toon lijst met stations van het bedrijf
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_FINANCES                    :{BLACK}Toon financiële informatie over het bedrijf
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_GENERAL                     :{BLACK}Toon algemene informatie over het bedrijf
+STR_TOOLBAR_TOOLTIP_DISPLAY_STORY_BOOK                          :{BLACK}Toon verhaallijn
+STR_TOOLBAR_TOOLTIP_DISPLAY_GOALS_LIST                          :{BLACK}Geven doellijst
 STR_TOOLBAR_TOOLTIP_DISPLAY_GRAPHS                              :{BLACK}Toon grafieken
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_LEAGUE                      :{BLACK}Toon bedrijfscompetitietabel
 STR_TOOLBAR_TOOLTIP_FUND_CONSTRUCTION_OF_NEW                    :{BLACK}Betaal de bouw van nieuwe industrie of toon lijst van alle industrieën
@@ -371,19 +384,19 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Afsluiten
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Kaart
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Extra kijkvenster
+STR_MAP_MENU_LINGRAPH_LEGEND                                    :Vracht Stroom Legenda
 STR_MAP_MENU_SIGN_LIST                                          :Bordenlijst
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Stedenlijst
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Sticht een stad
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Subsidies
-STR_SUBSIDIES_MENU_GOAL                                         :Huidige doelen
 ############ range ends here
 
 ############ range for graph menu starts
@@ -650,7 +663,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalist
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Magnaat
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mogul
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Tycoon van de Eeuw
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} bereikt '{STRING}'-status!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} van {COMPANY} bereikt '{STRING}'-status!
@@ -661,17 +674,20 @@ STR_SMALLMAP_CAPTION                                            :{WHITE}Kaart - 
 STR_SMALLMAP_TYPE_CONTOURS                                      :Contouren
 STR_SMALLMAP_TYPE_VEHICLES                                      :Voertuigen
 STR_SMALLMAP_TYPE_INDUSTRIES                                    :Industrieën
+STR_SMALLMAP_TYPE_ROUTEMAP                                      :Vrachtstroom
 STR_SMALLMAP_TYPE_ROUTES                                        :Routes
 STR_SMALLMAP_TYPE_VEGETATION                                    :Begroeiïng
 STR_SMALLMAP_TYPE_OWNERS                                        :Eigenaren
 STR_SMALLMAP_TOOLTIP_SHOW_LAND_CONTOURS_ON_MAP                  :{BLACK}Toon landcontouren op de kaart
 STR_SMALLMAP_TOOLTIP_SHOW_VEHICLES_ON_MAP                       :{BLACK}Toon voertuigen op de kaart
 STR_SMALLMAP_TOOLTIP_SHOW_INDUSTRIES_ON_MAP                     :{BLACK}Toon industrieën op de kaart
+STR_SMALLMAP_TOOLTIP_SHOW_LINK_STATS_ON_MAP                     :{BLACK}Toon vrachtstroom op de kaart
 STR_SMALLMAP_TOOLTIP_SHOW_TRANSPORT_ROUTES_ON                   :{BLACK}Toon transportroutes op de kaart
 STR_SMALLMAP_TOOLTIP_SHOW_VEGETATION_ON_MAP                     :{BLACK}Toon begroeiïng op de kaart
 STR_SMALLMAP_TOOLTIP_SHOW_LAND_OWNERS_ON_MAP                    :{BLACK}Toon landeigenaren op de kaart
 STR_SMALLMAP_TOOLTIP_INDUSTRY_SELECTION                         :{BLACK}Klik op een industriesoort om deze weer te geven. Ctrl+klik verbergt alle andere industriesoorten behalve de geselecteerde. Nogmaals Ctrl+klik geeft opnieuw alle industriesoorten weer.
 STR_SMALLMAP_TOOLTIP_COMPANY_SELECTION                          :{BLACK}Klik op een bedrijf om de bedrijfseigendommen weer te geven. Ctrl+klik verbergt alle andere bedrijven behalve de geselecteerde. Nogmaals Ctrl+klik geeft opnieuw alle bedrijven weer.
+STR_SMALLMAP_TOOLTIP_CARGO_SELECTION                            :{BLACK}Klik op een vrachtsoort om de eigenschappen weer te geven. Ctrl+Klik verbergt alle vrachtsoorten behalve de geselecteerde. Ctrl+Klik opnieuw om alle vrachttypes te activeren
 
 STR_SMALLMAP_LEGENDA_ROADS                                      :{TINY_FONT}{BLACK}Wegen
 STR_SMALLMAP_LEGENDA_RAILROADS                                  :{TINY_FONT}{BLACK}Spoorwegen
@@ -705,6 +721,7 @@ STR_SMALLMAP_LEGENDA_SNOW                                       :{TINY_FONT}{BLA
 STR_SMALLMAP_TOOLTIP_TOGGLE_TOWN_NAMES_ON_OFF                   :{BLACK}Plaatsnamen op de kaart aan/uit
 STR_SMALLMAP_CENTER                                             :{BLACK}Centreer de kaart op huidige positie
 STR_SMALLMAP_INDUSTRY                                           :{TINY_FONT}{STRING} ({NUM})
+STR_SMALLMAP_LINKSTATS                                          :{TINY_FONT}{STRING}
 STR_SMALLMAP_COMPANY                                            :{TINY_FONT}{COMPANY}
 STR_SMALLMAP_TOWN                                               :{TINY_FONT}{WHITE}{TOWN}
 STR_SMALLMAP_DISABLE_ALL                                        :{BLACK}Alles uitschakelen
@@ -715,6 +732,8 @@ STR_SMALLMAP_TOOLTIP_ENABLE_ALL_INDUSTRIES                      :{BLACK}Toon all
 STR_SMALLMAP_TOOLTIP_SHOW_HEIGHT                                :{BLACK}Schakel tonen van hoogte aan/uit
 STR_SMALLMAP_TOOLTIP_DISABLE_ALL_COMPANIES                      :{BLACK}Verberg bedrijfseigendommen op de kaart
 STR_SMALLMAP_TOOLTIP_ENABLE_ALL_COMPANIES                       :{BLACK}Toon alle bedrijfseigendommen op de kaart
+STR_SMALLMAP_TOOLTIP_DISABLE_ALL_CARGOS                         :{BLACK}Toon geen vrachtsoorten op de kaart
+STR_SMALLMAP_TOOLTIP_ENABLE_ALL_CARGOS                          :{BLACK}Toon alle vrachtsoorten op de kaart
 
 # Status bar messages
 STR_STATUSBAR_TOOLTIP_SHOW_LAST_NEWS                            :{BLACK}Toon laatste (nieuws)bericht
@@ -876,15 +895,12 @@ STR_GAME_OPTIONS_CURRENCY_LTL                                   :Litouwse Litas 
 STR_GAME_OPTIONS_CURRENCY_KRW                                   :Zuid-Koreaanse Won (KRW)
 STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Zuid-Afrikaanse Rand (ZAR)
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Aangepast...
+STR_GAME_OPTIONS_CURRENCY_GEL                                   :Georgische Lari (GEL)
+STR_GAME_OPTIONS_CURRENCY_IRR                                   :Iraanse Rial (IRR)
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Meeteenheden
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Kies meeteenheden
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Imperiaal
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metrisch
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Wegvoertuigen
@@ -1450,7 +1466,7 @@ STR_CONFIG_SETTING_NEWS_NEW_VEHICLES_HELPTEXT                   :Toon een krant 
 STR_CONFIG_SETTING_NEWS_CHANGES_ACCEPTANCE                      :Verandering van geaccepteerde vrachtsoorten: {STRING}
 STR_CONFIG_SETTING_NEWS_CHANGES_ACCEPTANCE_HELPTEXT             :Toon een bericht over gewijzigde acceptatie van goederen van stations
 STR_CONFIG_SETTING_NEWS_SUBSIDIES                               :Subsidies: {STRING}
-STR_CONFIG_SETTING_NEWS_SUBSIDIES_HELPTEXT                      :Toon een krant over subsidie ​​gerelateerde gebeurtenissen
+STR_CONFIG_SETTING_NEWS_SUBSIDIES_HELPTEXT                      :Toon een krant over subsidie gerelateerde gebeurtenissen
 STR_CONFIG_SETTING_NEWS_GENERAL_INFORMATION                     :Algemene informatie: {STRING}
 STR_CONFIG_SETTING_NEWS_GENERAL_INFORMATION_HELPTEXT            :Weergave krant over algemene gebeurtenissen, zoals de aankoop van exclusieve rechten of financiering van weg-reconstructie
 
@@ -1550,11 +1566,73 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Gemiddelde groo
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Verwijder rare weg-elementen tijdens het repareren van de weg: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Verwijder doodlopende wegen bij het bouwen van gefinancierde wegen.
 
+STR_CONFIG_SETTING_LINKGRAPH_INTERVAL                           :Bijwerken distributie grafiek elke {STRING} dag{P 0:2 "" en}
+STR_CONFIG_SETTING_LINKGRAPH_INTERVAL_HELPTEXT                  :Tijd tussen opeenvolgende herberekeningen van de link grafiek. Elke herberekening berekent de plannen voor een component van de grafiek. Dat betekent dat een waarde X voor deze instelling betekent niet dat de hele grafiek wordt elke X dagen worden bijgewerkt. Slechts een component wil. Hoe korter u instellen hoe meer CPU-tijd nodig is om het te berekenen zal zijn. Hoe langer je instellen hoe langer het zal duren totdat de lading distributie start op nieuwe routes.
+STR_CONFIG_SETTING_LINKGRAPH_TIME                               :Neem {STRING} dag{P 0:2 "" en} voor de herberekening van de distributie grafiek
+STR_CONFIG_SETTING_LINKGRAPH_TIME_HELPTEXT                      :Tijd gebruikt voor elke herberekening van een link grafiek component. Wanneer een herberekening wordt gestart, wordt een thread voortgebracht die mag lopen voor dit aantal dagen. Hoe korter u dit instelt des te waarschijnlijker het is dat de draad niet is voltooid als het zou moeten. Dan stopt het spel totdat het is ("lag"). Hoe langer je instellen hoe langer het duurt voor de distributie aan te passen wanneer routes te wijzigen.
+STR_CONFIG_SETTING_DISTRIBUTION_MANUAL                          :handmatig
+STR_CONFIG_SETTING_DISTRIBUTION_ASYMMETRIC                      :asymmetrisch
+STR_CONFIG_SETTING_DISTRIBUTION_SYMMETRIC                       :symmetrisch
+STR_CONFIG_SETTING_DISTRIBUTION_PAX                             :Distributie-modus voor passagiers: {STRING}
+STR_CONFIG_SETTING_DISTRIBUTION_PAX_HELPTEXT                    :"symmetrisch" betekent dat ongeveer hetzelfde aantal passagiers gaan van een station A naar station B als een van B naar A. "asymmetrische" betekent dat willekeurig aantal passagiers kunnen gaan in beide richtingen. "handmatig" betekent dat er geen automatische distributie zal plaatsvinden voor passagiers.
+STR_CONFIG_SETTING_DISTRIBUTION_MAIL                            :Distributie-modus voor post: {STRING}
+STR_CONFIG_SETTING_DISTRIBUTION_MAIL_HELPTEXT                   :"symmetrisch" betekent dat ongeveer dezelfde hoeveelheid e-mail wordt verzonden van een station A naar station B als een van B naar A. "asymmetrische" dat willekeurige hoeveelheden post in beide richtingen worden verzonden. "handmatig" betekent dat er geen automatische distributie zal plaatsvinden voor post.
+STR_CONFIG_SETTING_DISTRIBUTION_ARMOURED                        :Distributie-modus voor de GEPANTSERDE lading klasse: {STRING}
+STR_CONFIG_SETTING_DISTRIBUTION_ARMOURED_HELPTEXT               :De GEPANTSERDE lading klasse bevat waardevolle spullen in het gematigde klimaat, diamanten in de subtropische of goud in subarctische klimaat. NewGRFs kan dat veranderen. "symmetrisch" betekent dat ongeveer dezelfde hoeveelheid lading die wordt verzonden van een station A naar station B als een van B naar A. "asymmetrische" dat willekeurige deze vracht kan in beide richtingen worden verzonden. "handmatig" betekent dat er geen automatische distributie zal plaatsvinden voor die lading. Het wordt aanbevolen om dit op asymmetrische of handmatig bij het spelen van subarctische, zoals banken zullen geen goud terug te sturen naar goudmijnen. Voor gematigde en subtropische kunt u ook kiezen symmetrische als banken zullen waardevolle spullen terugsturen naar de oorsprong bank van enkele lading van kostbaarheden.
+STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT                         :Distributie-modus voor andere vrachtsoorten: {STRING}
+STR_CONFIG_SETTING_DISTRIBUTION_DEFAULT_HELPTEXT                :"symmetrisch" betekent dat ongeveer dezelfde hoeveelheid vracht wordt verzonden van een station A naar station B als een van B naar A. "asymmetrische" dat willekeurige hoeveelheid lading in beide richtingen worden verzonden. "handmatig" betekent dat er geen automatische distributie zal plaatsvinden voor die ladingen. Waarschijnlijk wilt u dit instellen op "asymmetrische" of handmatig.
+STR_CONFIG_SETTING_LINKGRAPH_ACCURACY                           :Verdeelnauwkeurigheid: {STRING}
+STR_CONFIG_SETTING_LINKGRAPH_ACCURACY_HELPTEXT                  :Hoe hoger de instelling des te meer CPU-tijd de berekening van de link grafiek zal gebruiken. Als het te lang duurt kan vertraging opleveren. Als u deze instelt op een lage waarde, echter, zal de verdeling onnauwkeurig zijn, en de lading zal niet altijd worden verzonden naar de plaatsen die u verwacht.
+STR_CONFIG_SETTING_DEMAND_DISTANCE                              :Effect van afstand op de vraag: {STRING}
+STR_CONFIG_SETTING_DEMAND_DISTANCE_HELPTEXT                     :Als je dit op een waarde hoger dan 0, de afstand tussen het station van herkomst A van enige vracht en een mogelijke bestemming B zal een effect hebben op de hoeveelheid lading verzonden van A naar B. Hoe verder weg B is van A des te minder lading wordt verzonden. Hoe hoger u deze instelt, zal het minder lading worden gezonden naar verder geleden stations en meer lading zal worden verzonden naar dichtbij gelegen stations.
+STR_CONFIG_SETTING_DEMAND_SIZE                                  :Hoeveelheid van de kerende vracht voor symmetrische modus: {STRING}
+STR_CONFIG_SETTING_DEMAND_SIZE_HELPTEXT                         :Door dit op minder dan 100% te zetten lijkt de symmetrische verdeling meer op het asymmetrische verdeling. Minder vracht zal geforceerd worden teruggestuurd als er een bepaalde hoeveelheid wordt verzonden naar een station. Op 0% van de symmetrische verdeling gedraagt deze zicht als de asymmetrische verdeling.
+STR_CONFIG_SETTING_SHORT_PATH_SATURATION                        :Verzadiging van korte routes voor het gebruik van ruime routes: {STRING}
+STR_CONFIG_SETTING_SHORT_PATH_SATURATION_HELPTEXT               :Vaak zijn er meerdere routes mogelijk tussen twee stations. Cargodist zal de kortste route eerst verzadigen, gebruik dan de tweede kortste route tot die verzadigd is en ga zo maar door. Verzadiging wordt bepaald door een schatting van de capaciteit en het geplande gebruik. Zodra alle routes verzadigd zijn, maar er is meer vraag, zal alle wegen overbelast worden, die met hoge capaciteit eerst. In veel gevallen zat het algoritme niet nauwkeurig de capaciteit inschatten, helaas. Met deze instelling kunt u aangeven tot welk percentage een korter pad moet worden verzadigd eer de eerst volgende langere route wordt gekozen. Zet deze op minder dan 100% om overvolle stations in geval van overschat capaciteit te voorkomen.
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VELOCITY                  :Snelheid eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VELOCITY_HELPTEXT         :Wanneer een snelheid wordt weergegeven in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VELOCITY_IMPERIAL         :Imperial (mph)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VELOCITY_METRIC           :Metrisch (km/h)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VELOCITY_SI               :SI (m/s)
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_POWER                     :Voertuig kracht eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_POWER_HELPTEXT            :Als het verbruik van een voertuig wordt weergegeven in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_POWER_IMPERIAL            :Imperial (hp)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_POWER_METRIC              :Metrisch (hp)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_POWER_SI                  :SI (kW)
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_WEIGHT                    :Gewichten eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_WEIGHT_HELPTEXT           :Telkens als gewichten worden weergegeven in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_WEIGHT_IMPERIAL           :Imperial (short t/ton)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_WEIGHT_METRIC             :Metrisch (t/ton)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_WEIGHT_SI                 :SI (kg)
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VOLUME                    :Volume eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VOLUME_HELPTEXT           :Wanneer volumes worden getoond in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VOLUME_IMPERIAL           :Imperial (gal)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VOLUME_METRIC             :Metrisch (l)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_VOLUME_SI                 :SI (m³)
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_FORCE                     :Trekkracht eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_FORCE_HELPTEXT            :Wanneer trekkracht, wordt weergegeven in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_FORCE_IMPERIAL            :Imperial (lbf)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_FORCE_METRIC              :Metrisch (kgf)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_FORCE_SI                  :SI (kN)
+
+STR_CONFIG_SETTING_LOCALISATION_UNITS_HEIGHT                    :hoogte eenheden: {STRING}
+STR_CONFIG_SETTING_LOCALISATION_UNITS_HEIGHT_HELPTEXT           :Wanneer hoogtes worden weergegeven in de gebruikersinterface, laten dat in de geselecteerde eenheden zien
+STR_CONFIG_SETTING_LOCALISATION_UNITS_HEIGHT_IMPERIAL           :Imperial (ft)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_HEIGHT_METRIC             :Metrisch (m)
+STR_CONFIG_SETTING_LOCALISATION_UNITS_HEIGHT_SI                 :SI (m)
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interface
+STR_CONFIG_SETTING_LOCALISATION                                 :{ORANGE}Lokalisatie
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Constructie
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Voertuigen
 STR_CONFIG_SETTING_STATIONS                                     :{ORANGE}Stations
 STR_CONFIG_SETTING_ECONOMY                                      :{ORANGE}Economie
+STR_CONFIG_SETTING_LINKGRAPH                                    :{ORANGE}Vrachtdistributie
 STR_CONFIG_SETTING_AI                                           :{ORANGE}Tegenstanders
 STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Weergave-opties
 STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Interactie
@@ -1602,6 +1680,8 @@ STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... save
 STR_CONFIG_ERROR_INVALID_BASE_GRAPHICS_NOT_FOUND                :{WHITE}... negeert Basis Grafische set '{STRING}': niet gevonden
 STR_CONFIG_ERROR_INVALID_BASE_SOUNDS_NOT_FOUND                  :{WHITE}... negeert Basis Geluid set '{STRING}': niet gevonden
 STR_CONFIG_ERROR_INVALID_BASE_MUSIC_NOT_FOUND                   :{WHITE}... negeert Basis Muziek set '{STRING}': niet gevonden
+STR_CONFIG_ERROR_OUT_OF_MEMORY                                  :{WHITE}Geen geheugen meer
+STR_CONFIG_ERROR_SPRITECACHE_TOO_BIG                            :{WHITE}Toewijzen van {BYTES} van spritecache mislukt. De spritecache werd teruggebracht tot {BYTES}. Dit zal de prestaties van OpenTTD verlagen. Om het geheugen te verminderen kunt u proberen om 32bpp graphics en / of zoom-in levels uit te schakelen
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -1778,10 +1858,10 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Verander
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Multiplayer
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Verbinding:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Kies tussen een internetspel of een spel op het lokale netwerk (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :Netwerk (LAN)
-STR_NETWORK_SERVER_LIST_INTERNET                                :Internet
+STR_NETWORK_SERVER_LIST_ADVERTISED                              :{BLACK}Openbaar
+STR_NETWORK_SERVER_LIST_ADVERTISED_TOOLTIP                      :{BLACK}Kies tussen een openbaar (internet) en een niet openbaar (Local Area Network, LAN) spel
+STR_NETWORK_SERVER_LIST_ADVERTISED_NO                           :Nee
+STR_NETWORK_SERVER_LIST_ADVERTISED_YES                          :Ja
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Spelersnaam:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Dit is de naam waarmee andere spelers je herkennen
 
@@ -1840,8 +1920,8 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}De speln
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Kies wachtwoord
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Bescherm je spel met een wachtwoord als je niet wilt dat deze algemeen toegankelijk is
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Internet
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (adverteren)
+STR_NETWORK_START_SERVER_UNADVERTISED                           :Nee
+STR_NETWORK_START_SERVER_ADVERTISED                             :Ja
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} speler{P "" s}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Maximaal aantal spelers:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Kies het maximaal aantal toegestane spelers. Niet alle posities hoeven gebruikt te worden
@@ -2152,6 +2232,17 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Schakel 
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Schakel transparantie voor bovenleiding aan/uit. Ctrl+klik voor onthouden
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Schakel transparantie voor laadindicatoren aan/uit. Ctrl+klik om vast te zetten
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Maak objecten onzichtbaar in plaats van transparant
+
+# Linkgraph legend window
+STR_LINKGRAPH_LEGEND_CAPTION                                    :{BLACK}Vracht Stroom Legenda
+STR_LINKGRAPH_LEGEND_ALL                                        :{BLACK}Alle
+STR_LINKGRAPH_LEGEND_NONE                                       :{BLACK}Geen
+STR_LINKGRAPH_LEGEND_SELECT_COMPANIES                           :{BLACK}Selecteer weer te geven bedrijven
+
+# Linkgraph legend window and linkgraph legend in smallmap
+STR_LINKGRAPH_LEGEND_UNUSED                                     :{TINY_FONT}{BLACK}ongebruikt
+STR_LINKGRAPH_LEGEND_SATURATED                                  :{TINY_FONT}{BLACK}verzadigd
+STR_LINKGRAPH_LEGEND_OVERLOADED                                 :{TINY_FONT}{BLACK}overbelast
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Dekkingsgebied markeren
@@ -2879,10 +2970,14 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Koop 1 
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Koop het plaatselijk gezag om om je reputatie te verhogen, met het gevaar van een strenge sanctie wanneer je gepakt wordt.{}Kosten: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Doelen
+STR_GOALS_CAPTION                                               :{WHITE}{COMPANY} Doelen
+STR_GOALS_SPECTATOR_CAPTION                                     :{WHITE}Algemene doelen
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Algemene doelen:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Geen -
+STR_GOALS_SPECTATOR_NONE                                        :{ORANGE}- Niet van toepassing -
+STR_GOALS_PROGRESS                                              :{ORANGE}{STRING}
+STR_GOALS_PROGRESS_COMPLETE                                     :{GREEN}{STRING}
 STR_GOALS_COMPANY_TITLE                                         :{BLACK}Bedrijfsdoelen:
 STR_GOALS_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                    :{BLACK}Klik op doel om venster te centreren op industrie/stad/tegel. Ctrl+Klik opent een nieuw venster op industrie/stad/tegel locatie
 
@@ -2921,6 +3016,17 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Bestaand
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} van {STRING} naar {STRING}{YELLOW} ({COMPANY}{YELLOW}, tot {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klik op de dienst om het dorp/industrie te centreren. Ctrl+klik opent een nieuw venster op de locatie van het dorp/industrie
 
+# Story book window
+STR_STORY_BOOK_CAPTION                                          :{WHITE}{COMPANY} Verhaallijn
+STR_STORY_BOOK_SPECTATOR_CAPTION                                :{WHITE}Algemene verhaallijn
+STR_STORY_BOOK_TITLE                                            :{YELLOW}{STRING}
+STR_STORY_BOOK_GENERIC_PAGE_ITEM                                :Pagina {NUM}
+STR_STORY_BOOK_SEL_PAGE_TOOLTIP                                 :{BLACK}Spring naar een bepaalde pagina door deze te selecteren in deze keuzelijst.
+STR_STORY_BOOK_PREV_PAGE                                        :{BLACK}Vorige
+STR_STORY_BOOK_PREV_PAGE_TOOLTIP                                :{BLACK}Ga naar de vorige pagina
+STR_STORY_BOOK_NEXT_PAGE                                        :{BLACK}Volgende
+STR_STORY_BOOK_NEXT_PAGE_TOOLTIP                                :{BLACK}Ga naar de volgende pagina
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Stationsnamen - klik op naam om het scherm te centreren op het station. Ctrl+klik opent een nieuw venster op de locatie van het station
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Houd Ctrl ingedrukt om meer items te kiezen
@@ -2936,7 +3042,7 @@ STR_STATION_LIST_NO_WAITING_CARGO                               :{BLACK}Er wacht
 STR_STATION_VIEW_CAPTION                                        :{WHITE}{STATION} {STATION_FEATURES}
 STR_STATION_VIEW_WAITING_TITLE                                  :{BLACK}Wachtend: {WHITE}{STRING}
 STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_LONG}
-STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} op weg van {STATION})
+STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} van {STATION})
 STR_STATION_VIEW_RESERVED                                       :{YELLOW}({CARGO_SHORT} gereserveerd voor laden)
 
 STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}Accepteert
@@ -2948,8 +3054,31 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Rangen
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Bekijk stationsreputaties
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Lokale rang van de vervoerdienst:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+STR_STATION_VIEW_SUPPLY_RATINGS_TITLE                           :{BLACK}Maandelijkse levering en lokale waardering:
+STR_STATION_VIEW_CARGO_SUPPLY_RATING                            :{WHITE}{STRING}: {YELLOW}{COMMA} / {STRING} ({COMMA}%)
+
+STR_STATION_VIEW_GROUP                                          :{BLACK}Groeperen op
+STR_STATION_VIEW_WAITING_STATION                                :Station: Wachtend
+STR_STATION_VIEW_WAITING_AMOUNT                                 :Hoeveelheid: Wachtend
+STR_STATION_VIEW_PLANNED_STATION                                :Station: Gepland
+STR_STATION_VIEW_PLANNED_AMOUNT                                 :Hoeveelheid: Gepland
+STR_STATION_VIEW_FROM                                           :{YELLOW}{CARGO_SHORT} van {STATION}
+STR_STATION_VIEW_VIA                                            :{YELLOW}{CARGO_SHORT} via {STATION}
+STR_STATION_VIEW_TO                                             :{YELLOW}{CARGO_SHORT} naar {STATION}
+STR_STATION_VIEW_FROM_ANY                                       :{RED}{CARGO_SHORT} van onbekend station
+STR_STATION_VIEW_TO_ANY                                         :{RED}{CARGO_SHORT} naar willekeurig station
+STR_STATION_VIEW_VIA_ANY                                        :{RED}{CARGO_SHORT} via willekeurig station
+STR_STATION_VIEW_FROM_HERE                                      :{GREEN}{CARGO_SHORT} van dit station
+STR_STATION_VIEW_VIA_HERE                                       :{GREEN}{CARGO_SHORT} stopt op dit station
+STR_STATION_VIEW_TO_HERE                                        :{GREEN}{CARGO_SHORT} naar dit station
+STR_STATION_VIEW_NONSTOP                                        :{YELLOW}{CARGO_SHORT} non-stop
+
+STR_STATION_VIEW_GROUP_S_V_D                                    :Bron-Via-Bestemming
+STR_STATION_VIEW_GROUP_S_D_V                                    :Bron-Bestemming-Via
+STR_STATION_VIEW_GROUP_V_S_D                                    :Via-Bron-Bestemming
+STR_STATION_VIEW_GROUP_V_D_S                                    :Via-Bestemming-Bron
+STR_STATION_VIEW_GROUP_D_S_V                                    :Bestemming-Bron-Via
+STR_STATION_VIEW_GROUP_D_V_S                                    :Bestemming-Via-Bron
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Teleurstellend
@@ -3076,7 +3205,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Kanalen
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Stations:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Station tegels
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Vliegvelden
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/jr ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/jr
 
 # Industry directory
@@ -3093,6 +3221,7 @@ STR_INDUSTRY_VIEW_PRODUCTION_LAST_MONTH_TITLE                   :{BLACK}Producti
 STR_INDUSTRY_VIEW_TRANSPORTED                                   :{YELLOW}{CARGO_LONG}{STRING}{BLACK} ({COMMA}% getransporteerd)
 STR_INDUSTRY_VIEW_LOCATION_TOOLTIP                              :{BLACK}Centreer het scherm op de locatie van de industrie. Ctrl+klik opent een nieuws venster op de locatie van de industrie
 STR_INDUSTRY_VIEW_PRODUCTION_LEVEL                              :{BLACK}Productieniveau: {YELLOW}{COMMA}%
+STR_INDUSTRY_VIEW_INDUSTRY_ANNOUNCED_CLOSURE                    :{YELLOW}De industrie heeft een dreigende sluiting aangekondigd!
 
 ############ range for requires starts
 STR_INDUSTRY_VIEW_REQUIRES_CARGO                                :{BLACK}Vereist: {YELLOW}{STRING}{STRING}
@@ -3696,7 +3825,7 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Deze die
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Deze dienstregeling begint bij {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Begindatum
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Kies een datum als beginpunt voor deze dienstregeling
+STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Selecteer een datum als uitgangspunt van dit tijdschema. Ctrl + klik geeft het startpunt van dit tijdschema en distribueert alle voertuigen die deze orders delen gelijkmatig op basis van hun relatieve volgorde, indien de order volledig is ingeroosterd
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Verander de tijd
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Verander de tijdsduur die de geselecteerde order mag duren
@@ -4187,6 +4316,9 @@ STR_ERROR_CAN_T_CHANGE_SERVICING                                :{WHITE}Kan onde
 
 STR_ERROR_VEHICLE_IS_DESTROYED                                  :{WHITE}... voertuig is vernietigd
 
+STR_ERROR_NO_VEHICLES_AVAILABLE                                 :{WHITE}Nog geen voertuigen beschikbaar
+STR_ERROR_NO_VEHICLES_AVAILABLE_EXPLANATION                     :{WHITE} Start een nieuw spel na {DATE_SHORT} of gebruik een NewGRF dat in vroege voertuigen voorziet
+
 # Specific vehicle errors
 STR_ERROR_CAN_T_MAKE_TRAIN_PASS_SIGNAL                          :{WHITE}Kan trein niet het signaal laten passeren bij gevaar...
 STR_ERROR_CAN_T_REVERSE_DIRECTION_TRAIN                         :{WHITE}Kan de richting van de trein niet omdraaien...
@@ -4228,6 +4360,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Kan bord
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Een simulatiespel gebaseerd op Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Originele graphics van de Transport Tycoon Deluxe DOS-versie.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Originele graphics van de Duitse Transport Tycoon Deluxe DOS-versie.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Originele graphics van de Transport Tycoon Deluxe Windows-versie.
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Originele geluiden van de Transport Tycoon Deluxe DOS-versie.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Originele geluiden van de Transport Tycoon Deluxe Windows-versie.
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :Een geluidset zonder geluid.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Originele muziek van de Transport Tycoon Deluxe Windows-versie.
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :Een muziekset zonder muziek.
 
 ##id 0x2000
 # Town building names
@@ -4677,6 +4819,7 @@ STR_JUST_DATE_ISO                                               :{DATE_ISO}
 STR_JUST_STRING                                                 :{STRING}
 STR_JUST_STRING_STRING                                          :{STRING}{STRING}
 STR_JUST_RAW_STRING                                             :{STRING}
+STR_JUST_BIG_RAW_STRING                                         :{BIG_FONT}{STRING}
 
 # Slightly 'raw' stringcodes with colour or size
 STR_BLACK_COMMA                                                 :{BLACK}{COMMA}

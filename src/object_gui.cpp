@@ -17,6 +17,7 @@
 #include "strings_func.h"
 #include "viewport_func.h"
 #include "window_gui.h"
+#include "window_func.h"
 
 #include "widgets/object_widget.h"
 
@@ -30,33 +31,66 @@ static uint8 _selected_object_view;          ///< the view of the selected objec
 class BuildObjectWindow : public PickerWindowBase {
 	static const int OBJECT_MARGIN = 4; ///< The margin (in pixels) around an object.
 	int line_height;                    ///< The height of a single line.
-	int object_height;                  ///< The height of the object box.
 	int info_height;                    ///< The height of the info box.
 	Scrollbar *vscroll;                 ///< The scrollbar.
 
-public:
-	BuildObjectWindow(const WindowDesc *desc, Window *w) : PickerWindowBase(w), info_height(1)
+	/** Scroll #WID_BO_CLASS_LIST so that the selected object class is visible. */
+	void EnsureSelectedObjectClassIsVisible()
 	{
-		this->CreateNestedTree(desc);
+		uint pos = 0;
+		for (int i = 0; i < _selected_object_class; i++) {
+			if (ObjectClass::Get((ObjectClassID) i)->GetUISpecCount() == 0) continue;
+			pos++;
+		}
+		this->vscroll->ScrollTowards(pos);
+	}
 
+	/**
+	 * Tests whether the previously selected object can be selected.
+	 * @return \c true if the selected object is available, \c false otherwise.
+	 */
+	bool CanRestoreSelectedObject()
+	{
+		if (_selected_object_index == -1) return false;
+
+		ObjectClass *sel_objclass = ObjectClass::Get(_selected_object_class);
+		if ((int)sel_objclass->GetSpecCount() <= _selected_object_index) return false;
+
+		return sel_objclass->GetSpec(_selected_object_index)->IsAvailable();
+	}
+
+	/**
+	 * Calculate the number of columns of the #WID_BO_SELECT_MATRIX widget.
+	 * @return Number of columns in the matrix.
+	 */
+	uint GetMatrixColumnCount()
+	{
+		const NWidgetBase *matrix = this->GetWidget<NWidgetBase>(WID_BO_SELECT_MATRIX);
+		return 1 + (matrix->current_x - matrix->smallest_x) / matrix->resize_x;
+	}
+
+public:
+	BuildObjectWindow(WindowDesc *desc, Window *w) : PickerWindowBase(desc, w), info_height(1)
+	{
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_BO_SCROLLBAR);
-		this->vscroll->SetCapacity(5);
+		this->FinishInitNested(0);
+
 		this->vscroll->SetPosition(0);
 		this->vscroll->SetCount(ObjectClass::GetUIClassCount());
 
-		this->FinishInitNested(desc, 0);
-
-		this->SelectFirstAvailableObject(true);
-		assert(ObjectClass::Get(_selected_object_class)->GetUISpecCount() > 0); // object GUI should be disables elsewise
-		this->GetWidget<NWidgetMatrix>(WID_BO_OBJECT_MATRIX)->SetCount(4);
-
 		NWidgetMatrix *matrix = this->GetWidget<NWidgetMatrix>(WID_BO_SELECT_MATRIX);
 		matrix->SetScrollbar(this->GetScrollbar(WID_BO_SELECT_SCROLL));
-		matrix->SetCount(ObjectClass::Get(_selected_object_class)->GetUISpecCount());
-	}
 
-	virtual ~BuildObjectWindow()
-	{
+		if (this->CanRestoreSelectedObject()) {
+			this->SelectOtherClass(_selected_object_class),
+			this->SelectOtherObject(_selected_object_index);
+		} else {
+			this->SelectFirstAvailableObject(true);
+		}
+		assert(ObjectClass::Get(_selected_object_class)->GetUISpecCount() > 0); // object GUI should be disables elsewise
+		this->EnsureSelectedObjectClassIsVisible();
+		this->GetWidget<NWidgetMatrix>(WID_BO_OBJECT_MATRIX)->SetCount(4);
 	}
 
 	virtual void SetStringParameters(int widget) const
@@ -92,7 +126,7 @@ public:
 				size->width += padding.width;
 				this->line_height = FONT_HEIGHT_NORMAL + WD_MATRIX_TOP + WD_MATRIX_BOTTOM;
 				resize->height = this->line_height;
-				size->height = this->vscroll->GetCapacity() * this->line_height;
+				size->height = 5 * this->line_height;
 				break;
 			}
 
@@ -272,6 +306,16 @@ public:
 	}
 
 	/**
+	 * Select the specified object class.
+	 * @param object_class_index Object class index to select.
+	 */
+	void SelectOtherClass(ObjectClassID object_class_index)
+	{
+		_selected_object_class = object_class_index;
+		this->GetWidget<NWidgetMatrix>(WID_BO_SELECT_MATRIX)->SetCount(ObjectClass::Get(_selected_object_class)->GetUISpecCount());
+	}
+
+	/**
 	 * Select the specified object in #_selected_object_class class.
 	 * @param object_index Object index to select, \c -1 means select nothing.
 	 */
@@ -307,7 +351,6 @@ public:
 	virtual void OnResize()
 	{
 		this->vscroll->SetCapacityFromWidget(this, WID_BO_CLASS_LIST);
-		this->GetWidget<NWidgetCore>(WID_BO_CLASS_LIST)->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
 	}
 
 	virtual void OnClick(Point pt, int widget, int click_count)
@@ -317,8 +360,7 @@ public:
 				int num_clicked = this->vscroll->GetPosition() + (pt.y - this->nested_array[widget]->pos_y) / this->line_height;
 				if (num_clicked >= (int)ObjectClass::GetUIClassCount()) break;
 
-				_selected_object_class = ObjectClass::GetUIClass(num_clicked);
-				this->GetWidget<NWidgetMatrix>(WID_BO_SELECT_MATRIX)->SetCount(ObjectClass::Get(_selected_object_class)->GetUISpecCount());
+				this->SelectOtherClass(ObjectClass::GetUIClass(num_clicked));
 				this->SelectFirstAvailableObject(false);
 				break;
 			}
@@ -365,7 +407,7 @@ public:
 				for (uint i = 0; i < objclass->GetSpecCount(); i++) {
 					const ObjectSpec *spec = objclass->GetSpec(i);
 					if (spec->IsAvailable()) {
-						_selected_object_class = j;
+						this->SelectOtherClass(j);
 						this->SelectOtherObject(i);
 						return;
 					}
@@ -377,7 +419,7 @@ public:
 			/* ... but make sure that the class is not empty. */
 			for (ObjectClassID j = OBJECT_CLASS_BEGIN; j < OBJECT_CLASS_MAX; j++) {
 				if (ObjectClass::Get(j)->GetUISpecCount() > 0) {
-					_selected_object_class = j;
+					this->SelectOtherClass(j);
 					break;
 				}
 			}
@@ -390,12 +432,13 @@ static const NWidgetPart _nested_build_object_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_DARK_GREEN),
 		NWidget(WWT_CAPTION, COLOUR_DARK_GREEN), SetDataTip(STR_OBJECT_BUILD_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_DARK_GREEN),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_DARK_GREEN),
 		NWidget(NWID_HORIZONTAL), SetPadding(2, 0, 0, 0),
 			NWidget(NWID_VERTICAL),
 				NWidget(NWID_HORIZONTAL), SetPadding(0, 5, 2, 5),
-					NWidget(WWT_MATRIX, COLOUR_GREY, WID_BO_CLASS_LIST), SetFill(1, 0), SetDataTip(0x501, STR_OBJECT_BUILD_CLASS_TOOLTIP), SetScrollbar(WID_BO_SCROLLBAR),
+					NWidget(WWT_MATRIX, COLOUR_GREY, WID_BO_CLASS_LIST), SetFill(1, 0), SetMatrixDataTip(1, 0, STR_OBJECT_BUILD_CLASS_TOOLTIP), SetScrollbar(WID_BO_SCROLLBAR),
 					NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_BO_SCROLLBAR),
 				EndContainer(),
 				NWidget(NWID_HORIZONTAL), SetPadding(0, 5, 0, 5),
@@ -427,8 +470,8 @@ static const NWidgetPart _nested_build_object_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _build_object_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _build_object_desc(
+	WDP_AUTO, "build_object", 0, 0,
 	WC_BUILD_OBJECT, WC_BUILD_TOOLBAR,
 	WDF_CONSTRUCTION,
 	_nested_build_object_widgets, lengthof(_nested_build_object_widgets)

@@ -569,7 +569,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Плош
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Насельніцтва
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Назва
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Дата
 # These are used in dropdowns
@@ -590,7 +589,6 @@ STR_SORT_BY_LENGTH                                              :Даўжыня
 STR_SORT_BY_LIFE_TIME                                           :Рэшткавы тэрмін службы
 STR_SORT_BY_TIMETABLE_DELAY                                     :Адставаньне ад ґрафіку
 STR_SORT_BY_FACILITY                                            :Тып станцыі
-STR_SORT_BY_WAITING                                             :Коль-ць грузу на станцыі
 STR_SORT_BY_RATING_MAX                                          :Найвышэйшы рэйтынґ
 STR_SORT_BY_RATING_MIN                                          :Ніжэйшы рэйтынґ
 STR_SORT_BY_ENGINE_ID                                           :Назва, серыя
@@ -602,6 +600,8 @@ STR_SORT_BY_RUNNING_COST                                        :Кошт абс
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Магутнасьць/кошт абслуг.
 STR_SORT_BY_CARGO_CAPACITY                                      :Ёмiстасьць
 STR_SORT_BY_RANGE                                               :Далёкасьць
+STR_SORT_BY_POPULATION                                          :Насельніцтва
+STR_SORT_BY_RATING                                              :Рэйтынг
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Паўза
@@ -684,19 +684,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Выхад
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Мапа сусьвету
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Дадатковае вакно прагляду
 STR_MAP_MENU_SIGN_LIST                                          :Сьпіс таблічак
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Сьпіс гарадоў
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Заснаваць горад
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Субсыдыі
-STR_SUBSIDIES_MENU_GOAL                                         :Бягучыя задачы
 ############ range ends here
 
 ############ range for graph menu starts
@@ -963,7 +962,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Капітал�
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Маґнат
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Транспартны кароль
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Аліґарх стагоддзя
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}«{STRING}»   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}Дырэктара кампаніі «{COMPANY}» называюць {STRING.abl}!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME}, прэзідэнт кампаніі «{COMPANY}», заслужыў тытул «{STRING}»!
@@ -1189,15 +1188,12 @@ STR_GAME_OPTIONS_CURRENCY_LTL                                   :Летувiск
 STR_GAME_OPTIONS_CURRENCY_KRW                                   :Паўднёвакарэйская вона (KRW)
 STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Паўднёваафрыканскі рэнд (ZAR)
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Уласная...
+STR_GAME_OPTIONS_CURRENCY_GEL                                   :Грузінскі лары (GEL)
+STR_GAME_OPTIONS_CURRENCY_IRR                                   :Іранскі рыал (IRR)
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Адзінкі вымярэньня
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Выбар сістэмы адзінак вымярэньня
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Брытанская
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Мэтрычная
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :СІ
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Дарожны рух
@@ -1416,7 +1412,7 @@ STR_CONFIG_SETTING_CONSTRUCTION_COSTS_HELPTEXT                  :Усталюй�
 STR_CONFIG_SETTING_RECESSIONS                                   :Спады: {STRING}
 STR_CONFIG_SETTING_RECESSIONS_HELPTEXT                          :Калі ўключана, спад можа наставаць раз у некалькі гадоў. Падчас спаду ўвесь аб'ём вытворчасьці значна ніжэй (ён вяртаецца да ранейшага ўзроўня, калі спад сканчаецца)
 STR_CONFIG_SETTING_TRAIN_REVERSING                              :Забараніць разварот цягнікоў на станцыях: {STRING}
-STR_CONFIG_SETTING_TRAIN_REVERSING_HELPTEXT                     :Калі ўключана, цягнікі ня будуць заварочвацца на прахадных станцыях, калі ёсць карацейшы шлях да наступнага пункта прызначэньня, што не патрабуе развароту
+STR_CONFIG_SETTING_TRAIN_REVERSING_HELPTEXT                     :Калі ўключана, цягнікі ня будуць разварочвацца на прахадных станцыях, нават калі гэта дазволіць скараціць шлях да наступнага пункта прызначэньня
 STR_CONFIG_SETTING_DISASTERS                                    :Бедствы: {STRING}
 STR_CONFIG_SETTING_DISASTERS_HELPTEXT                           :Пераключыце бедствы, якія могуць час ад часу блякаваць ці зьнішчаць транспартныя сродкі ды інфраструктуру
 STR_CONFIG_SETTING_CITY_APPROVAL                                :Стаўленьне гарадзкой рады да рэструктурызацыі навакольляў: {STRING}
@@ -1863,6 +1859,7 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Адносна�
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Выдаляць абсурдныя элемэнты падчас дарожнага будаўніцтва: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Выдаляць "мёртвыя" канцы дарогаў, якія ўтварыліся пасля рэканструкцыі вуліц.
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Інтэрфэйс
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Будаўніцтва
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Транспарт
@@ -1915,6 +1912,8 @@ STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... фа
 STR_CONFIG_ERROR_INVALID_BASE_GRAPHICS_NOT_FOUND                :{WHITE}... набор ґрафікі "{STRING}" ня знойдзены
 STR_CONFIG_ERROR_INVALID_BASE_SOUNDS_NOT_FOUND                  :{WHITE}... набор гукаў "{STRING}" ня знойдзены
 STR_CONFIG_ERROR_INVALID_BASE_MUSIC_NOT_FOUND                   :{WHITE}... набор музыкі "{STRING}" ня знойдзены
+STR_CONFIG_ERROR_OUT_OF_MEMORY                                  :{WHITE}Недахоп апэратыўнай памяці
+STR_CONFIG_ERROR_SPRITECACHE_TOO_BIG                            :{WHITE}Не атрымалася вылучыць {BYTES} для кэша спрайтаў. Памер кэша зніжаны да {BYTES}. Гэта адмоўна адаб'ецца на прадукцыйнасьці OpenTTD. Каб зьменшыць выдаткі памяці, адключыце 32-бітную ґрафіку й зьменшыце максімальны ўзровень набліжэньня.
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -2091,10 +2090,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Зьмя
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Сеткавая гульня
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Злучэньне:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Выберыце паміж гульнёй па Інтэрнэце й па лакальнай сетцы (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :Лакальная сетка (LAN)
-STR_NETWORK_SERVER_LIST_INTERNET                                :Інтэрнэт
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Імя гульца:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Гэта ваша імя, якое будзе бачна іншым гульцам
 
@@ -2153,8 +2148,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Назв
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Усталяваць пароль
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Абараніце вашу гульню паролем, калі ня хочаце рабіць яе публічна даступнай
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :Лакальная сетка / Інтэрнэт
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Інтэрнэт (зьмясьціць у агульны сьпіс)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} клiент{P "" ы аў}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Макс. клiентаў:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Выбар максымальнай колькасьці кліентаў. Ня ўсе месцы павінны быць занятыя
@@ -2394,9 +2387,9 @@ STR_CONTENT_SELECT_UPDATES_CAPTION_TOOLTIP                      :{BLACK}Адзн
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Нічога не адзначаць
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Адзначыць увесь кантэнт нявыбраным, нічога не запампоўваць
 STR_CONTENT_SEARCH_EXTERNAL                                     :{BLACK}Шукаць на іншых сайтах
-STR_CONTENT_SEARCH_EXTERNAL_TOOLTIP                             :{BLACK}Вынікі пошуку знаходзяцца на іншых сайтах, якія не маюць дачыненьня да OpenTTD
+STR_CONTENT_SEARCH_EXTERNAL_TOOLTIP                             :{BLACK}Вынікі пошуку знаходзяцца на іншых сайтах, якія ня маюць дачыненьня да OpenTTD
 STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER_CAPTION                  :{WHITE}Вы пакідаеце OpenTTD!
-STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER                          :{WHITE}Умовы загрузкі змесціва з іншых сайтаў могуць адрознівацца.{}За інструкцыямі па ўсталёўцы кампанентаў OpenTTD вам трэба звярнуцца на адпаведныя сайты.{}Вы жадаеце працягнуць?
+STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER                          :{WHITE}Умовы загрузкі змесціва зь іншых сайтаў могуць адрозьнівацца.{}За інструкцыямі па ўсталёўцы кампанэнтаў OpenTTD вам трэба зьвярнуцца на адпаведныя сайты.{}Вы жадаеце працягнуць?
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Фільтар па бірках/назвах:
 STR_CONTENT_OPEN_URL                                            :{BLACK}Наведаць вэб-старонку
 STR_CONTENT_OPEN_URL_TOOLTIP                                    :{BLACK}Наведаць вэб-старонку для гэтага кантэнту
@@ -2481,6 +2474,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Пера
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Пераключыць празрыстасьць для кантактнай сеткі. Ctrl+клік — заблякаваць.
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Пераключыць празрыстасьць для індыкатараў загрузкі. Ctrl+клік — заблякаваць.
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Зрабіць аб'екты не празрыстымі, а цалкам нябачнымі
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Падсьветка зоны пакрыцьця
@@ -3212,7 +3209,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Куп�
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Даць хабар гарадзкой адміністрацыі для павышэньня рэйтынґу. Існуе рызыка санкцыяў, калі факт хабару раскрыецца.{}Кошт: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Задачы
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Агульныя задачы:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Няма -
@@ -3254,6 +3250,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Марш
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} па маршруце з {STRING} у {STRING}{YELLOW} ({COMPANY}{YELLOW}, да {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Націсьніце на маршрут для адлюстраваньня прадпрыемства/горада. Ctrl+пстрычка паказвае ў дадатковым вакне.
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Сьпіс станцыяў: пстрычка па назьве паказвае станцыю ў асноўным вакне. Ctrl+клiк паказвае ў дадатковым вакне.
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Націсьніце й ўтрымлівайце Ctrl для выбару больш за адзін варыянт
@@ -3270,7 +3268,7 @@ STR_STATION_VIEW_CAPTION                                        :{WHITE}{STATION
 STR_STATION_VIEW_WAITING_TITLE                                  :{BLACK}Чакае: {WHITE}{STRING}
 STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_LONG}
 STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} транзітам з {STATION})
-STR_STATION_VIEW_RESERVED                                       :{YELLOW}({CARGO_SHORT} зарэзервавана для грузу)
+STR_STATION_VIEW_RESERVED                                       :{YELLOW}({CARGO_SHORT} зарэзэрвавана для грузу)
 
 STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}Прымае
 STR_STATION_VIEW_ACCEPTS_TOOLTIP                                :{BLACK}Паказаць сьпіс прымаемых грузаў
@@ -3281,8 +3279,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Рэйтынґ
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Паказаць рэйтынґ станцыі
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Мясцовы рэйтынґ транспартнай кампаніі:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Жудасны
@@ -3409,7 +3407,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Кана
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Станцыi:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Станцыйныя клеткi
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Аэрапорты
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/год ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/год
 
 # Industry directory
@@ -3809,8 +3806,8 @@ STR_VEHICLE_DETAILS_SERVICING_INTERVAL_PERCENT                  :{BLACK}Агля
 STR_VEHICLE_DETAILS_INCREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Павялiчыць інтэрвал абслугоўваньня на 10. Ctrl+клік — павялічыць інтэрвал абслугоўваньня на 5.
 STR_VEHICLE_DETAILS_DECREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Зьменшыць інтэрвал абслугоўваньня на 10. Ctrl+клік — паменшыць інтэрвал абслугоўваньня на 5.
 
-STR_SERVICE_INTERVAL_DROPDOWN_TOOLTIP                           :{BLACK}Змяніць прынцып разліку інтэрвалу абслугоўваньня
-STR_VEHICLE_DETAILS_DEFAULT                                     :Па змаўчанні
+STR_SERVICE_INTERVAL_DROPDOWN_TOOLTIP                           :{BLACK}Зьмяніць прынцып разьліку інтэрвалу абслугоўваньня
+STR_VEHICLE_DETAILS_DEFAULT                                     :Па змоўчаньні
 STR_VEHICLE_DETAILS_DAYS                                        :У днях
 STR_VEHICLE_DETAILS_PERCENT                                     :У адсотках
 
@@ -4049,7 +4046,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Ґраф
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Адлік часу пачнецца з {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Пачатковая дата
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Зьмяніць дату пачатку гэтага раскладу
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Зьмяніць час
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Зьмяніць час для вылучанага заданьня
@@ -4581,6 +4577,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Не а�
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Эканамічны сімулятар на аснове «Transport Tycoon Deluxe»
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Арыгінальная графіка з Transport Tycoon Deluxe для DOS.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Арыгінальная графіка з нямецкай версіі Transport Tycoon Deluxe для DOS.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Арыгінальная графіка з Transport Tycoon Deluxe для Windows.
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Арыгінальны набор гукавога афармленьня з гульні Transport Tycoon Deluxe для DOS.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Арыгінальны набор гукавога афармленьня з гульні Transport Tycoon Deluxe для Windows.
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :"Пусты" набор гукавога афармленьня, не змяшчаючы ніякіх гукаў.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Арыгінальны набор музычнага афармленьня з гульні Transport Tycoon Deluxe для Windows.
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :"Пусты" набор музычнага афармлення, не змяшчаючы ніякай музыкі.
 
 ##id 0x2000
 # Town building names

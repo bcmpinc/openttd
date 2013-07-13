@@ -28,11 +28,11 @@
 struct SubsidyListWindow : Window {
 	Scrollbar *vscroll;
 
-	SubsidyListWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	SubsidyListWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_SUL_SCROLLBAR);
-		this->FinishInitNested(desc, window_number);
+		this->FinishInitNested(window_number);
 		this->OnInvalidateData(0);
 	}
 
@@ -227,6 +227,7 @@ static const NWidgetPart _nested_subsidies_list_widgets[] = {
 		NWidget(WWT_CLOSEBOX, COLOUR_BROWN),
 		NWidget(WWT_CAPTION, COLOUR_BROWN), SetDataTip(STR_SUBSIDIES_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_SHADEBOX, COLOUR_BROWN),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_BROWN),
 		NWidget(WWT_STICKYBOX, COLOUR_BROWN),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL),
@@ -238,8 +239,8 @@ static const NWidgetPart _nested_subsidies_list_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _subsidies_list_desc(
-	WDP_AUTO, 500, 127,
+static WindowDesc _subsidies_list_desc(
+	WDP_AUTO, "list_subsidies", 500, 127,
 	WC_SUBSIDIES_LIST, WC_NONE,
 	0,
 	_nested_subsidies_list_widgets, lengthof(_nested_subsidies_list_widgets)

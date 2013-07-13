@@ -189,7 +189,8 @@ uint Vehicle::Crash(bool flooded)
 	if (this->IsPrimaryVehicle()) this->vehstatus |= VS_STOPPED;
 	/* crash all wagons, and count passengers */
 	for (Vehicle *v = this; v != NULL; v = v->Next()) {
-		if (IsCargoInClass(v->cargo_type, CC_PASSENGERS)) pass += v->cargo.Count();
+		/* We do not transfer reserver cargo back, so TotalCount() instead of StoredCount() */
+		if (IsCargoInClass(v->cargo_type, CC_PASSENGERS)) pass += v->cargo.TotalCount();
 		v->vehstatus |= VS_CRASHED;
 		MarkSingleVehicleDirty(v);
 	}
@@ -269,6 +270,8 @@ Vehicle::Vehicle(VehicleType type)
 	this->first              = this;
 	this->colourmap          = PAL_NONE;
 	this->cargo_age_counter  = 1;
+	this->last_station_visited = INVALID_STATION;
+	this->last_loading_station = INVALID_STATION;
 }
 
 /**
@@ -724,7 +727,7 @@ void Vehicle::PreDestructor()
 		st->loading_vehicles.remove(this);
 
 		HideFillingPercent(&this->fill_percent_te_id);
-		this->CancelReservation(st);
+		this->CancelReservation(INVALID_STATION, st);
 		delete this->cargo_payment;
 	}
 
@@ -878,7 +881,9 @@ void CallVehicleTicks()
 			case VEH_TRAIN:
 			case VEH_ROAD:
 			case VEH_AIRCRAFT:
-			case VEH_SHIP:
+			case VEH_SHIP: {
+				Vehicle *front = v->First();
+
 				if (v->vcache.cached_cargo_age_period != 0) {
 					v->cargo_age_counter = min(v->cargo_age_counter, v->vcache.cached_cargo_age_period);
 					if (--v->cargo_age_counter == 0) {
@@ -887,16 +892,46 @@ void CallVehicleTicks()
 					}
 				}
 
-				if (v->type == VEH_TRAIN && Train::From(v)->IsWagon()) continue;
-				if (v->type == VEH_AIRCRAFT && v->subtype != AIR_HELICOPTER) continue;
-				if (v->type == VEH_ROAD && !RoadVehicle::From(v)->IsFrontEngine()) continue;
+				/* Do not play any sound when crashed */
+				if (front->vehstatus & VS_CRASHED) continue;
 
-				v->motion_counter += v->cur_speed;
+				/* Do not play any sound when in depot or tunnel */
+				if (v->vehstatus & VS_HIDDEN) continue;
+
+				/* Do not play any sound when stopped */
+				if ((front->vehstatus & VS_STOPPED) && (front->type != VEH_TRAIN || front->cur_speed == 0)) continue;
+
+				/* Check vehicle type specifics */
+				switch (v->type) {
+					case VEH_TRAIN:
+						if (Train::From(v)->IsWagon()) continue;
+						break;
+
+					case VEH_ROAD:
+						if (!RoadVehicle::From(v)->IsFrontEngine()) continue;
+						break;
+
+					case VEH_AIRCRAFT:
+						if (!Aircraft::From(v)->IsNormalAircraft()) continue;
+						break;
+
+					default:
+						break;
+				}
+
+				v->motion_counter += front->cur_speed;
 				/* Play a running sound if the motion counter passes 256 (Do we not skip sounds?) */
-				if (GB(v->motion_counter, 0, 8) < v->cur_speed) PlayVehicleSound(v, VSE_RUNNING);
+				if (GB(v->motion_counter, 0, 8) < front->cur_speed) PlayVehicleSound(v, VSE_RUNNING);
 
 				/* Play an alternating running sound every 16 ticks */
-				if (GB(v->tick_counter, 0, 4) == 0) PlayVehicleSound(v, v->cur_speed > 0 ? VSE_RUNNING_16 : VSE_STOPPED_16);
+				if (GB(v->tick_counter, 0, 4) == 0) {
+					/* Play running sound when speed > 0 and not braking */
+					bool running = (front->cur_speed > 0) && !(front->vehstatus & (VS_STOPPED | VS_TRAIN_SLOWING));
+					PlayVehicleSound(v, running ? VSE_RUNNING_16 : VSE_STOPPED_16);
+				}
+
+				break;
+			}
 		}
 	}
 
@@ -1256,12 +1291,12 @@ uint8 CalcPercentVehicleFilled(const Vehicle *front, StringID *colour)
 
 	/* Count up max and used */
 	for (const Vehicle *v = front; v != NULL; v = v->Next()) {
-		count += v->cargo.OnboardCount();
+		count += v->cargo.StoredCount();
 		max += v->cargo_cap;
 		if (v->cargo_cap != 0 && colour != NULL) {
 			unloading += HasBit(v->vehicle_flags, VF_CARGO_UNLOADING) ? 1 : 0;
 			loading |= !order_no_load &&
-					(order_full_load || HasBit(st->goods[v->cargo_type].acceptance_pickup, GoodsEntry::GES_PICKUP)) &&
+					(order_full_load || st->goods[v->cargo_type].HasRating()) &&
 					!HasBit(v->vehicle_flags, VF_LOADING_FINISHED) && !HasBit(v->vehicle_flags, VF_STOP_LOADING);
 			cars++;
 		}
@@ -1367,7 +1402,7 @@ void VehicleEnterDepot(Vehicle *v)
 
 		if (t.IsRefit()) {
 			Backup<CompanyByte> cur_company(_current_company, v->owner, FILE_LINE);
-			CommandCost cost = DoCommand(v->tile, v->index, t.GetRefitCargo() | t.GetRefitSubtype() << 8, DC_EXEC, GetCmdRefitVeh(v));
+			CommandCost cost = DoCommand(v->tile, v->index, t.GetRefitCargo() | 0xFF << 8, DC_EXEC, GetCmdRefitVeh(v));
 			cur_company.Restore();
 
 			if (cost.Failed()) {
@@ -1967,7 +2002,12 @@ void Vehicle::BeginLoading()
 		this->current_order.MakeLoading(false);
 	}
 
-	Station::Get(this->last_station_visited)->loading_vehicles.push_back(this);
+	if (this->last_loading_station != INVALID_STATION &&
+			this->last_loading_station != this->last_station_visited &&
+			((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
+			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0)) {
+		IncreaseStats(Station::Get(this->last_loading_station), this, this->last_station_visited);
+	}
 
 	PrepareUnload(this);
 
@@ -1982,18 +2022,20 @@ void Vehicle::BeginLoading()
 }
 
 /**
- * Return all reserved cargo packets to the station.
+ * Return all reserved cargo packets to the station and reset all packets
+ * staged for transfer.
  * @param st the station where the reserved packets should go.
  */
-void Vehicle::CancelReservation(Station *st)
+void Vehicle::CancelReservation(StationID next, Station *st)
 {
 	for (Vehicle *v = this; v != NULL; v = v->next) {
 		VehicleCargoList &cargo = v->cargo;
 		if (cargo.ActionCount(VehicleCargoList::MTA_LOAD) > 0) {
 			DEBUG(misc, 1, "cancelling cargo reservation");
-			cargo.Return(UINT_MAX, &st->goods[v->cargo_type].cargo);
-			cargo.KeepAll();
+			cargo.Return(UINT_MAX, &st->goods[v->cargo_type].cargo, next);
+			cargo.SetTransferLoadPlace(st->xy);
 		}
+		cargo.KeepAll();
 	}
 }
 
@@ -2010,9 +2052,27 @@ void Vehicle::LeaveStation()
 	/* Only update the timetable if the vehicle was supposed to stop here. */
 	if (this->current_order.GetNonStopType() != ONSF_STOP_EVERYWHERE) UpdateVehicleTimetable(this, false);
 
+	if ((this->current_order.GetLoadType() & OLFB_NO_LOAD) == 0 ||
+			(this->current_order.GetUnloadType() & OUFB_NO_UNLOAD) == 0) {
+		if (this->current_order.CanLeaveWithCargo(this->last_loading_station != INVALID_STATION)) {
+			/* Refresh next hop stats to make sure we've done that at least once
+			 * during the stop and that refit_cap == cargo_cap for each vehicle in
+			 * the consist. */
+			this->ResetRefitCaps();
+			this->RefreshNextHopsStats();
+
+			/* if the vehicle could load here or could stop with cargo loaded set the last loading station */
+			this->last_loading_station = this->last_station_visited;
+		} else {
+			/* if the vehicle couldn't load and had to unload or transfer everything
+			 * set the last loading station to invalid as it will leave empty. */
+			this->last_loading_station = INVALID_STATION;
+		}
+	}
+
 	this->current_order.MakeLeaveStation();
 	Station *st = Station::Get(this->last_station_visited);
-	this->CancelReservation(st);
+	this->CancelReservation(INVALID_STATION, st);
 	st->loading_vehicles.remove(this);
 
 	HideFillingPercent(&this->fill_percent_te_id);
@@ -2028,6 +2088,164 @@ void Vehicle::LeaveStation()
 	}
 }
 
+/**
+ * Reset all refit_cap in the consist to cargo_cap.
+ */
+void Vehicle::ResetRefitCaps()
+{
+	for (Vehicle *v = this; v != NULL; v = v->Next()) v->refit_cap = v->cargo_cap;
+}
+
+/**
+ * Simulated cargo type and capacity for prediction of future links.
+ */
+struct RefitDesc {
+	CargoID cargo;    ///< Cargo type the vehicle will be carrying.
+	uint16 capacity;  ///< Capacity the vehicle will have.
+	uint16 remaining; ///< Capacity remaining from before the previous refit.
+	RefitDesc(CargoID cargo, uint16 capacity, uint16 remaining) :
+			cargo(cargo), capacity(capacity), remaining(remaining) {}
+};
+
+typedef std::list<RefitDesc> RefitList;
+typedef std::map<CargoID, uint> CapacitiesMap;
+
+/**
+ * Predict a vehicle's course from its current state and refresh all links it
+ * will visit.
+ */
+void Vehicle::RefreshNextHopsStats()
+{
+	/* Assemble list of capacities and set last loading stations to 0. */
+	CapacitiesMap capacities;
+	RefitList refit_capacities;
+	for (Vehicle *v = this; v != NULL; v = v->Next()) {
+		refit_capacities.push_back(RefitDesc(v->cargo_type, v->cargo_cap, v->refit_cap));
+		if (v->refit_cap > 0) capacities[v->cargo_type] += v->refit_cap;
+	}
+
+	/* If orders were deleted while loading, we're done here.*/
+	if (this->orders.list == NULL) return;
+
+	const Order *first = this->GetOrder(this->cur_implicit_order_index);
+
+	/* Make sure the first order is a station order. */
+	first = this->orders.list->GetNextStoppingOrder(this, first, 0);
+	if (first == NULL) return;
+
+	const Order *cur = first;
+	const Order *next = first;
+	bool has_cargo = this->last_loading_station != INVALID_STATION;
+	bool was_refit = false;
+	uint hops = 0;
+
+	while (next != NULL) {
+
+		/* If the refit cargo is CT_AUTO_REFIT, we're optimistic and assume the
+		 * cargo will stay the same. The point of this method is to avoid
+		 * deadlocks due to vehicles waiting for cargo that isn't being routed,
+		 * yet. That situation will not occur if the vehicle is actually
+		 * carrying a different cargo in the end. */
+		if (next->IsRefit() && !next->IsAutoRefit()) {
+			was_refit = true;
+			CargoID new_cid = next->GetRefitCargo();
+			RefitList::iterator refit_it = refit_capacities.begin();
+			for (Vehicle *v = this; v != NULL; v = v->Next()) {
+				const Engine *e = Engine::Get(v->engine_type);
+				if (!HasBit(e->info.refit_mask, new_cid)) {
+					++refit_it;
+					continue;
+				}
+
+				/* Back up the vehicle's cargo type */
+				CargoID temp_cid = v->cargo_type;
+				byte temp_subtype = v->cargo_subtype;
+				v->cargo_type = new_cid;
+				v->cargo_subtype = GetBestFittingSubType(v, v, new_cid);
+
+				uint16 mail_capacity = 0;
+				uint amount = e->DetermineCapacity(v, &mail_capacity);
+
+				/* Restore the original cargo type */
+				v->cargo_type = temp_cid;
+				v->cargo_subtype = temp_subtype;
+
+				/* Skip on next refit. */
+				if (new_cid != refit_it->cargo && refit_it->remaining > 0) {
+					capacities[refit_it->cargo] -= refit_it->remaining;
+					refit_it->remaining = 0;
+				} else if (amount < refit_it->remaining) {
+					capacities[refit_it->cargo] -= refit_it->remaining - amount;
+					refit_it->remaining = amount;
+				}
+				refit_it->capacity = amount;
+				refit_it->cargo = new_cid;
+
+				++refit_it;
+
+				/* Special case for aircraft with mail. */
+				if (v->type == VEH_AIRCRAFT) {
+					if (mail_capacity < refit_it->remaining) {
+						capacities[refit_it->cargo] -= refit_it->remaining - mail_capacity;
+						refit_it->remaining = mail_capacity;
+					}
+					refit_it->capacity = mail_capacity;
+					break; // aircraft have only one vehicle
+				}
+			}
+		}
+
+		/* Only reset the refit capacities if the "previous" next is a station,
+		 * meaning that either the vehicle was refit at the previous station or
+		 * it wasn't at all refit during the current hop. */
+		bool reset_refit = was_refit && (next->IsType(OT_GOTO_STATION) || next->IsType(OT_IMPLICIT));
+
+		/* Reassign next with the following stop. This can be a station or a
+		 * depot. Allow the order list to be walked twice so that we can
+		 * reassign "first" below without afterwards terminating early here. */
+		next = this->orders.list->GetNextStoppingOrder(this,
+				this->orders.list->GetNext(next), hops++ / 2);
+		if (next == NULL) break;
+
+		if (next->IsType(OT_GOTO_STATION) || next->IsType(OT_IMPLICIT)) {
+			if (reset_refit) {
+				/* Restore remaining capacities as vehicle might have been able to load now. */
+				for (RefitList::iterator it(refit_capacities.begin()); it != refit_capacities.end(); ++it) {
+					if (it->remaining == it->capacity) continue;
+					capacities[it->cargo] += it->capacity - it->remaining;
+					it->remaining = it->capacity;
+				}
+				reset_refit = false;
+				was_refit = false;
+			}
+
+			if (cur->IsType(OT_GOTO_STATION) || cur->IsType(OT_IMPLICIT)) {
+				has_cargo = cur->CanLeaveWithCargo(has_cargo);
+				if (has_cargo) {
+					StationID next_station = next->GetDestination();
+					Station *st = Station::GetIfValid(cur->GetDestination());
+					if (st != NULL && next_station != INVALID_STATION && next_station != st->index) {
+						for (CapacitiesMap::const_iterator i = capacities.begin(); i != capacities.end(); ++i) {
+							/* Refresh the link and give it a minimum capacity. */
+							if (i->second > 0) IncreaseStats(st, i->first, next_station, i->second, UINT_MAX);
+						}
+					}
+				}
+			}
+
+			/* "cur" is only assigned here if the stop is a station so that
+			 * whenever stats are to be increased two stations can be found.
+			 * However, "first" can be a depot stop. If that is the case
+			 * reassign it to make sure we end up with a station for the last
+			 * link. */
+			cur = next;
+			if (cur == first) break;
+			if (!first->IsType(OT_GOTO_STATION) && !first->IsType(OT_IMPLICIT)) {
+				first = cur;
+			}
+		}
+	}
+}
 
 /**
  * Handle the loading of the vehicle; when not it skips through dummy
@@ -2063,6 +2281,34 @@ void Vehicle::HandleLoading(bool mode)
 	}
 
 	this->IncrementImplicitOrderIndex();
+}
+
+/**
+ * Get a map of cargoes and free capacities in the consist.
+ * @param capacities Map to be filled with cargoes and capacities.
+ */
+void Vehicle::GetConsistFreeCapacities(SmallMap<CargoID, uint> &capacities) const
+{
+	for (const Vehicle *v = this; v != NULL; v = v->Next()) {
+		if (v->cargo_cap == 0) continue;
+		SmallPair<CargoID, uint> *pair = capacities.Find(v->cargo_type);
+		if (pair == capacities.End()) {
+			pair = capacities.Append();
+			pair->first = v->cargo_type;
+			pair->second = v->cargo_cap - v->cargo.StoredCount();
+		} else {
+			pair->second += v->cargo_cap - v->cargo.StoredCount();
+		}
+	}
+}
+
+uint Vehicle::GetConsistTotalCapacity() const
+{
+	uint result = 0;
+	for (const Vehicle *v = this; v != NULL; v = v->Next()) {
+		result += v->cargo_cap;
+	}
+	return result;
 }
 
 /**

@@ -15,8 +15,21 @@
 #include "string_type.h"
 #include "strings_type.h"
 
+/**
+ * Return values for Textbuf::HandleKeypress
+ */
+enum HandleKeyPressResult
+{
+	HKPR_EDITING,     ///< Textbuf content changed.
+	HKPR_CURSOR,      ///< Non-text change, e.g. cursor position.
+	HKPR_CONFIRM,     ///< Return or enter key pressed.
+	HKPR_CANCEL,      ///< Escape key pressed.
+	HKPR_NOT_HANDLED, ///< Key does not affect editboxes.
+};
+
 /** Helper/buffer for input fields. */
 struct Textbuf {
+	CharSetFilter afilter;    ///< Allowed characters
 	char * const buf;         ///< buffer in which text is saved
 	uint16 max_bytes;         ///< the maximum size of the buffer in bytes (including terminating '\0')
 	uint16 max_chars;         ///< the maximum size of the buffer in characters (including terminating '\0')
@@ -35,10 +48,14 @@ struct Textbuf {
 	void CDECL Print(const char *format, ...) WARN_FORMAT(2, 3);
 
 	void DeleteAll();
-	bool DeleteChar(int delmode);
-	bool InsertChar(uint32 key);
 	bool InsertClipboard();
-	bool MovePos(int navmode);
+
+	bool InsertChar(uint32 key);
+
+	bool DeleteChar(uint16 keycode);
+	bool MovePos(uint16 keycode);
+
+	HandleKeyPressResult HandleKeyPress(uint16 key, uint16 keycode);
 
 	bool HandleCaret();
 	void UpdateSize();

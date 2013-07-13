@@ -42,7 +42,6 @@ private:
 	DestinationID dest;   ///< The destination of the order.
 
 	CargoID refit_cargo;  ///< Refit CargoID
-	byte refit_subtype;   ///< Refit subtype
 
 public:
 	Order *next;          ///< Pointer to next order. If NULL, end of list
@@ -72,7 +71,7 @@ public:
 	void Free();
 
 	void MakeGoToStation(StationID destination);
-	void MakeGoToDepot(DepotID destination, OrderDepotTypeFlags order, OrderNonStopFlags non_stop_type = ONSF_NO_STOP_AT_INTERMEDIATE_STATIONS, OrderDepotActionFlags action = ODATF_SERVICE_ONLY, CargoID cargo = CT_NO_REFIT, byte subtype = 0);
+	void MakeGoToDepot(DepotID destination, OrderDepotTypeFlags order, OrderNonStopFlags non_stop_type = ONSF_NO_STOP_AT_INTERMEDIATE_STATIONS, OrderDepotActionFlags action = ODATF_SERVICE_ONLY, CargoID cargo = CT_NO_REFIT);
 	void MakeGoToWaypoint(StationID destination);
 	void MakeLoading(bool ordered);
 	void MakeLeaveStation();
@@ -124,14 +123,7 @@ public:
 	 */
 	inline CargoID GetRefitCargo() const { return this->refit_cargo; }
 
-	/**
-	 * Get the cargo subtype to to refit to.
-	 * @pre IsType(OT_GOTO_DEPOT) || IsType(OT_GOTO_STATION)
-	 * @return the cargo subtype.
-	 */
-	inline byte GetRefitSubtype() const { return this->refit_subtype; }
-
-	void SetRefit(CargoID cargo, byte subtype = 0);
+	void SetRefit(CargoID cargo);
 
 	/** How must the consist be loaded? */
 	inline OrderLoadFlags GetLoadType() const { return (OrderLoadFlags)GB(this->flags, 4, 4); }
@@ -176,6 +168,9 @@ public:
 	inline void SetConditionValue(uint16 value) { SB(this->dest, 0, 11, value); }
 
 	bool ShouldStopAtStation(const Vehicle *v, StationID station) const;
+	bool CanLoadOrUnload() const;
+	bool CanLeaveWithCargo(bool has_cargo) const;
+
 	TileIndex GetLocation(const Vehicle *v, bool airport = false) const;
 
 	/** Checks if this order has travel_time and if needed wait_time set. */
@@ -205,6 +200,8 @@ struct OrderList : OrderListPool::PoolItem<&_orderlist_pool> {
 private:
 	friend void AfterLoadVehicles(bool part_of_load); ///< For instantiating the shared vehicle chain
 	friend const struct SaveLoad *GetOrderListDescription(); ///< Saving and loading of order lists.
+
+	const Order *GetBestLoadableNext(const Vehicle *v, const Order *o1, const Order *o2) const;
 
 	Order *first;                     ///< First order of the order list.
 	VehicleOrderID num_orders;        ///< NOSAVE: How many orders there are in the list.
@@ -247,6 +244,14 @@ public:
 	inline Order *GetLastOrder() const { return this->GetOrderAt(this->num_orders - 1); }
 
 	/**
+	 * Get the order after the given one or the first one, if the given one is the
+	 * last one.
+	 * @param curr Order to find the next one for.
+	 * @return Next order.
+	 */
+	inline const Order *GetNext(const Order *curr) const { return (curr->next == NULL) ? this->GetFirstOrder() : curr->next; }
+
+	/**
 	 * Get number of orders in the order list.
 	 * @return number of orders in the chain.
 	 */
@@ -257,6 +262,9 @@ public:
 	 * @return number of manual orders in the chain.
 	 */
 	inline VehicleOrderID GetNumManualOrders() const { return this->num_manual_orders; }
+
+	StationID GetNextStoppingStation(const Vehicle *v) const;
+	const Order *GetNextStoppingOrder(const Vehicle *v, const Order *next, uint hops, bool is_loading = false) const;
 
 	void InsertOrderAt(Order *new_order, int index);
 	void DeleteOrderAt(int index);

@@ -219,7 +219,7 @@
 	EnforcePrecondition(false, ScriptObject::GetCompany() != OWNER_DEITY);
 	EnforcePrecondition(false, IsValidVehicle(vehicle_id));
 	EnforcePrecondition(false, name != NULL);
-	const char *text = name->GetEncodedText();
+	const char *text = name->GetDecodedText();
 	EnforcePreconditionEncodedText(false, text);
 	EnforcePreconditionCustomError(false, ::Utf8StringLength(text) < MAX_LENGTH_VEHICLE_NAME_CHARS, ScriptError::ERR_PRECONDITION_STRING_TOO_LONG);
 
@@ -399,7 +399,7 @@
 
 	uint32 amount = 0;
 	for (const Vehicle *v = ::Vehicle::Get(vehicle_id); v != NULL; v = v->Next()) {
-		if (v->cargo_type == cargo) amount += v->cargo.Count();
+		if (v->cargo_type == cargo) amount += v->cargo.StoredCount();
 	}
 
 	return amount;

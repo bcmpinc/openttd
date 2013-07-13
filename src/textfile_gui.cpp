@@ -27,6 +27,7 @@ static const NWidgetPart _nested_textfile_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_MAUVE),
 		NWidget(WWT_CAPTION, COLOUR_MAUVE, WID_TF_CAPTION), SetDataTip(STR_NULL, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_MAUVE),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_PANEL, COLOUR_MAUVE, WID_TF_BACKGROUND), SetMinimalSize(200, 125), SetResize(1, 12), SetScrollbar(WID_TF_VSCROLLBAR),
@@ -42,19 +43,19 @@ static const NWidgetPart _nested_textfile_widgets[] = {
 };
 
 /** Window definition for the textfile window */
-static const WindowDesc _textfile_desc(
-	WDP_CENTER, 630, 460,
+static WindowDesc _textfile_desc(
+	WDP_CENTER, "textfile", 630, 460,
 	WC_TEXTFILE, WC_NONE,
 	0,
 	_nested_textfile_widgets, lengthof(_nested_textfile_widgets)
 );
 
-TextfileWindow::TextfileWindow(TextfileType file_type) : Window(), file_type(file_type)
+TextfileWindow::TextfileWindow(TextfileType file_type) : Window(&_textfile_desc), file_type(file_type)
 {
-	this->CreateNestedTree(&_textfile_desc);
+	this->CreateNestedTree();
 	this->vscroll = this->GetScrollbar(WID_TF_VSCROLLBAR);
 	this->hscroll = this->GetScrollbar(WID_TF_HSCROLLBAR);
-	this->FinishInitNested(&_textfile_desc);
+	this->FinishInitNested();
 	this->GetWidget<NWidgetCore>(WID_TF_CAPTION)->SetDataTip(STR_TEXTFILE_README_CAPTION + file_type, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS);
 }
 
@@ -135,7 +136,7 @@ TextfileWindow::TextfileWindow(TextfileType file_type) : Window(), file_type(fil
 /* virtual */ void TextfileWindow::SetFontNames(FreeTypeSettings *settings, const char *font_name)
 {
 #ifdef WITH_FREETYPE
-	strecpy(settings->mono_font, font_name, lastof(settings->mono_font));
+	strecpy(settings->mono.font, font_name, lastof(settings->mono.font));
 #endif /* WITH_FREETYPE */
 }
 

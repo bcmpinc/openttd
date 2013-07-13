@@ -270,16 +270,30 @@ static inline void DrawInset(const Rect &r, Colours colour, StringID str)
  * @param colour  Colour of the background.
  * @param clicked Matrix is rendered lowered.
  * @param data    Data of the widget, number of rows and columns of the widget.
+ * @param resize_x Matrix resize unit size.
+ * @param resize_y Matrix resize unit size.
  */
-static inline void DrawMatrix(const Rect &r, Colours colour, bool clicked, uint16 data)
+static inline void DrawMatrix(const Rect &r, Colours colour, bool clicked, uint16 data, uint resize_x, uint resize_y)
 {
 	DrawFrameRect(r.left, r.top, r.right, r.bottom, colour, (clicked) ? FR_LOWERED : FR_NONE);
 
 	int num_columns = GB(data, MAT_COL_START, MAT_COL_BITS);  // Lower 8 bits of the widget data: Number of columns in the matrix.
-	int column_width = (r.right - r.left + 1) / num_columns; // Width of a single column in the matrix.
+	int column_width; // Width of a single column in the matrix.
+	if (num_columns == 0) {
+		column_width = resize_x;
+		num_columns = (r.right - r.left + 1) / column_width;
+	} else {
+		column_width = (r.right - r.left + 1) / num_columns;
+	}
 
 	int num_rows = GB(data, MAT_ROW_START, MAT_ROW_BITS); // Upper 8 bits of the widget data: Number of rows in the matrix.
-	int row_height = (r.bottom - r.top + 1) / num_rows; // Height of a single row in the matrix.
+	int row_height; // Height of a single row in the matrix.
+	if (num_rows == 0) {
+		row_height = resize_y;
+		num_rows = (r.bottom - r.top + 1) / row_height;
+	} else {
+		row_height = (r.bottom - r.top + 1) / num_rows;
+	}
 
 	int col = _colour_gradient[colour & 0xF][6];
 
@@ -461,6 +475,18 @@ static inline void DrawStickyBox(const Rect &r, Colours colour, bool clicked)
 }
 
 /**
+ * Draw a defsize box.
+ * @param r       Rectangle of the box.
+ * @param colour  Colour of the defsize box.
+ * @param clicked Box is lowered.
+ */
+static inline void DrawDefSizeBox(const Rect &r, Colours colour, bool clicked)
+{
+	DrawFrameRect(r.left, r.top, r.right, r.bottom, colour, (clicked) ? FR_LOWERED : FR_NONE);
+	DrawSprite(SPR_WINDOW_DEFSIZE, PAL_NONE, r.left + WD_DEFSIZEBOX_LEFT + clicked, r.top + WD_DEFSIZEBOX_TOP + clicked);
+}
+
+/**
  * Draw a NewGRF debug box.
  * @param r       Rectangle of the box.
  * @param colour  Colour of the debug box.
@@ -501,7 +527,7 @@ static inline void DrawCloseBox(const Rect &r, Colours colour, StringID str)
 {
 	assert(str == STR_BLACK_CROSS || str == STR_SILVER_CROSS); // black or silver cross
 	DrawFrameRect(r.left, r.top, r.right, r.bottom, colour, FR_NONE);
-	DrawString(r.left + WD_CLOSEBOX_LEFT, r.right - WD_CLOSEBOX_RIGHT, r.top + WD_CLOSEBOX_TOP, str, TC_FROMSTRING, SA_HOR_CENTER);
+	DrawString(r.left, r.right, r.top + WD_CLOSEBOX_TOP, str, TC_FROMSTRING, SA_HOR_CENTER);
 }
 
 /**
@@ -1470,7 +1496,8 @@ void NWidgetMatrix::SetCount(int count)
 	 * and post spacing "offsets". */
 	count = CeilDiv(count, this->sb->IsVertical() ? this->widgets_x : this->widgets_y);
 	count *= (this->sb->IsVertical() ? this->head->smallest_y : this->head->smallest_x) + this->pip_inter;
-	count += -this->pip_inter + this->pip_pre + this->pip_post; // We counted an inter too much in the multiplication above
+	if (count > 0) count -= this->pip_inter; // We counted an inter too much in the multiplication above
+	count += this->pip_pre + this->pip_post;
 	this->sb->SetCount(count);
 	this->sb->SetCapacity(this->sb->IsVertical() ? this->current_y : this->current_x);
 	this->sb->SetStepSize(this->sb->IsVertical() ? this->widget_h  : this->widget_w);
@@ -2041,6 +2068,7 @@ Dimension NWidgetScrollbar::horizontal_dimension = {0, 0};
 
 Dimension NWidgetLeaf::shadebox_dimension  = {0, 0};
 Dimension NWidgetLeaf::debugbox_dimension  = {0, 0};
+Dimension NWidgetLeaf::defsizebox_dimension = {0, 0};
 Dimension NWidgetLeaf::stickybox_dimension = {0, 0};
 Dimension NWidgetLeaf::resizebox_dimension = {0, 0};
 Dimension NWidgetLeaf::closebox_dimension  = {0, 0};
@@ -2055,7 +2083,7 @@ Dimension NWidgetLeaf::closebox_dimension  = {0, 0};
  */
 NWidgetLeaf::NWidgetLeaf(WidgetType tp, Colours colour, int index, uint16 data, StringID tip) : NWidgetCore(tp, colour, 1, 1, data, tip)
 {
-	assert(index >= 0 || tp == WWT_LABEL || tp == WWT_TEXT || tp == WWT_CAPTION || tp == WWT_RESIZEBOX || tp == WWT_SHADEBOX || tp == WWT_DEBUGBOX || tp == WWT_STICKYBOX || tp == WWT_CLOSEBOX);
+	assert(index >= 0 || tp == WWT_LABEL || tp == WWT_TEXT || tp == WWT_CAPTION || tp == WWT_RESIZEBOX || tp == WWT_SHADEBOX || tp == WWT_DEFSIZEBOX || tp == WWT_DEBUGBOX || tp == WWT_STICKYBOX || tp == WWT_CLOSEBOX);
 	if (index >= 0) this->SetIndex(index);
 	this->SetMinimalSize(0, 0);
 	this->SetResize(0, 0);
@@ -2081,10 +2109,12 @@ NWidgetLeaf::NWidgetLeaf(WidgetType tp, Colours colour, int index, uint16 data, 
 			this->SetFill(0, 0);
 			break;
 
-		case WWT_EDITBOX:
-			this->SetMinimalSize(10, 0);
+		case WWT_EDITBOX: {
+			Dimension sprite_size = GetSpriteSize(_current_text_dir == TD_RTL ? SPR_IMG_DELETE_RIGHT : SPR_IMG_DELETE_LEFT);
+			this->SetMinimalSize(30 + sprite_size.width, sprite_size.height);
 			this->SetFill(0, 0);
 			break;
+		}
 
 		case WWT_CAPTION:
 			this->SetFill(1, 0);
@@ -2109,6 +2139,12 @@ NWidgetLeaf::NWidgetLeaf(WidgetType tp, Colours colour, int index, uint16 data, 
 			this->SetFill(0, 0);
 			this->SetMinimalSize(WD_DEBUGBOX_TOP, WD_CAPTION_HEIGHT);
 			this->SetDataTip(STR_NULL, STR_TOOLTIP_DEBUG);
+			break;
+
+		case WWT_DEFSIZEBOX:
+			this->SetFill(0, 0);
+			this->SetMinimalSize(WD_DEFSIZEBOX_TOP, WD_CAPTION_HEIGHT);
+			this->SetDataTip(STR_NULL, STR_TOOLTIP_DEFSIZE);
 			break;
 
 		case WWT_RESIZEBOX:
@@ -2196,6 +2232,19 @@ void NWidgetLeaf::SetupSmallestSize(Window *w, bool init_array)
 			size = maxdim(size, NWidgetLeaf::stickybox_dimension);
 			break;
 		}
+
+		case WWT_DEFSIZEBOX: {
+			static const Dimension extra = {WD_DEFSIZEBOX_LEFT + WD_DEFSIZEBOX_RIGHT, WD_DEFSIZEBOX_TOP + WD_DEFSIZEBOX_BOTTOM};
+			padding = &extra;
+			if (NWidgetLeaf::defsizebox_dimension.width == 0) {
+				NWidgetLeaf::defsizebox_dimension = GetSpriteSize(SPR_WINDOW_DEFSIZE);
+				NWidgetLeaf::defsizebox_dimension.width += extra.width;
+				NWidgetLeaf::defsizebox_dimension.height += extra.height;
+			}
+			size = maxdim(size, NWidgetLeaf::defsizebox_dimension);
+			break;
+		}
+
 		case WWT_RESIZEBOX: {
 			static const Dimension extra = {WD_RESIZEBOX_LEFT + WD_RESIZEBOX_RIGHT, WD_RESIZEBOX_TOP + WD_RESIZEBOX_BOTTOM};
 			padding = &extra;
@@ -2366,7 +2415,7 @@ void NWidgetLeaf::Draw(const Window *w)
 			break;
 
 		case WWT_MATRIX:
-			DrawMatrix(r, this->colour, clicked, this->widget_data);
+			DrawMatrix(r, this->colour, clicked, this->widget_data, this->resize_x, this->resize_y);
 			break;
 
 		case WWT_EDITBOX: {
@@ -2392,6 +2441,11 @@ void NWidgetLeaf::Draw(const Window *w)
 		case WWT_STICKYBOX:
 			assert(this->widget_data == 0);
 			DrawStickyBox(r, this->colour, !!(w->flags & WF_STICKY));
+			break;
+
+		case WWT_DEFSIZEBOX:
+			assert(this->widget_data == 0);
+			DrawDefSizeBox(r, this->colour, clicked);
 			break;
 
 		case WWT_RESIZEBOX:

@@ -340,6 +340,7 @@ bool VideoDriver_SDL::CreateMainSurface(uint w, uint h)
 			SDL_CALL SDL_QuitSubSystem(SDL_INIT_VIDEO);
 			SDL_CALL SDL_InitSubSystem(SDL_INIT_VIDEO);
 			ClaimMousePointer();
+			SetupKeyboard();
 		}
 	}
 	/* Remember if we wanted a hwpalette. We can't reliably query
@@ -391,6 +392,11 @@ bool VideoDriver_SDL::CreateMainSurface(uint w, uint h)
 	_screen.pitch = newscreen->pitch / (bpp / 8);
 	_screen.dst_ptr = newscreen->pixels;
 	_sdl_screen = newscreen;
+
+	/* When in full screen, we will always have the mouse cursor
+	 * within the window, even though SDL does not give us the
+	 * appropriate event to know this. */
+	if (_fullscreen) _cursor.in_window = true;
 
 	Blitter *blitter = BlitterFactoryBase::GetCurrentBlitter();
 	blitter->PostResize();
@@ -649,13 +655,17 @@ const char *VideoDriver_SDL::Start(const char * const *parm)
 	DEBUG(driver, 1, "SDL: using driver '%s'", buf);
 
 	MarkWholeScreenDirty();
-
-	SDL_CALL SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-	SDL_CALL SDL_EnableUNICODE(1);
+	SetupKeyboard();
 
 	_draw_threaded = GetDriverParam(parm, "no_threads") == NULL && GetDriverParam(parm, "no_thread") == NULL;
 
 	return NULL;
+}
+
+void VideoDriver_SDL::SetupKeyboard()
+{
+	SDL_CALL SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+	SDL_CALL SDL_EnableUNICODE(1);
 }
 
 void VideoDriver_SDL::Stop()

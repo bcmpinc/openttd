@@ -27,11 +27,6 @@
 /* static */ GameScannerInfo *Game::scanner_info = NULL;
 /* static */ GameScannerLibrary *Game::scanner_library = NULL;
 
-/* static */ const char *Game::GetMainScript()
-{
-		return Game::info->GetMainScript();
-}
-
 /* static */ void Game::GameLoop()
 {
 	if (_networking && !_network_server) return;
@@ -75,6 +70,8 @@
 	GameConfig *config = GameConfig::GetConfig(GameConfig::SSS_FORCE_GAME);
 	GameInfo *info = config->GetInfo();
 	if (info == NULL) return;
+
+	config->AnchorUnchangeableSettings();
 
 	Backup<CompanyByte> cur_company(_current_company, FILE_LINE);
 	cur_company.Change(OWNER_DEITY);

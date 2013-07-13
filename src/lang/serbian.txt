@@ -405,7 +405,8 @@ STR_UNITS_HEIGHT_IMPERIAL                                       :{COMMA} ft
 STR_UNITS_HEIGHT_SI                                             :{COMMA} m
 
 # Common window strings
-STR_LIST_FILTER_OSKTITLE                                        :{BLACK}Unes filter niske
+STR_LIST_FILTER_TITLE                                           :{BLACK}Filtriraj po:
+STR_LIST_FILTER_OSKTITLE                                        :{BLACK}Unesite tekst za filter
 STR_LIST_FILTER_TOOLTIP                                         :{BLACK}Unesite ključnu reč kako bi se filtriralo spisak
 
 STR_TOOLTIP_SORT_ORDER                                          :{BLACK}Odaberite način sortiranja (opadajući/rastući)
@@ -418,7 +419,7 @@ STR_BUTTON_RENAME                                               :{BLACK}Preimenu
 STR_TOOLTIP_CLOSE_WINDOW                                        :{BLACK}Zatvori prozor
 STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS                              :{BLACK}Naslov - povucite mišem da biste pomerili prozor
 STR_TOOLTIP_SHADE                                               :{BLACK}Zamotaj prozor - prikazuje se samo naslov
-STR_TOOLTIP_DEBUG                                               :{BLACK}Prokazuje NewGRF podatake o otklanjanju grešaka
+STR_TOOLTIP_DEBUG                                               :{BLACK}Prikazuje NewGRF podatake o otklanjanju grešaka
 STR_TOOLTIP_STICKY                                              :{BLACK}Pridenite kako bi ovaj prozor ostao otvoren prilikom pritiska na dugme za zatvaranje svih prozora
 STR_TOOLTIP_RESIZE                                              :{BLACK}Pritisnite i povucite kako bi prozor promenio veličinu
 STR_TOOLTIP_TOGGLE_LARGE_SMALL_WINDOW                           :{BLACK}Izbor velikog/malog prozora
@@ -443,7 +444,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Područj
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Naseljenosti
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Imenu
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Datumu
 # These are used in dropdowns
@@ -464,7 +464,6 @@ STR_SORT_BY_LENGTH                                              :Dužini
 STR_SORT_BY_LIFE_TIME                                           :Isticanju životnog veka
 STR_SORT_BY_TIMETABLE_DELAY                                     :Kašnjenje u rasporedu
 STR_SORT_BY_FACILITY                                            :Vrsti stanice
-STR_SORT_BY_WAITING                                             :Vrednosti tovara na čekanju
 STR_SORT_BY_RATING_MAX                                          :Najvišoj oceni tereta
 STR_SORT_BY_RATING_MIN                                          :Najnižoj oceni tereta
 STR_SORT_BY_ENGINE_ID                                           :ID mašine (standardno)
@@ -476,6 +475,8 @@ STR_SORT_BY_RUNNING_COST                                        :Troškovima odr
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Snazi/Troškovima održavanja
 STR_SORT_BY_CARGO_CAPACITY                                      :Nosivosti tovara
 STR_SORT_BY_RANGE                                               :Dometu
+STR_SORT_BY_POPULATION                                          :Naseljenosti
+STR_SORT_BY_RATING                                              :Rejtingu
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Pauziranje partije
@@ -558,19 +559,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Izađi
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Karta sveta
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Dodatno gledište
 STR_MAP_MENU_SIGN_LIST                                          :Lista Znakova
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Popis naselja
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Osnivanje naselja
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Subvencije
-STR_SUBSIDIES_MENU_GOAL                                         :Trenutni ciljevi
 ############ range ends here
 
 ############ range for graph menu starts
@@ -844,7 +844,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mogul
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL.gen                       :mogula
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Tajkun veka
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY.gen       :tajkuna veka
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} dostiže status '{STRING}'!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME}, vlasnik preduzeća {COMPANY} je dostigao status '{STRING}'!
@@ -1048,9 +1048,9 @@ STR_GAME_OPTIONS_CURRENCY_CHF                                   :Švajcarski Fra
 STR_GAME_OPTIONS_CURRENCY_CZK                                   :Češka Kruna (CZK)
 STR_GAME_OPTIONS_CURRENCY_DEM                                   :Nemačka Marka (DEM)
 STR_GAME_OPTIONS_CURRENCY_DKK                                   :Danska Kruna (DKK)
-STR_GAME_OPTIONS_CURRENCY_ESP                                   :Pezeta (ESP)
-STR_GAME_OPTIONS_CURRENCY_FIM                                   :Finski Marka (FIM)
-STR_GAME_OPTIONS_CURRENCY_FRF                                   :Franak (FRF)
+STR_GAME_OPTIONS_CURRENCY_ESP                                   :Španska Pezeta (ESP)
+STR_GAME_OPTIONS_CURRENCY_FIM                                   :Finska Marka (FIM)
+STR_GAME_OPTIONS_CURRENCY_FRF                                   :Francuski Franak (FRF)
 STR_GAME_OPTIONS_CURRENCY_GRD                                   :Grčka Drahma (GRD)
 STR_GAME_OPTIONS_CURRENCY_HUF                                   :Mađarska Forinta (HUF)
 STR_GAME_OPTIONS_CURRENCY_ISK                                   :Islandska Kruna (ISK)
@@ -1058,7 +1058,7 @@ STR_GAME_OPTIONS_CURRENCY_ITL                                   :Italijanska Lir
 STR_GAME_OPTIONS_CURRENCY_NLG                                   :Holandski Gulden (NLG)
 STR_GAME_OPTIONS_CURRENCY_NOK                                   :Norveška Kruna (NOK)
 STR_GAME_OPTIONS_CURRENCY_PLN                                   :Poljski Zlot (PLN)
-STR_GAME_OPTIONS_CURRENCY_RON                                   :Rumunska Lej (RON)
+STR_GAME_OPTIONS_CURRENCY_RON                                   :Rumunski Lej (RON)
 STR_GAME_OPTIONS_CURRENCY_RUR                                   :Ruska Rublja (RUR)
 STR_GAME_OPTIONS_CURRENCY_SIT                                   :Slovenački Tolar (SIT)
 STR_GAME_OPTIONS_CURRENCY_SEK                                   :Švedska Kruna (SEK)
@@ -1070,15 +1070,12 @@ STR_GAME_OPTIONS_CURRENCY_LTL                                   :Litvanski Litas
 STR_GAME_OPTIONS_CURRENCY_KRW                                   :Južnokorejski Von (KRW)
 STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Južnoafrički Rand (ZAR)
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Sopstvena...
+STR_GAME_OPTIONS_CURRENCY_GEL                                   :Gruzijski Lari (GEL)
+STR_GAME_OPTIONS_CURRENCY_IRR                                   :Iranski Rijal (IRR)
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Merne jedinice
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Izbor svetskih najzastupljenijih mernih jedinica
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Anglosaksonski
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metrički
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Drumska vozila
@@ -1106,7 +1103,7 @@ STR_GAME_OPTIONS_TOWN_NAME_HUNGARIAN                            :Mađarska
 STR_GAME_OPTIONS_TOWN_NAME_AUSTRIAN                             :Austrijanska
 STR_GAME_OPTIONS_TOWN_NAME_ROMANIAN                             :Rumunska
 STR_GAME_OPTIONS_TOWN_NAME_CZECH                                :Češka
-STR_GAME_OPTIONS_TOWN_NAME_SWISS                                :Švajcerska
+STR_GAME_OPTIONS_TOWN_NAME_SWISS                                :Švajcarska
 STR_GAME_OPTIONS_TOWN_NAME_DANISH                               :Danska
 STR_GAME_OPTIONS_TOWN_NAME_TURKISH                              :Turska
 STR_GAME_OPTIONS_TOWN_NAME_ITALIAN                              :Italijanska
@@ -1167,7 +1164,7 @@ STR_CURRENCY_SET_CUSTOM_CURRENCY_PREFIX_TOOLTIP                 :{BLACK}Postavit
 STR_CURRENCY_SUFFIX                                             :{LTBLUE}Sufiks: {ORANGE}{STRING}
 STR_CURRENCY_SET_CUSTOM_CURRENCY_SUFFIX_TOOLTIP                 :{BLACK}Postavite sufiks za vašu monetu
 
-STR_CURRENCY_SWITCH_TO_EURO                                     :{LTBLUE}Pelazak na Euro: {ORANGE}{NUM}
+STR_CURRENCY_SWITCH_TO_EURO                                     :{LTBLUE}Prelazak na Euro: {ORANGE}{NUM}
 STR_CURRENCY_SWITCH_TO_EURO_NEVER                               :{LTBLUE}Prelazak na Euro: {ORANGE}nikada
 STR_CURRENCY_SET_CUSTOM_CURRENCY_TO_EURO_TOOLTIP                :{BLACK}Odredite godinu za prelazak na euro
 STR_CURRENCY_DECREASE_CUSTOM_CURRENCY_TO_EURO_TOOLTIP           :{BLACK}Raniji prelazak na euro
@@ -1225,7 +1222,7 @@ STR_SUBSIDY_X4                                                  :x4
 
 STR_TERRAIN_TYPE_VERY_FLAT                                      :Ravničarski
 STR_TERRAIN_TYPE_FLAT                                           :Brdski
-STR_TERRAIN_TYPE_HILLY                                          :Brdskio-planinski
+STR_TERRAIN_TYPE_HILLY                                          :Brdsko-planinski
 STR_TERRAIN_TYPE_MOUNTAINOUS                                    :Planinski
 
 STR_CITY_APPROVAL_PERMISSIVE                                    :Popustljiv
@@ -1236,6 +1233,7 @@ STR_WARNING_NO_SUITABLE_AI                                      :{WHITE}Nisu dos
 
 # Advanced settings window
 STR_CONFIG_SETTING_CAPTION                                      :{WHITE}Napredna Podešavanja
+STR_CONFIG_SETTING_FILTER_TITLE                                 :{BLACK}Filtriraj po:
 STR_CONFIG_SETTING_EXPAND_ALL                                   :{BLACK}Proširi sve
 STR_CONFIG_SETTING_COLLAPSE_ALL                                 :{BLACK}Skupi sve
 STR_CONFIG_SETTING_NO_EXPLANATION_AVAILABLE_HELPTEXT            :(nema objašnjenja)
@@ -1248,10 +1246,12 @@ STR_CONFIG_SETTING_TYPE_COMPANY_MENU                            :Podešavanja pr
 STR_CONFIG_SETTING_TYPE_COMPANY_INGAME                          :Podešavanja preduzeća (čuvaju se prilikom snimanja; utiču samo tekuće preduzeće)
 
 STR_CONFIG_SETTING_RESTRICT_LABEL                               :{BLACK}Prikaži:
+STR_CONFIG_SETTING_RESTRICT_DROPDOWN_HELPTEXT                   :{BLACK}Ograničava donju listu tako da prikazuje samo promenjena podešavanja
 STR_CONFIG_SETTING_RESTRICT_BASIC                               :Osnovna podešavanja
 STR_CONFIG_SETTING_RESTRICT_ADVANCED                            :Napredna podešavanja
 STR_CONFIG_SETTING_RESTRICT_ALL                                 :Ekspertska / sva podešavanja
 STR_CONFIG_SETTING_RESTRICT_CHANGED_AGAINST_DEFAULT             :Podešavanja sa vrednošću različitom od podrazumevane
+STR_CONFIG_SETTING_RESTRICT_CHANGED_AGAINST_NEW                 :Podešavanja sa vrednošću različitom od vrednosti za novu igru
 
 STR_CONFIG_SETTING_TYPE_DROPDOWN_HELPTEXT                       :{BLACK}Ograničava donju listu na određen tip podešavanja
 STR_CONFIG_SETTING_TYPE_DROPDOWN_ALL                            :Sva podešavanja
@@ -1290,6 +1290,7 @@ STR_CONFIG_SETTING_VEHICLE_BREAKDOWNS_HELPTEXT                  :Koliko često m
 STR_CONFIG_SETTING_SUBSIDY_MULTIPLIER                           :Množilac subvencije: {STRING}
 STR_CONFIG_SETTING_SUBSIDY_MULTIPLIER_HELPTEXT                  :Podešava koliko se plaća za subvencionisane konekcije
 STR_CONFIG_SETTING_CONSTRUCTION_COSTS                           :Troškovi gradnje: {STRING}
+STR_CONFIG_SETTING_CONSTRUCTION_COSTS_HELPTEXT                  :Podešava nivo troškova gradnje i kupovine
 STR_CONFIG_SETTING_RECESSIONS                                   :Recesije: {STRING}
 STR_CONFIG_SETTING_RECESSIONS_HELPTEXT                          :Ako je omogućeno, recesije mogu da se jave svakih nekoliko godina. Proizvodnja je značajno smanjena tokom recesije (vraća se na prethodni nivo kada se recesija završi)
 STR_CONFIG_SETTING_TRAIN_REVERSING                              :Onemogući okretanje voza u stanicama: {STRING}
@@ -1309,55 +1310,88 @@ STR_CONFIG_SETTING_EXTRADYNAMITE                                :Dozvoljeno ukla
 STR_CONFIG_SETTING_EXTRADYNAMITE_HELPTEXT                       :Olakšava uklanjanje infrastrukture i zgrada u gradskom vlasništvu
 STR_CONFIG_SETTING_TRAIN_LENGTH                                 :Najveća dužina vozova: {STRING}
 STR_CONFIG_SETTING_TRAIN_LENGTH_HELPTEXT                        :Podešava najveću dužinu vozova
+STR_CONFIG_SETTING_TILE_LENGTH                                  :{COMMA} pločic{P a e a}
 STR_CONFIG_SETTING_SMOKE_AMOUNT                                 :Količina dima/varnica vozila: {STRING}
 STR_CONFIG_SETTING_SMOKE_AMOUNT_HELPTEXT                        :Podešava količinu dima ili varnica koje emituju vozila
 STR_CONFIG_SETTING_TRAIN_ACCELERATION_MODEL                     :Model ubrzavanja vozova: {STRING}
+STR_CONFIG_SETTING_TRAIN_ACCELERATION_MODEL_HELPTEXT            :Bira fizički model za ubrzanje vozova. "Originalni" model ima istovetni penal na usponima za sa vozila. "Realistični" model ima različit penal u zavisnosti od osobina kompozicije poput dužine i sile potrebne za pokretanje voza
 STR_CONFIG_SETTING_ROAD_VEHICLE_ACCELERATION_MODEL              :Model ubrzavanja drumskih vozila: {STRING}
+STR_CONFIG_SETTING_ROAD_VEHICLE_ACCELERATION_MODEL_HELPTEXT     :Bira fizički model za ubrzanje drumskih vozila. "Originalni" model ima istovetni penal na usponima za sa vozila. "Realistični" model ima različit penal u zavisnosti od osobina motora i sile potrebne za pokretanje vozila
+STR_CONFIG_SETTING_TRAIN_SLOPE_STEEPNESS                        :Nagib uspona za vozove: {STRING}
+STR_CONFIG_SETTING_TRAIN_SLOPE_STEEPNESS_HELPTEXT               :Nagib uspona za voz. Veće vrednosti čine težim penjanje uzbrdo
 STR_CONFIG_SETTING_PERCENTAGE                                   :{COMMA}%
+STR_CONFIG_SETTING_ROAD_VEHICLE_SLOPE_STEEPNESS                 :Nagib uspona za drumska vozila: {STRING}
+STR_CONFIG_SETTING_ROAD_VEHICLE_SLOPE_STEEPNESS_HELPTEXT        :Nagib uspona za drumsko vozilo. Veće vrednosti čine težim penjanje uzbrdo
 STR_CONFIG_SETTING_FORBID_90_DEG                                :Zabranjeno okretanje brodova i vozova za 90 stepeni: {STRING}
+STR_CONFIG_SETTING_FORBID_90_DEG_HELPTEXT                       :Okretanje za 90 stepeni se dešava kada se uspravna pruga nalazi odmah posle vodoravne pruge na susednoj pločici i time čini da voz skreće pod 90 stepeni kad prelazi sa pločice na pločicu, umesto uobičajenih 45 stepeni kod drugih kombinacija pruge. Ovo takođe važi i za radijus zaokreta brodova
 STR_CONFIG_SETTING_DISTANT_JOIN_STATIONS                        :Dozvoljeno sjedinjavanje udaljenih stanica: {STRING}
+STR_CONFIG_SETTING_DISTANT_JOIN_STATIONS_HELPTEXT               :Dozvoljava dodavanje delova stanici bez da oni dodiruju postojeće delove stanice. Zahteva Ctrl+Klik kod postavljanja novih delova
 STR_CONFIG_SETTING_IMPROVEDLOAD                                 :Koristiti poboljšan algoritam utovara: {STRING}
+STR_CONFIG_SETTING_IMPROVEDLOAD_HELPTEXT                        :Ako je omogućen, više vozila koja čekaju u stanici će se utovarivati jedno za drugim. Sledeće vozilo će početi sa utovarom kada čeka dovoljno tereta da napuni prethodno vozilo
 STR_CONFIG_SETTING_GRADUAL_LOADING                              :Postepeno utovarivanje u vozilo: {STRING}
+STR_CONFIG_SETTING_GRADUAL_LOADING_HELPTEXT                     :Postupno utovaruj vozila koristeći različito vreme utovara za svako vozilo, umesto utovara odjednom za fiksno vreme koje zavisi samo od količine tovara
 STR_CONFIG_SETTING_INFLATION                                    :Inflacija: {STRING}
+STR_CONFIG_SETTING_INFLATION_HELPTEXT                           :Omogućuje inflaciju tako da troškovi rastu malo brže od isplata
 STR_CONFIG_SETTING_SELECTGOODS                                  :Dostavljanje tovara na stanicu samo ako ima potražnje: {STRING}
+STR_CONFIG_SETTING_SELECTGOODS_HELPTEXT                         :Dostavlja na stanicu samo onaj tovar koji je potreban vozilu koje se utovaruje. Ovo onemogućava loš rejting za one vrste tovara koji ne mogu da se iskoriste u stanici
 STR_CONFIG_SETTING_MAX_BRIDGE_LENGTH                            :Najveća dužina mosta: {STRING}
 STR_CONFIG_SETTING_MAX_BRIDGE_LENGTH_HELPTEXT                   :Maksimalna dužina za podizanje mostova
 STR_CONFIG_SETTING_MAX_TUNNEL_LENGTH                            :Najveća dužina tunela: {STRING}
 STR_CONFIG_SETTING_MAX_TUNNEL_LENGTH_HELPTEXT                   :Maksimalna dužina za iskopavanje tunela
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD             :Metod izgradnje finansiranih primarnih industrija: {STRING}
+STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_HELPTEXT    :Način izgradnje primarnih industrija. 'nikakav' znači da finansiranje nije moguće, 'istraživački' znači da jeste moguće ali se izgradnja odvija na slučajnom mestu na karti i može da ne uspe, 'uobičajen' znači da preduzeća mogu da postave primarnu industriju na bilo koju poziciju na karti
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NONE        :nikakav
-STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NORMAL      :uobičajan
+STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NORMAL      :uobičajen
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_PROSPECTING :istraživački
 STR_CONFIG_SETTING_INDUSTRY_PLATFORM                            :Ravna površina oko industrija: {STRING}
 STR_CONFIG_SETTING_INDUSTRY_PLATFORM_HELPTEXT                   :Količina ravne površine u okružini jedne industrije. Ovo osigurava da će u okolini industrije biti dovoljno slobodnog mesta za konstrukciju pruga, i tako dalje.
 STR_CONFIG_SETTING_MULTIPINDTOWN                                :Dozvoljeno više industrija iste vrste na teritoriji jednog naselja: {STRING}
+STR_CONFIG_SETTING_MULTIPINDTOWN_HELPTEXT                       :Naselje uobičajeno ne dozvoljava više industrija iste vrste. Sa ovim podešavanjem će biti dozvoljeno više industrija iste vrste na teritoriji jednog naselja
 STR_CONFIG_SETTING_SIGNALSIDE                                   :Prikaži signale: {STRING}
 STR_CONFIG_SETTING_SIGNALSIDE_HELPTEXT                          :Odaberi na kojoj strani koloseka se postavlja signalizacija
 STR_CONFIG_SETTING_SIGNALSIDE_LEFT                              :Na levoj
 STR_CONFIG_SETTING_SIGNALSIDE_DRIVING_SIDE                      :Na strani na kojoj se vozi
 STR_CONFIG_SETTING_SIGNALSIDE_RIGHT                             :Na desnoj
 STR_CONFIG_SETTING_SHOWFINANCES                                 :Prikazivanje finansijskog stanja na kraju godine: {STRING}
+STR_CONFIG_SETTING_SHOWFINANCES_HELPTEXT                        :Ako je omogućeno, na kraju svake godine će se prikazati prozor sa finansijskim stanjem što omogućava lakše praćenje finansija preduzeća
 STR_CONFIG_SETTING_NONSTOP_BY_DEFAULT                           :Nove naredbe su postavljene sa 'direktno': {STRING}
+STR_CONFIG_SETTING_NONSTOP_BY_DEFAULT_HELPTEXT                  :Vozilo će uobičajeno stati u svakoj stanici kroz koju prolazi. Ako se ovo podešavanje omogući, vozilo će samo proći kroz stanicu bez zaustavljanja sve do krajnje stanice. Ovo podešavanje menja samo podrazumevanu vrednost za nove naredbe. Pojedinačne naredbe mogu da imaju i jedno i drugo ponašanje
 STR_CONFIG_SETTING_STOP_LOCATION                                :Nove naredbe zaustavljaju voz na {STRING} stanice
-STR_CONFIG_SETTING_STOP_LOCATION_NEAR_END                       :kraj
-STR_CONFIG_SETTING_STOP_LOCATION_MIDDLE                         :sredinu
-STR_CONFIG_SETTING_STOP_LOCATION_FAR_END                        :početak
+STR_CONFIG_SETTING_STOP_LOCATION_HELPTEXT                       :Mesto gde će se voz zaustaviti u stanici. 'početak' znači blizu ulaska, 'sredina' znači na sredini platforme a 'kraj' znači najdalje od ulaska. Ovo podešavanje menja samo podrazumevanu vrednost za nove naredbe. Pojedinačne naredbe za vozove mogu da imaju bilo koje od ova tri ponašanja
+STR_CONFIG_SETTING_STOP_LOCATION_NEAR_END                       :početak
+STR_CONFIG_SETTING_STOP_LOCATION_MIDDLE                         :sredina
+STR_CONFIG_SETTING_STOP_LOCATION_FAR_END                        :kraj
 STR_CONFIG_SETTING_ROAD_VEHICLE_QUEUEING                        :Vozila čekaju u koloni (na zauzetim stanicama): {STRING}
+STR_CONFIG_SETTING_ROAD_VEHICLE_QUEUEING_HELPTEXT               :Čini da drumsko vozilo čeka ispred zauzetih stanica dok se ne raščiste
 STR_CONFIG_SETTING_AUTOSCROLL                                   :Pomeranje prozora kada miš priđe ivicama: {STRING}
+STR_CONFIG_SETTING_AUTOSCROLL_DISABLED                          :Isključeno
+STR_CONFIG_SETTING_AUTOSCROLL_MAIN_VIEWPORT                     :Glavni prikaz
+STR_CONFIG_SETTING_AUTOSCROLL_EVERY_VIEWPORT                    :Svaki prikaz
 STR_CONFIG_SETTING_BRIBE                                        :Dozvoljeno podmićivanje lokalnih vlasti: {STRING}
+STR_CONFIG_SETTING_BRIBE_HELPTEXT                               :Dozvoljava preduzećima da pokušaju da podmite lokalne vlasti. Ako inspektor primeti podmićivanje, preduzeće neće moći da deluje u naselju sledećih šest meseci
 STR_CONFIG_SETTING_ALLOW_EXCLUSIVE                              :Dozvoljena kupovina ekskluzivnih prava prevoza: {STRING}
+STR_CONFIG_SETTING_ALLOW_EXCLUSIVE_HELPTEXT                     :Ako preduzeće kupi ekskluzivna prava prevoza u naselju, protivničke stanice neće primati nikakav tovar ni putnike cele godine
 STR_CONFIG_SETTING_ALLOW_FUND_BUILDINGS                         :Dozvoljeno finansiranje zgrada: {STRING}
+STR_CONFIG_SETTING_ALLOW_FUND_BUILDINGS_HELPTEXT                :Dozvoljava preduzećima da naselju daju novac za gradnju novih kuća
 STR_CONFIG_SETTING_ALLOW_FUND_ROAD                              :Dozvoljeno finansiranje rekonstrukcije lokalnih puteva: {STRING}
+STR_CONFIG_SETTING_ALLOW_FUND_ROAD_HELPTEXT                     :Dozvoljava preduzećima da daju novac naseljima za rekonstrukciju puteva kako bi sabotirali drumski saobraćaj
 STR_CONFIG_SETTING_ALLOW_GIVE_MONEY                             :Dozvoljeno slanje novca drugim preduzećima: {STRING}
+STR_CONFIG_SETTING_ALLOW_GIVE_MONEY_HELPTEXT                    :Dozvoljava prenos novca između preduzeća u modu za više igrača
 STR_CONFIG_SETTING_FREIGHT_TRAINS                               :Množilac težine tovara za simulaciju opterećenja vozova: {STRING}
+STR_CONFIG_SETTING_PLANE_SPEED                                  :Faktor brzine aviona: {STRING}
+STR_CONFIG_SETTING_PLANE_SPEED_HELPTEXT                         :Postavlja brzinu aviona relativno u odnosu na druge vrste vozila kako bi se ograničio prihod od avio saobraćaja
 STR_CONFIG_SETTING_PLANE_SPEED_VALUE                            :1 / {COMMA}
 STR_CONFIG_SETTING_PLANE_CRASHES                                :Broj avionskih nesreća: {STRING}
+STR_CONFIG_SETTING_PLANE_CRASHES_HELPTEXT                       :Postavlja šansu da se dogodi avionska nesreća
 STR_CONFIG_SETTING_PLANE_CRASHES_NONE                           :nikakav
 STR_CONFIG_SETTING_PLANE_CRASHES_REDUCED                        :umanjen
 STR_CONFIG_SETTING_PLANE_CRASHES_NORMAL                         :normalan
 STR_CONFIG_SETTING_STOP_ON_TOWN_ROAD                            :Dozvoljene ulične stanice na kolovozima u vlasništvu naselja: {STRING}
+STR_CONFIG_SETTING_STOP_ON_TOWN_ROAD_HELPTEXT                   :Dozvoljava izgradnju protočnih drumskih stanica na putevima čiji je vlasnik naselje
 STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD                      :Dozvoljene ulične stanice na kolovozima u vlasništvu drugih preduzeća: {STRING}
+STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD_HELPTEXT             :Dozvoljava izgradnju protočnih drumskih stanica na putevima čiji je vlasnik drugo preduzeće
 STR_CONFIG_SETTING_ADJACENT_STATIONS                            :Dozvoljena gradnja stanica jedne pored druge: {STRING}
+STR_CONFIG_SETTING_ADJACENT_STATIONS_HELPTEXT                   :Dozvoljava da se različite stanice dodiruju
 STR_CONFIG_SETTING_DYNAMIC_ENGINES                              :Dozvoljeno više NewGRF kolekcija mašina: {STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES_EXISTING_VEHICLES            :{WHITE}Promena ovog podešavanja nije moguća dok postoje vozila
 STR_CONFIG_SETTING_INFRASTRUCTURE_MAINTENANCE                   :Održavanje infrastrukture: {STRING}
@@ -1365,14 +1399,21 @@ STR_CONFIG_SETTING_INFRASTRUCTURE_MAINTENANCE                   :Održavanje inf
 STR_CONFIG_SETTING_NEVER_EXPIRE_AIRPORTS                        :Nezastarevanje aerodroma: {STRING}
 
 STR_CONFIG_SETTING_WARN_LOST_VEHICLE                            :Upozorenje ukoliko se vozilo izgubi: {STRING}
+STR_CONFIG_SETTING_WARN_LOST_VEHICLE_HELPTEXT                   :Prikazuje poruke o vozilima koja ne mogu da nađu put do odredišta
 STR_CONFIG_SETTING_ORDER_REVIEW                                 :Provera naredbi vozila: {STRING}
 STR_CONFIG_SETTING_ORDER_REVIEW_OFF                             :nijedno
 STR_CONFIG_SETTING_ORDER_REVIEW_EXDEPOT                         :da, osim zaustavljenih vozila
 STR_CONFIG_SETTING_ORDER_REVIEW_ON                              :svih vozila
 STR_CONFIG_SETTING_WARN_INCOME_LESS                             :Upozorenje ukoliko vozilo pravi gubitke: {STRING}
-STR_CONFIG_SETTING_NEVER_EXPIRE_VEHICLES                        :Vozila su uvek dostupna: {STRING}
+STR_CONFIG_SETTING_WARN_INCOME_LESS_HELPTEXT                    :Ako je omogućeno, šalje vest kada vozilo u toku kalendarske godine nije ostvarilo zaradu
+STR_CONFIG_SETTING_NEVER_EXPIRE_VEHICLES                        :Vozila nikad ne zastarevaju: {STRING}
 STR_CONFIG_SETTING_AUTORENEW_VEHICLE                            :Automatska zamena kada vozilo ostari: {STRING}
+STR_CONFIG_SETTING_AUTORENEW_MONTHS                             :Automatska zamena kada je vozilo staro najviše {STRING}
+STR_CONFIG_SETTING_AUTORENEW_MONTHS_HELPTEXT                    :Starost vozila pri kojoj postaje kandidat za automatsku zamenu
+STR_CONFIG_SETTING_AUTORENEW_MONTHS_VALUE_BEFORE                :{COMMA} mesec{P "" a i} pre
+STR_CONFIG_SETTING_AUTORENEW_MONTHS_VALUE_AFTER                 :{COMMA} mesec{P "" a i} posle
 STR_CONFIG_SETTING_AUTORENEW_MONEY                              :Najmanja potrebna količina novca za zamenu: {STRING}
+STR_CONFIG_SETTING_ERRMSG_DURATION                              :Trajanje poruke o greški: {STRING}
 STR_CONFIG_SETTING_POPULATION_IN_LABEL                          :Prikazivanje broja populacije pored naziva naselja: {STRING}
 STR_CONFIG_SETTING_GRAPH_LINE_THICKNESS                         :Debljina linija u grafikonima: {STRING}
 
@@ -1467,24 +1508,43 @@ STR_CONFIG_SETTING_SOUND_DISASTER_HELPTEXT                      :Reprodukuj zvu�
 STR_CONFIG_SETTING_SOUND_VEHICLE                                :Vozila: {STRING}
 STR_CONFIG_SETTING_SOUND_VEHICLE_HELPTEXT                       :Reprodukuj zvučne efekte vozila
 STR_CONFIG_SETTING_SOUND_AMBIENT                                :Okruženje: {STRING}
-STR_CONFIG_SETTING_SOUND_AMBIENT_HELPTEXT                       :Reprodukuj ambijentalne zvučne efekte za teren, industriju i gradove
+STR_CONFIG_SETTING_SOUND_AMBIENT_HELPTEXT                       :Reprodukuj ambijentalne zvučne efekte za teren, industrije i gradove
 
 STR_CONFIG_SETTING_DISABLE_UNSUITABLE_BUILDING                  :Onemogućena izgradnja infrastrukture kada nema odgovarajućih vozila: {STRING}
 STR_CONFIG_SETTING_MAX_TRAINS                                   :Najviše vozova po preduzeću: {STRING}
+STR_CONFIG_SETTING_MAX_TRAINS_HELPTEXT                          :Najveći broj vozova koje preduzeće može da ima
 STR_CONFIG_SETTING_MAX_ROAD_VEHICLES                            :Najviše drumskih vozila po preduzeću: {STRING}
+STR_CONFIG_SETTING_MAX_ROAD_VEHICLES_HELPTEXT                   :Najveći broj drumskih vozila koje preduzeće može da ima
 STR_CONFIG_SETTING_MAX_AIRCRAFT                                 :Najviše letilica po preduzeću: {STRING}
+STR_CONFIG_SETTING_MAX_AIRCRAFT_HELPTEXT                        :Najveći broj letilica koje preduzeće može da ima
 STR_CONFIG_SETTING_MAX_SHIPS                                    :Najviše brodova po preduzeću: {STRING}
+STR_CONFIG_SETTING_MAX_SHIPS_HELPTEXT                           :Najveći broj brodova koje preduzeće može da ima
 
 STR_CONFIG_SETTING_AI_BUILDS_TRAINS                             :Računar ne može da koristi železnički prevoz: {STRING}
+STR_CONFIG_SETTING_AI_BUILDS_TRAINS_HELPTEXT                    :Omogućavanje ovog podešavanja znači da računar ne može da stvara vozove
 STR_CONFIG_SETTING_AI_BUILDS_ROAD_VEHICLES                      :Računar ne može da koristi drumski prevoz: {STRING}
+STR_CONFIG_SETTING_AI_BUILDS_ROAD_VEHICLES_HELPTEXT             :Omogućavanje ovog podešavanja znači da računar ne može da stvara drumska vozila
 STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT                           :Računar ne može da koristi vazdušni prevoz: {STRING}
+STR_CONFIG_SETTING_AI_BUILDS_AIRCRAFT_HELPTEXT                  :Omogućavanje ovog podešavanja znači da računar ne može da stvara letilice
 STR_CONFIG_SETTING_AI_BUILDS_SHIPS                              :Računar ne može da koristi vodni prevoz: {STRING}
+STR_CONFIG_SETTING_AI_BUILDS_SHIPS_HELPTEXT                     :Omogućavanje ovog podešavanja znači da računar ne može da stvara brodove
 
+STR_CONFIG_SETTING_AI_PROFILE                                   :Podrazumevani profil podešavanja: {STRING}
+STR_CONFIG_SETTING_AI_PROFILE_EASY                              :Lak
+STR_CONFIG_SETTING_AI_PROFILE_MEDIUM                            :Srednji
+STR_CONFIG_SETTING_AI_PROFILE_HARD                              :Težak
 
 STR_CONFIG_SETTING_AI_IN_MULTIPLAYER                            :Dozvoljena VI u mrežnoj partiji: {STRING}
+STR_CONFIG_SETTING_AI_IN_MULTIPLAYER_HELPTEXT                   :Dozvoljava računarskoj VI da učestvuje u mrežnoj partiji
 STR_CONFIG_SETTING_SCRIPT_MAX_OPCODES                           :Suspendovanje #opkodova pre skripti: {STRING}
+STR_CONFIG_SETTING_SCRIPT_MAX_OPCODES_HELPTEXT                  :Najveći broj koraka računanja koje skript može da izvede u jednom krugu
 
 STR_CONFIG_SETTING_SERVINT_ISPERCENT                            :Intervali servisiranja u procentima: {STRING}
+STR_CONFIG_SETTING_SERVINT_ISPERCENT_HELPTEXT                   :Da li se intervali servisiranja vozila okidaju vremenom proteklim od prošlog servisiranja ili padom pouzdanosti za određeni procenat u odnosu na najveću pouzdanost
+STR_CONFIG_SETTING_SERVINT_TRAINS                               :Podrazumevani servisni interval za vozove: {STRING}
+STR_CONFIG_SETTING_SERVINT_ROAD_VEHICLES                        :Podrazumevani servisni interval za drumska vozila: {STRING}
+STR_CONFIG_SETTING_SERVINT_AIRCRAFT                             :Podrazumevani servisni interval za letilice: {STRING}
+STR_CONFIG_SETTING_SERVINT_SHIPS                                :Podrazumevani servisni interval za brodove: {STRING}
 STR_CONFIG_SETTING_NOSERVICE                                    :Isključeno servisiranje kada ne postoje kvarovi: {STRING}
 STR_CONFIG_SETTING_WAGONSPEEDLIMITS                             :Uključeno ograničenje brzine kod vagona: {STRING}
 STR_CONFIG_SETTING_DISABLE_ELRAILS                              :Ne postoji posebna električna pruga: {STRING}
@@ -1494,7 +1554,7 @@ STR_CONFIG_SETTING_NEWS_ARRIVAL_FIRST_VEHICLE_OWN_HELPTEXT      :Prikazuje novin
 STR_CONFIG_SETTING_NEWS_ARRIVAL_FIRST_VEHICLE_OTHER             :Dolazak prvog vozila na suparničku stanicu: {STRING}
 STR_CONFIG_SETTING_NEWS_ARRIVAL_FIRST_VEHICLE_OTHER_HELPTEXT    :Prikazuje novinske naslove kada prvo vozilo pristigne u konkurentsku novu stanicu
 STR_CONFIG_SETTING_NEWS_ACCIDENTS_DISASTERS                     :Udesi/nepogode: {STRING}
-STR_CONFIG_SETTING_NEWS_ACCIDENTS_DISASTERS_HELPTEXT            :Prikazuje novinske naslove kada se desi nezgoda ili katastrofa
+STR_CONFIG_SETTING_NEWS_ACCIDENTS_DISASTERS_HELPTEXT            :Prikazuje novinske naslove kada se dese nezgode ili katastrofe
 STR_CONFIG_SETTING_NEWS_COMPANY_INFORMATION                     :Podaci o preduzeću: {STRING}
 STR_CONFIG_SETTING_NEWS_COMPANY_INFORMATION_HELPTEXT            :Prikazuje novinske naslove kada se otvori nova kompanija, ili kada postojeća rizikuje bankrot
 STR_CONFIG_SETTING_NEWS_INDUSTRY_OPEN                           :Otvaranje nove fabrike: {STRING}
@@ -1527,10 +1587,14 @@ STR_CONFIG_SETTING_NEWS_MESSAGES_FULL                           :Potpuno
 STR_CONFIG_SETTING_COLOURED_NEWS_YEAR                           :Vesti u boji se objavljuju od: {STRING}
 STR_CONFIG_SETTING_STARTING_YEAR                                :Početna godina: {STRING}
 STR_CONFIG_SETTING_SMOOTH_ECONOMY                               :Uključena glatka ekonomija (više, manjih promena): {STRING}
+STR_CONFIG_SETTING_SMOOTH_ECONOMY_HELPTEXT                      :Ako je omogućeno, industrijska proizvodnja se češće menja u manjim koracima. Ako se vrste industrija učitavaju preko NewGRF dodataka ovo podešavanje uglavnom nema efekta
 STR_CONFIG_SETTING_ALLOW_SHARES                                 :Dozvoljena kupovina deonica drugih preduzeća: {STRING}
+STR_CONFIG_SETTING_ALLOW_SHARES_HELPTEXT                        :Ako je omogućeno, dozvoljava kupovinu i prodaju deonica preduzeća. Deonice su dostupne tek kad preduzeće dostigne određenu starost
+STR_CONFIG_SETTING_DRAG_SIGNALS_DENSITY                         :Prilikom prevlačenja, postavi signale na svakih: {STRING}
+STR_CONFIG_SETTING_DRAG_SIGNALS_DENSITY_VALUE                   :{COMMA} pločic{P 0 u e e}
 STR_CONFIG_SETTING_SEMAPHORE_BUILD_BEFORE_DATE                  :Automatsko postavljanje semafora do: {STRING}
 STR_CONFIG_SETTING_ENABLE_SIGNAL_GUI                            :Omogućena traka za signalizaciju:{STRING}
-STR_CONFIG_SETTING_DEFAULT_SIGNAL_TYPE                          :Uobičajna vrsta signalizacije za izgradnju: {STRING}
+STR_CONFIG_SETTING_DEFAULT_SIGNAL_TYPE                          :Uobičajena vrsta signalizacije za izgradnju: {STRING}
 STR_CONFIG_SETTING_DEFAULT_SIGNAL_NORMAL                        :Blok signalizacija
 STR_CONFIG_SETTING_DEFAULT_SIGNAL_PBS                           :Putna signalizacija
 STR_CONFIG_SETTING_DEFAULT_SIGNAL_PBSOWAY                       :Jednosmerna putna signalizacija
@@ -1565,11 +1629,12 @@ STR_CONFIG_SETTING_ZOOM_MIN                                     :Najbliži nivo:
 STR_CONFIG_SETTING_ZOOM_MAX                                     :Najudaljeniji nivo: {STRING}
 STR_CONFIG_SETTING_ZOOM_LVL_MIN                                 :4x
 STR_CONFIG_SETTING_ZOOM_LVL_IN_2X                               :2x
-STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Uobičajan
+STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Uobičajen
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_2X                              :2x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_4X                              :4x
 STR_CONFIG_SETTING_ZOOM_LVL_OUT_8X                              :8x
 STR_CONFIG_SETTING_TOWN_GROWTH                                  :Brzina razvoja naselja: {STRING}
+STR_CONFIG_SETTING_TOWN_GROWTH_HELPTEXT                         :Brzina kojom se naselje razvija
 STR_CONFIG_SETTING_TOWN_GROWTH_NONE                             :Nimalo
 STR_CONFIG_SETTING_TOWN_GROWTH_SLOW                             :Sporo
 STR_CONFIG_SETTING_TOWN_GROWTH_NORMAL                           :Normalno
@@ -1577,6 +1642,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_FAST                             :Brzo
 STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :Veoma brzo
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :Inicijalni množilac razvoja gradova: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Uklanjati besmislene kolovoze u naseljima: {STRING}
+
 
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Okruženje
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Izgradnja
@@ -1799,10 +1865,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Promena 
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Mrežna partija
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Povezivanje:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Izaberite način poveivanja između interneta ili lokalne mreže (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :Internet
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Ime igrača:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Sa ovim imenom će Vas drugi igrači (pre)poznavati
 
@@ -1861,8 +1923,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Naziv pa
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Postavi lozinku
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Ukoliko ne želite da bude javno dostupna zaštitite Vašu partiju lozinkom
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Internet
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (sa oglašavanjem)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} igrač{P "" a a}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Najviše igrača:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Odaberite koliko najviše može da ima igrača. Nemoraju sva mesta da budu popunjena
@@ -2169,6 +2229,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Promena 
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Promena prozirnosti kontaktnih mreža. Sa Ctrl+Klik se zaključava
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Promena prozirnosti pokazatelja utovara. Sa Ctrl+Klik se zaključava
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Čini objekte nevidljivim umesto prozirnim
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Označavanje zahvaćenog područja
@@ -2895,7 +2959,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Kupovin
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Davanje mita lokalnoj vlasti kako bi porastao rejting vašeg preduzeća, uz rizik velike štete ukoliko se otkrije.{} Cena: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Ciljevi
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Opšti ciljevi:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Nema -
@@ -2937,6 +3000,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Odobrene
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} između stanica {STRING} i {STRING}{YELLOW} ({COMPANY}{YELLOW}, do {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klikom na uslugu prebacuje glavni pogled na lokaciju fabrike/naselja. Ctrl+Klik otvara novi pogled na to mesto
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Imena stanica - klikom na ime se centrira glavni pogled na stanicu. Ctrl+Klik otvara novi pogled na lokaciju stanice
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Držanjem Ctrl moguće je označiti više od jedne stavke
@@ -2962,8 +3027,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ocene
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Prikaži ocene stanice
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Kotiranje lokalnih prevoznih usluga:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :užas
@@ -3088,7 +3153,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Kanali
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Stanice:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Pločica sa stanicom
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Aerodromi
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/god ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/god
 
 # Industry directory
@@ -3718,7 +3782,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Ovaj ras
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Ovaj raspored počinje {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Datum početka
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Izbor datuma kao vreme početaka rasporeda
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Promena Vremena
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Menjanje količine vremena za koje će obeležena naredba trajati
@@ -4244,6 +4307,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Nemoguć
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Simulacija bazirana na igri Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Originalni skup grafika Transport Tycoon Deluxe DOS izdanja.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Originalni skup grafika nemačkog Transport Tycoon Deluxe DOS izdanja.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Originalni skup grafika Transport Tycoon Deluxe Windows izdanja.
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Originalni skup zvukova Transport Tycoon Deluxe DOS izdanja.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Originalni skup zvukova Transport Tycoon Deluxe Windows izdanja.
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :Prazan skup zvukova.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Originalni skup muzičkih numera Transport Tycoon Deluxe Windows izdanja.
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :Prazan skup muzičkih numera.
 
 ##id 0x2000
 # Town building names

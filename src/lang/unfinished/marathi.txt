@@ -232,7 +232,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}क्�
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}लोकसंख्या
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}नाव
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}दिनांक
 # These are used in dropdowns
@@ -257,6 +256,7 @@ STR_SORT_BY_POWER                                               :ताकद
 STR_SORT_BY_RUNNING_COST                                        :चालवण्याचा खर्च
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :ताकद/चालवण्याचा खर्च
 STR_SORT_BY_CARGO_CAPACITY                                      :मालवाहन क्षमता
+STR_SORT_BY_POPULATION                                          :लोकसंख्या
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK} खेळ स्थगित करा
@@ -306,14 +306,14 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :बाहेर पडा
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :वैश्विक नकाशा
 STR_MAP_MENU_SIGN_LIST                                          :चिन्हांची यादी
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :शहरांची यादी
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :सापडलेलं शहर
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 ############ range ends here
@@ -425,7 +425,7 @@ STR_PLAYLIST_TRACK_NAME                                         :{TINY_FONT}{LTB
 
 # Highscore window
 STR_HIGHSCORE_POSITION                                          :{BIG_FONT}{BLACK}{COMMA}.
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 
 # Smallmap window
@@ -615,6 +615,7 @@ STR_CONFIG_SETTING_STATUSBAR_POS                                :स्टेट
 
 
 
+
 # Config errors
 
 # Intro window
@@ -780,6 +781,10 @@ STR_NETWORK_SERVER_MESSAGE                                      :*** {1:STRING}
 
 
 # Transparency settings window
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 
@@ -973,6 +978,8 @@ STR_GOALS_TEXT                                                  :{ORANGE}{STRING
 
 # Subsidies window
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_STATION                                        :{YELLOW}{STATION} {STATION_FEATURES}
 STR_STATION_LIST_WAYPOINT                                       :{YELLOW}{WAYPOINT}
@@ -983,7 +990,8 @@ STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_L
 
 
 
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :धक्कादायक
@@ -1360,6 +1368,8 @@ STR_ERROR_BRIDGE_THROUGH_MAP_BORDER                             :{WHITE}पू�
 # Sign related errors
 
 # Translatable comment for OpenTTD's desktop shortcut
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

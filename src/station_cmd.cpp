@@ -50,6 +50,7 @@
 #include "order_backup.h"
 #include "newgrf_house.h"
 #include "company_gui.h"
+#include "linkgraph/linkgraph_base.h"
 #include "widgets/station_widget.h"
 
 #include "table/strings.h"
@@ -559,7 +560,7 @@ void UpdateStationAcceptance(Station *st, bool show_msg)
 
 	/* Adjust in case our station only accepts fewer kinds of goods */
 	for (CargoID i = 0; i < NUM_CARGO; i++) {
-		uint amt = min(acceptance[i], 15);
+		uint amt = acceptance[i];
 
 		/* Make sure the station can accept the goods type. */
 		bool is_passengers = IsCargoInClass(i, CC_PASSENGERS);
@@ -568,7 +569,11 @@ void UpdateStationAcceptance(Station *st, bool show_msg)
 			amt = 0;
 		}
 
-		SB(st->goods[i].acceptance_pickup, GoodsEntry::GES_ACCEPTANCE, 1, amt >= 8);
+		GoodsEntry &ge = st->goods[i];
+		SB(ge.acceptance_pickup, GoodsEntry::GES_ACCEPTANCE, 1, amt >= 8);
+		if (LinkGraph::IsValidID(ge.link_graph)) {
+			(*LinkGraph::Get(ge.link_graph))[ge.node].SetDemand(amt / 8);
+		}
 	}
 
 	/* Only show a message in case the acceptance was actually changed. */
@@ -1317,10 +1322,21 @@ CommandCost CmdBuildRailStation(TileIndex tile_org, DoCommandFlag flags, uint32 
 		}
 
 		TILE_AREA_LOOP(tile, update_reservation_area) {
+			/* Don't even try to make eye candy parts reserved. */
+			if (IsStationTileBlocked(tile)) continue;
+
 			DiagDirection dir = AxisToDiagDir(axis);
 			TileIndexDiff tile_offset = TileOffsByDiagDir(dir);
-			TileIndex platform_begin = tile - tile_offset * (st->GetPlatformLength(tile, ReverseDiagDir(dir)) - 1);
-			TileIndex platform_end   = tile + tile_offset * (st->GetPlatformLength(tile, dir) - 1);
+			TileIndex platform_begin = tile;
+			TileIndex platform_end = tile;
+
+			/* We can only account for tiles that are reachable from this tile, so ignore primarily blocked tiles while finding the platform begin and end. */
+			for (TileIndex next_tile = platform_begin - tile_offset; IsCompatibleTrainStationTile(next_tile, platform_begin); next_tile -= tile_offset) {
+				platform_begin = next_tile;
+			}
+			for (TileIndex next_tile = platform_end + tile_offset; IsCompatibleTrainStationTile(next_tile, platform_end); next_tile += tile_offset) {
+				platform_end = next_tile;
+			}
 
 			/* If there is at least on reservation on the platform, we reserve the whole platform. */
 			bool reservation = false;
@@ -1414,6 +1430,10 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 	/* Count of the number of tiles removed */
 	int quantity = 0;
 	CommandCost total_cost(EXPENSES_CONSTRUCTION);
+	/* Accumulator for the errors seen during clearing. If no errors happen,
+	 * and the quantity is 0 there is no station. Otherwise it will be one
+	 * of the other error that got accumulated. */
+	CommandCost error;
 
 	/* Do the action for every tile into the area */
 	TILE_AREA_LOOP(tile, ta) {
@@ -1422,6 +1442,7 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 
 		/* If there is a vehicle on ground, do not allow to remove (flood) the tile */
 		CommandCost ret = EnsureNoVehicleOnGround(tile);
+		error.AddCost(ret);
 		if (ret.Failed()) continue;
 
 		/* Check ownership of station */
@@ -1430,6 +1451,7 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 
 		if (_current_company != OWNER_WATER) {
 			CommandCost ret = CheckOwnership(st->owner);
+			error.AddCost(ret);
 			if (ret.Failed()) continue;
 		}
 
@@ -1489,7 +1511,7 @@ CommandCost RemoveFromRailBaseStation(TileArea ta, SmallVector<T *, 4> &affected
 		}
 	}
 
-	if (quantity == 0) return_cmd_error(STR_ERROR_THERE_IS_NO_STATION);
+	if (quantity == 0) return error.Failed() ? error : CommandCost(STR_ERROR_THERE_IS_NO_STATION);
 
 	for (T **stp = affected_stations.Begin(); stp != affected_stations.End(); stp++) {
 		T *st = *stp;
@@ -2263,7 +2285,7 @@ CommandCost CmdBuildAirport(TileIndex tile, DoCommandFlag flags, uint32 p1, uint
 		st->RecomputeIndustriesNear();
 		InvalidateWindowData(WC_SELECT_STATION, 0, 0);
 		InvalidateWindowData(WC_STATION_LIST, st->owner, 0);
-		InvalidateWindowData(WC_STATION_VIEW, st->index);
+		InvalidateWindowData(WC_STATION_VIEW, st->index, -1);
 
 		if (_settings_game.economy.station_noise_level) {
 			SetWindowDirty(WC_TOWN_VIEW, st->town->index);
@@ -2339,7 +2361,7 @@ static CommandCost RemoveAirport(TileIndex tile, DoCommandFlag flags)
 		st->airport.Clear();
 		st->facilities &= ~FACIL_AIRPORT;
 
-		InvalidateWindowData(WC_STATION_VIEW, st->index);
+		InvalidateWindowData(WC_STATION_VIEW, st->index, -1);
 
 		if (_settings_game.economy.station_noise_level) {
 			SetWindowDirty(WC_TOWN_VIEW, st->town->index);
@@ -3102,7 +3124,7 @@ static VehicleEnterTileStatus VehicleEnter_Station(Vehicle *v, TileIndex tile, i
 		 * begin of the platform to the stop location is longer than the length
 		 * of the platform. Station ahead 'includes' the current tile where the
 		 * vehicle is on, so we need to subtract that. */
-		if (!IsInsideBS(stop + station_ahead, station_length, TILE_SIZE)) return VETSB_CONTINUE;
+		if (stop + station_ahead - (int)TILE_SIZE >= station_length) return VETSB_CONTINUE;
 
 		DiagDirection dir = DirToDiagDir(v->direction);
 
@@ -3114,14 +3136,11 @@ static VehicleEnterTileStatus VehicleEnter_Station(Vehicle *v, TileIndex tile, i
 			if (dir != DIAGDIR_SE && dir != DIAGDIR_SW) x = TILE_SIZE - 1 - x;
 			stop &= TILE_SIZE - 1;
 
-			if (x == stop) return VETSB_ENTERED_STATION | (VehicleEnterTileStatus)(station_id << VETS_STATION_ID_OFFSET); // enter station
-			if (x < stop) {
-				uint16 spd;
+			if (x >= stop) return VETSB_ENTERED_STATION | (VehicleEnterTileStatus)(station_id << VETS_STATION_ID_OFFSET); // enter station
 
-				v->vehstatus |= VS_TRAIN_SLOWING;
-				spd = max(0, (stop - x) * 20 - 15);
-				if (spd < v->cur_speed) v->cur_speed = spd;
-			}
+			v->vehstatus |= VS_TRAIN_SLOWING;
+			uint16 spd = max(0, (stop - x) * 20 - 15);
+			if (spd < v->cur_speed) v->cur_speed = spd;
 		}
 	} else if (v->type == VEH_ROAD) {
 		RoadVehicle *rv = RoadVehicle::From(v);
@@ -3207,17 +3226,30 @@ static void UpdateStationRating(Station *st)
 		/* Slowly increase the rating back to his original level in the case we
 		 *  didn't deliver cargo yet to this station. This happens when a bribe
 		 *  failed while you didn't moved that cargo yet to a station. */
-		if (!HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP) && ge->rating < INITIAL_STATION_RATING) {
+		if (!ge->HasRating() && ge->rating < INITIAL_STATION_RATING) {
 			ge->rating++;
 		}
 
 		/* Only change the rating if we are moving this cargo */
-		if (HasBit(ge->acceptance_pickup, GoodsEntry::GES_PICKUP)) {
+		if (ge->HasRating()) {
 			byte_inc_sat(&ge->time_since_pickup);
 
 			bool skip = false;
 			int rating = 0;
-			uint waiting = ge->cargo.Count();
+			uint waiting = ge->cargo.TotalCount();
+
+			/* num_dests is at least 1 if there is any cargo as
+			 * INVALID_STATION is also a destination.
+			 */
+			uint num_dests = (uint)ge->cargo.Packets()->MapSize();
+
+			/* Average amount of cargo per next hop, but prefer solitary stations
+			 * with only one or two next hops. They are allowed to have more
+			 * cargo waiting per next hop.
+			 * With manual cargo distribution waiting_avg = waiting / 2 as then
+			 * INVALID_STATION is the only destination.
+			 */
+			uint waiting_avg = waiting / (num_dests + 1);
 
 			if (HasBit(cs->callback_mask, CBM_CARGO_STATION_RATING_CALC)) {
 				/* Perform custom station rating. If it succeeds the speed, days in transit and
@@ -3226,7 +3258,7 @@ static void UpdateStationRating(Station *st)
 				/* NewGRFs expect last speed to be 0xFF when no vehicle has arrived yet. */
 				uint last_speed = ge->HasVehicleEverTriedLoading() ? ge->last_speed : 0xFF;
 
-				uint32 var18 = min(ge->time_since_pickup, 0xFF) | (min(waiting, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
+				uint32 var18 = min(ge->time_since_pickup, 0xFF) | (min(ge->max_waiting_cargo, 0xFFFF) << 8) | (min(last_speed, 0xFF) << 24);
 				/* Convert to the 'old' vehicle types */
 				uint32 var10 = (st->last_vehicle_type == VEH_INVALID) ? 0x0 : (st->last_vehicle_type + 0x10);
 				uint16 callback = GetCargoCallback(CBID_CARGO_STATION_RATING_CALC, var10, var18, cs);
@@ -3251,11 +3283,11 @@ static void UpdateStationRating(Station *st)
 				(rating += 45, waittime > 3) ||
 				(rating += 35, true);
 
-				(rating -= 90, waiting > 1500) ||
-				(rating += 55, waiting > 1000) ||
-				(rating += 35, waiting > 600) ||
-				(rating += 10, waiting > 300) ||
-				(rating += 20, waiting > 100) ||
+				(rating -= 90, ge->max_waiting_cargo > 1500) ||
+				(rating += 55, ge->max_waiting_cargo > 1000) ||
+				(rating += 35, ge->max_waiting_cargo > 600) ||
+				(rating += 10, ge->max_waiting_cargo > 300) ||
+				(rating += 20, ge->max_waiting_cargo > 100) ||
 				(rating += 10, true);
 			}
 
@@ -3273,12 +3305,12 @@ static void UpdateStationRating(Station *st)
 				/* only modify rating in steps of -2, -1, 0, 1 or 2 */
 				ge->rating = rating = or_ + Clamp(Clamp(rating, 0, 255) - or_, -2, 2);
 
-				/* if rating is <= 64 and more than 200 items waiting,
+				/* if rating is <= 64 and more than 100 items waiting on average per destination,
 				 * remove some random amount of goods from the station */
-				if (rating <= 64 && waiting >= 200) {
+				if (rating <= 64 && waiting_avg >= 100) {
 					int dec = Random() & 0x1F;
-					if (waiting < 400) dec &= 7;
-					waiting -= dec + 1;
+					if (waiting_avg < 200) dec &= 7;
+					waiting -= (dec + 1) * num_dests;
 					waiting_changed = true;
 				}
 
@@ -3287,7 +3319,7 @@ static void UpdateStationRating(Station *st)
 					uint32 r = Random();
 					if (rating <= (int)GB(r, 0, 7)) {
 						/* Need to have int, otherwise it will just overflow etc. */
-						waiting = max((int)waiting - (int)GB(r, 8, 2) - 1, 0);
+						waiting = max((int)waiting - (int)((GB(r, 8, 2) - 1) * num_dests), 0);
 						waiting_changed = true;
 					}
 				}
@@ -3307,8 +3339,28 @@ static void UpdateStationRating(Station *st)
 					waiting_changed = true;
 				}
 
-				if (waiting_changed && waiting < ge->cargo.Count()) {
-					ge->cargo.Truncate(ge->cargo.Count() - waiting);
+				/* We can't truncate cargo that's already reserved for loading.
+				 * Thus StoredCount() here. */
+				if (waiting_changed && waiting < ge->cargo.AvailableCount()) {
+					/* Feed back the exact own waiting cargo at this station for the
+					 * next rating calculation. */
+					ge->max_waiting_cargo = 0;
+
+					/* If truncating also punish the source stations' ratings to
+					 * decrease the flow of incoming cargo. */
+
+					StationCargoAmountMap waiting_per_source;
+					ge->cargo.Truncate(ge->cargo.AvailableCount() - waiting, &waiting_per_source);
+					for (StationCargoAmountMap::iterator i(waiting_per_source.begin()); i != waiting_per_source.end(); ++i) {
+						Station *source_station = Station::GetIfValid(i->first);
+						if (source_station == NULL) continue;
+
+						GoodsEntry &source_ge = source_station->goods[cs->Index()];
+						source_ge.max_waiting_cargo = max(source_ge.max_waiting_cargo, i->second);
+					}
+				} else {
+					/* If the average number per next hop is low, be more forgiving. */
+					ge->max_waiting_cargo = waiting_avg;
 				}
 			}
 		}
@@ -3319,6 +3371,141 @@ static void UpdateStationRating(Station *st)
 		SetWindowDirty(WC_STATION_VIEW, index); // update whole window
 	} else {
 		SetWindowWidgetDirty(WC_STATION_VIEW, index, WID_SV_ACCEPT_RATING_LIST); // update only ratings list
+	}
+}
+
+/**
+ * Reroute cargo of type c at station st or in any vehicles unloading there.
+ * Make sure the cargo's new next hop is neither "avoid" nor "avoid2".
+ * @param st Station to be rerouted at.
+ * @param c Type of cargo.
+ * @param avoid Original next hop of cargo, avoid this.
+ * @param avoid2 Another station to be avoided when rerouting.
+ */
+void RerouteCargo(Station *st, CargoID c, StationID avoid, StationID avoid2)
+{
+	GoodsEntry &ge = st->goods[c];
+
+	/* Reroute cargo in station. */
+	ge.cargo.Reroute(UINT_MAX, &ge.cargo, avoid, avoid2, &ge);
+
+	/* Reroute cargo staged to be transfered. */
+	for (std::list<Vehicle *>::iterator it(st->loading_vehicles.begin()); it != st->loading_vehicles.end(); ++it) {
+		for (Vehicle *v = *it; v != NULL; v = v->Next()) {
+			if (v->cargo_type != c) continue;
+			v->cargo.Reroute(UINT_MAX, &v->cargo, avoid, avoid2, &ge);
+		}
+	}
+}
+
+/**
+ * Check all next hops of cargo packets in this station for existance of a
+ * a valid link they may use to travel on. Reroute any cargo not having a valid
+ * link and remove timed out links found like this from the linkgraph. We're
+ * not all links here as that is expensive and useless. A link no one is using
+ * doesn't hurt either.
+ * @param from Station to check.
+ */
+void DeleteStaleLinks(Station *from)
+{
+	for (CargoID c = 0; c < NUM_CARGO; ++c) {
+		GoodsEntry &ge = from->goods[c];
+		LinkGraph *lg = LinkGraph::GetIfValid(ge.link_graph);
+		if (lg == NULL) continue;
+		Node node = (*lg)[ge.node];
+		for (EdgeIterator it(node.Begin()); it != node.End();) {
+			Edge edge = it->second;
+			Station *to = Station::Get((*lg)[it->first].Station());
+			assert(to->goods[c].node == it->first);
+			++it; // Do that before removing the node. Anything else may crash.
+			assert(_date >= edge.LastUpdate());
+			if ((uint)(_date - edge.LastUpdate()) > LinkGraph::MIN_TIMEOUT_DISTANCE +
+					(DistanceManhattan(from->xy, to->xy) >> 2)) {
+				node.RemoveEdge(to->goods[c].node);
+				ge.flows.DeleteFlows(to->index);
+				RerouteCargo(from, c, to->index, from->index);
+			}
+		}
+		assert(_date >= lg->LastCompression());
+		if ((uint)(_date - lg->LastCompression()) > LinkGraph::COMPRESSION_INTERVAL) {
+			lg->Compress();
+		}
+	}
+}
+
+/**
+ * Increase capacity for a link stat given by station cargo and next hop.
+ * @param st Station to get the link stats from.
+ * @param cargo Cargo to increase stat for.
+ * @param next_station_id Station the consist will be travelling to next.
+ * @param capacity Capacity to add to link stat.
+ * @param usage Usage to add to link stat. If UINT_MAX refresh the link instead of increasing.
+ */
+void IncreaseStats(Station *st, CargoID cargo, StationID next_station_id, uint capacity, uint usage)
+{
+	GoodsEntry &ge1 = st->goods[cargo];
+	Station *st2 = Station::Get(next_station_id);
+	GoodsEntry &ge2 = st2->goods[cargo];
+	LinkGraph *lg = NULL;
+	if (ge1.link_graph == INVALID_LINK_GRAPH) {
+		if (ge2.link_graph == INVALID_LINK_GRAPH) {
+			if (LinkGraph::CanAllocateItem()) {
+				lg = new LinkGraph(cargo);
+				LinkGraphSchedule::Instance()->Queue(lg);
+				ge2.link_graph = lg->index;
+				ge2.node = lg->AddNode(st2);
+			} else {
+				DEBUG(misc, 0, "Can't allocate link graph");
+			}
+		} else {
+			lg = LinkGraph::Get(ge2.link_graph);
+		}
+		if (lg) {
+			ge1.link_graph = lg->index;
+			ge1.node = lg->AddNode(st);
+		}
+	} else if (ge2.link_graph == INVALID_LINK_GRAPH) {
+		lg = LinkGraph::Get(ge1.link_graph);
+		ge2.link_graph = lg->index;
+		ge2.node = lg->AddNode(st2);
+	} else {
+		lg = LinkGraph::Get(ge1.link_graph);
+		if (ge1.link_graph != ge2.link_graph) {
+			LinkGraph *lg2 = LinkGraph::Get(ge2.link_graph);
+			if (lg->Size() < lg2->Size()) {
+				LinkGraphSchedule::Instance()->Unqueue(lg);
+				lg2->Merge(lg); // Updates GoodsEntries of lg
+				lg = lg2;
+			} else {
+				LinkGraphSchedule::Instance()->Unqueue(lg2);
+				lg->Merge(lg2); // Updates GoodsEntries of lg2
+			}
+		}
+	}
+	if (lg != NULL) {
+		(*lg)[ge1.node].UpdateEdge(ge2.node, capacity, usage);
+	}
+}
+
+/**
+ * Increase capacity for all link stats associated with vehicles in the given consist.
+ * @param st Station to get the link stats from.
+ * @param front First vehicle in the consist.
+ * @param next_station_id Station the consist will be travelling to next.
+ */
+void IncreaseStats(Station *st, const Vehicle *front, StationID next_station_id)
+{
+	for (const Vehicle *v = front; v != NULL; v = v->Next()) {
+		if (v->refit_cap > 0) {
+			/* The cargo count can indeed be higher than the refit_cap if
+			 * wagons have been auto-replaced and subsequently auto-
+			 * refitted to a higher capacity. The cargo gets redistributed
+			 * among the wagons in that case.
+			 * As usage is not such an important figure anyway we just
+			 * ignore the additional cargo then.*/
+			IncreaseStats(st, v->cargo_type, next_station_id, v->refit_cap,
+				min(v->refit_cap, v->cargo.StoredCount()));
+		}
 	}
 }
 
@@ -3341,6 +3528,11 @@ void OnTick_Station()
 	BaseStation *st;
 	FOR_ALL_BASE_STATIONS(st) {
 		StationHandleSmallTick(st);
+
+		/* Clean up the link graph about once a week. */
+		if (Station::IsExpected(st) && (_tick_counter + st->index) % STATION_LINKGRAPH_TICKS == 0) {
+			DeleteStaleLinks(Station::From(st));
+		};
 
 		/* Run STATION_ACCEPTANCE_TICKS = 250 tick interval trigger for station animation.
 		 * Station index is included so that triggers are not all done
@@ -3401,9 +3593,24 @@ static uint UpdateStationWaiting(Station *st, CargoID type, uint amount, SourceT
 	/* No new "real" cargo item yet. */
 	if (amount == 0) return 0;
 
-	ge.cargo.Append(new CargoPacket(st->index, st->xy, amount, source_type, source_id));
+	StationID next = ge.GetVia(st->index);
+	ge.cargo.Append(new CargoPacket(st->index, st->xy, amount, source_type, source_id), next);
+	LinkGraph *lg = NULL;
+	if (ge.link_graph == INVALID_LINK_GRAPH) {
+		if (LinkGraph::CanAllocateItem()) {
+			lg = new LinkGraph(type);
+			LinkGraphSchedule::Instance()->Queue(lg);
+			ge.link_graph = lg->index;
+			ge.node = lg->AddNode(st);
+		} else {
+			DEBUG(misc, 0, "Can't allocate link graph");
+		}
+	} else {
+		lg = LinkGraph::Get(ge.link_graph);
+	}
+	if (lg != NULL) (*lg)[ge.node].UpdateSupply(amount);
 
-	if (!HasBit(ge.acceptance_pickup, GoodsEntry::GES_PICKUP)) {
+	if (!ge.HasRating()) {
 		InvalidateWindowData(WC_STATION_LIST, st->index);
 		SetBit(ge.acceptance_pickup, GoodsEntry::GES_PICKUP);
 	}
@@ -3831,6 +4038,228 @@ static CommandCost TerraformTile_Station(TileIndex tile, DoCommandFlag flags, in
 	return DoCommand(tile, 0, 0, flags, CMD_LANDSCAPE_CLEAR);
 }
 
+/**
+ * Get flow for a station.
+ * @param st Station to get flow for.
+ * @return Flow for st.
+ */
+uint FlowStat::GetShare(StationID st) const
+{
+	uint32 prev = 0;
+	for (SharesMap::const_iterator it = this->shares.begin(); it != this->shares.end(); ++it) {
+		if (it->second == st) {
+			return it->first - prev;
+		} else {
+			prev = it->first;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Get a station a package can be routed to, but exclude the given one.
+ * @param excluded StationID not to be selected.
+ * @return A station ID from the shares map.
+ */
+StationID FlowStat::GetVia(StationID excluded, StationID excluded2) const
+{
+	assert(!this->shares.empty());
+	uint max = (--this->shares.end())->first - 1;
+	SharesMap::const_iterator it = this->shares.upper_bound(RandomRange(max));
+	assert(it != this->shares.end());
+	if (it->second != excluded && it->second != excluded2) return it->second;
+
+	/* We've hit one of the excluded stations.
+	 * Draw another share, from outside its range. */
+
+	uint end = it->first;
+	uint begin = (it == this->shares.begin() ? 0 : (--it)->first);
+	uint interval = end - begin;
+	if (interval > max) return INVALID_STATION; // Only one station in the map.
+	uint new_max = max - interval;
+	uint rand = RandomRange(new_max);
+	SharesMap::const_iterator it2 = (rand < begin) ? this->shares.upper_bound(rand) :
+			this->shares.upper_bound(rand + interval);
+	assert(it2 != this->shares.end());
+	if (it2->second != excluded && it2->second != excluded2) return it2->second;
+
+	/* We've hit the second excluded station.
+	 * Same as before, only a bit more complicated. */
+
+	uint end2 = it2->first;
+	uint begin2 = (it2 == this->shares.begin() ? 0 : (--it2)->first);
+	uint interval2 = end2 - begin2;
+	if (interval2 > new_max) return INVALID_STATION; // Only the two excluded stations in the map.
+	new_max -= interval2;
+	if (begin > begin2) {
+		Swap(begin, begin2);
+		Swap(end, end2);
+		Swap(interval, interval2);
+	}
+	rand = RandomRange(new_max);
+	SharesMap::const_iterator it3 = this->shares.end();
+	if (rand < begin) {
+		it3 = this->shares.upper_bound(rand);
+	} else if (rand < begin2 - interval) {
+		it3 = this->shares.upper_bound(rand + interval);
+	} else {
+		it3 = this->shares.upper_bound(rand + interval + interval2);
+	}
+	assert(it3 != this->shares.end());
+	return it3->second;
+}
+
+/**
+ * Reduce all flows to minimum capacity so that they don't get in the way of
+ * link usage statistics too much. Keep them around, though, to continue
+ * routing any remaining cargo.
+ */
+void FlowStat::Invalidate()
+{
+	assert(!this->shares.empty());
+	SharesMap new_shares;
+	uint i = 0;
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
+		new_shares[++i] = it->second;
+	}
+	this->shares.swap(new_shares);
+	assert(!this->shares.empty());
+}
+
+/**
+ * Change share for specified station. By specifing INT_MIN as parameter you
+ * can erase a share.
+ * @param st Next Hop to be removed.
+ * @param flow Share to be added or removed.
+ */
+void FlowStat::ChangeShare(StationID st, int flow)
+{
+	/* We assert only before changing as afterwards the shares can actually
+	 * be empty. In that case the whole flow stat must be deleted then. */
+	assert(!this->shares.empty());
+
+	uint removed_shares = 0;
+	uint added_shares = 0;
+	uint last_share = 0;
+	SharesMap new_shares;
+	for (SharesMap::iterator it(this->shares.begin()); it != this->shares.end(); ++it) {
+		if (it->second == st) {
+			if (flow < 0) {
+				uint share = it->first - last_share;
+				if (flow == INT_MIN || (uint)(-flow) >= share) {
+					removed_shares += share;
+					if (flow != INT_MIN) flow += share;
+					last_share = it->first;
+					continue; // remove the whole share
+				}
+				removed_shares += (uint)(-flow);
+			} else {
+				added_shares += (uint)(flow);
+			}
+
+			/* If we don't continue above the whole flow has been added or
+			 * removed. */
+			flow = 0;
+		}
+		new_shares[it->first + added_shares - removed_shares] = it->second;
+		last_share = it->first;
+	}
+	if (flow > 0) new_shares[last_share + (uint)flow] = st;
+	this->shares.swap(new_shares);
+}
+
+/**
+ * Add some flow from "origin", going via "via".
+ * @param origin Origin of the flow.
+ * @param via Next hop.
+ * @param flow Amount of flow to be added.
+ */
+void FlowStatMap::AddFlow(StationID origin, StationID via, uint flow)
+{
+	FlowStatMap::iterator origin_it = this->find(origin);
+	if (origin_it == this->end()) {
+		this->insert(std::make_pair(origin, FlowStat(via, flow)));
+	} else {
+		origin_it->second.ChangeShare(via, flow);
+		assert(!origin_it->second.GetShares()->empty());
+	}
+}
+
+/**
+ * Pass on some flow, remembering it as invalid, for later subtraction from
+ * locally consumed flow. This is necessary because we can't have negative
+ * flows and we don't want to sort the flows before adding them up.
+ * @param origin Origin of the flow.
+ * @param via Next hop.
+ * @param flow Amount of flow to be passed.
+ */
+void FlowStatMap::PassOnFlow(StationID origin, StationID via, uint flow)
+{
+	FlowStatMap::iterator prev_it = this->find(origin);
+	if (prev_it == this->end()) {
+		FlowStat fs(via, flow);
+		fs.AppendShare(INVALID_STATION, flow);
+		this->insert(std::make_pair(origin, fs));
+	} else {
+		prev_it->second.ChangeShare(via, flow);
+		prev_it->second.ChangeShare(INVALID_STATION, flow);
+		assert(!prev_it->second.GetShares()->empty());
+	}
+}
+
+/**
+ * Subtract invalid flows from locally consumed flow.
+ * @param self ID of own station.
+ */
+void FlowStatMap::FinalizeLocalConsumption(StationID self)
+{
+	for (FlowStatMap::iterator i = this->begin(); i != this->end(); ++i) {
+		FlowStat &fs = i->second;
+		uint local = fs.GetShare(INVALID_STATION);
+		if (local > INT_MAX) { // make sure it fits in an int
+			fs.ChangeShare(self, -INT_MAX);
+			fs.ChangeShare(INVALID_STATION, -INT_MAX);
+			local -= INT_MAX;
+		}
+		fs.ChangeShare(self, -(int)local);
+		fs.ChangeShare(INVALID_STATION, -(int)local);
+
+		/* If the local share is used up there must be a share for some
+		 * remote station. */
+		assert(!fs.GetShares()->empty());
+	}
+}
+
+/**
+ * Delete all flows at a station for specific cargo and destination.
+ * @param via Remote station of flows to be deleted.
+ */
+void FlowStatMap::DeleteFlows(StationID via)
+{
+	for (FlowStatMap::iterator f_it = this->begin(); f_it != this->end();) {
+		FlowStat &s_flows = f_it->second;
+		s_flows.ChangeShare(via, INT_MIN);
+		if (s_flows.GetShares()->empty()) {
+			this->erase(f_it++);
+		} else {
+			++f_it;
+		}
+	}
+}
+
+/**
+ * Get the sum of flows via a specific station from this GoodsEntry.
+ * @param via Remote station to look for.
+ * @return a FlowStat with all flows for 'via' added up.
+ */
+uint GoodsEntry::GetSumFlowVia(StationID via) const
+{
+	uint ret = 0;
+	for (FlowStatMap::const_iterator i = this->flows.begin(); i != this->flows.end(); ++i) {
+		ret += i->second.GetShare(via);
+	}
+	return ret;
+}
 
 extern const TileTypeProcs _tile_type_station_procs = {
 	DrawTile_Station,           // draw_tile_proc

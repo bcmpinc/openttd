@@ -24,6 +24,7 @@
 #include "rail_gui.h"
 #include "settings_gui.h"
 #include "company_gui.h"
+#include "linkgraph/linkgraph.h"
 
 #include "widgets/cheat_widget.h"
 
@@ -100,7 +101,10 @@ static int32 ClickChangeDateCheat(int32 p1, int32 p2)
 	p1 = Clamp(p1, MIN_YEAR, MAX_YEAR);
 	if (p1 == _cur_year) return _cur_year;
 
-	SetDate(ConvertYMDToDate(p1, ymd.month, ymd.day), _date_fract);
+	Date new_date = ConvertYMDToDate(p1, ymd.month, ymd.day);
+	LinkGraph *lg;
+	FOR_ALL_LINK_GRAPHS(lg) lg->ShiftDates(new_date - _date);
+	SetDate(new_date, _date_fract);
 	EnginesMonthlyLoop();
 	SetWindowDirty(WC_STATUS_BAR, 0);
 	InvalidateWindowClassesData(WC_BUILD_STATION, 0);
@@ -170,9 +174,9 @@ struct CheatWindow : Window {
 	int clicked;
 	int header_height;
 
-	CheatWindow(const WindowDesc *desc) : Window()
+	CheatWindow(WindowDesc *desc) : Window(desc)
 	{
-		this->InitNested(desc);
+		this->InitNested();
 	}
 
 	virtual void DrawWidget(const Rect &r, int widget) const
@@ -348,8 +352,8 @@ struct CheatWindow : Window {
 };
 
 /** Window description of the cheats GUI. */
-static const WindowDesc _cheats_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _cheats_desc(
+	WDP_AUTO, "cheats", 0, 0,
 	WC_CHEATS, WC_NONE,
 	0,
 	_nested_cheat_widgets, lengthof(_nested_cheat_widgets)

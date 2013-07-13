@@ -255,7 +255,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Achar: {
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Daonra
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Ainm
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Dáta
 # These are used in dropdowns
@@ -276,7 +275,6 @@ STR_SORT_BY_LENGTH                                              :Fad
 STR_SORT_BY_LIFE_TIME                                           :Saolré fágtha
 STR_SORT_BY_TIMETABLE_DELAY                                     :Moill san amchlár
 STR_SORT_BY_FACILITY                                            :Cineál stáisiúin
-STR_SORT_BY_WAITING                                             :Luach an lastais atá ag fanacht
 STR_SORT_BY_RATING_MAX                                          :Rátáil lastais is airde
 STR_SORT_BY_RATING_MIN                                          :Rátáil lastais is ísle
 STR_SORT_BY_ENGINE_ID                                           :ID an Innill (sórtáil chlaisiceach)
@@ -288,6 +286,7 @@ STR_SORT_BY_RUNNING_COST                                        :Costas le Rith
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Cumhacht/Costas le Rith
 STR_SORT_BY_CARGO_CAPACITY                                      :Méid an Lastais
 STR_SORT_BY_RANGE                                               :Raon
+STR_SORT_BY_POPULATION                                          :Daonra
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Cuir an cluiche ar sos
@@ -370,19 +369,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Scoir
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Léarscáil den domhan
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Fuinneog amhairc bhreise
 STR_MAP_MENU_SIGN_LIST                                          :Liosta na gcomharthaí
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Liosta bailte
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Aimsíodh baile
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Fordheontais
-STR_SUBSIDIES_MENU_GOAL                                         :Spriocanna reatha
 ############ range ends here
 
 ############ range for graph menu starts
@@ -647,7 +645,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Caipitlí
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Móruasal
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mógal
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Toicí an Chéid
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}Baineann {COMPANY} an stádas '{STRING}' amach!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}Baineann {PRESIDENT_NAME} ó {COMPANY} an stádas '{STRING}' amach!
@@ -867,13 +865,8 @@ STR_GAME_OPTIONS_CURRENCY_EEK                                   :Krooni na hEast
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Saincheaptha...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Aonaid tomhais
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Aonaid tomhais a roghnú
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Impiriúil
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Méadrach
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Feithiclí Bóithre
@@ -1285,6 +1278,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :An-scioptha
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :Iolraitheoir tosaigh mhéid na gcathracha: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Bain gnéithe bóthair áiféiseacha agus bóithre á dtógáil: {STRING}
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Comhéadan
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Tógáil
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Feithiclí
@@ -1485,10 +1479,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Athraigh
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Ilimreoirí
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Nasc:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Roghnaigh idir cluiche idirlín agus cluiche Líonra Achair Logánta (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :Idirlíon
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Ainm imreora:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Seo an t-ainm faoina mbeidh imreoirí eile in ann tú a aithint
 
@@ -1547,8 +1537,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Taispeá
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Socraigh pasfhocal
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Cosain do chluiche le pasfhocal más mian leat nach mbeidh rochtain phoiblí air
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Idirlíon
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Idirlíon (déan fógraíocht)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} {P ch ch ch gc c}lia{P "" "" "" "" i}nt
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Cliaint uasta:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Roghnaigh uaslíon na gcliant. Ní gá gach áit a líonadh
@@ -1837,6 +1825,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Scorána
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Scoránaigh trédhearcacht do chuair. Ctrl+Cliceáil le glasáil.
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Scoránaigh trédhearcacht do tháscairí lódála. Ctrl+Cliceáil le glasáil.
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Socraigh go bhfuil nithe dofheicthe seachas trédhearcach
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Aibhsigh an limistéar clúdaigh
@@ -2527,6 +2519,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Seirbhí
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} a thabhairt ó {STRING} go {STRING}{YELLOW} ({COMPANY}{YELLOW}, go dtí {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Cliceáil ar sheirbhís chun an t-amharc a lárú ar thionscal/bhaile. Déantar amharc nua a oscailt ar shuíomh an tionscail/bhaile le Ctrl+Cliceáil
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Ainmneacha na stáisiún - cliceáil ar ainm chun an t-amharc a lárú ar stáisiún. Osclaítear amharc nua ar shuíomh an stáisiúin le Ctrl+Cliceáil
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Coinnigh síos Ctrl le níos mó ná rud amháin a roghnú
@@ -2551,8 +2545,8 @@ STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Glactar 
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Rátálacha
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Taispeáin rátálacha na stáisiún
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Rátáil áitiúil na seirbhíse iompair:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Uafásach
@@ -3243,7 +3237,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Níor th
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Tosóidh an t-amchlár seo ag {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Dáta tosaigh
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Roghnaith dáta mar phointe tosaigh don amchlár seo
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Athraigh Am
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Athraigh an méid ama ar chóir don ordú aibhsithe a thógáil
@@ -3740,6 +3733,8 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Ní féi
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Cluiche ionsamhlúcháin bunaithe ar Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

@@ -255,7 +255,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Gebied: 
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Ynwenners
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Namme
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Datum
 # These are used in dropdowns
@@ -276,7 +275,6 @@ STR_SORT_BY_LENGTH                                              :Lingte
 STR_SORT_BY_LIFE_TIME                                           :Restearjende libbensdagen
 STR_SORT_BY_TIMETABLE_DELAY                                     :Opûnthâld yn de tsjinstregeling
 STR_SORT_BY_FACILITY                                            :Stasjonstype
-STR_SORT_BY_WAITING                                             :Wearde fan wachtsjende fracht
 STR_SORT_BY_RATING_MAX                                          :Heechste fracht foldwaning
 STR_SORT_BY_RATING_MIN                                          :Minste fracht foldwanning
 STR_SORT_BY_ENGINE_ID                                           :Reau ID (klassyke soart)
@@ -288,6 +286,7 @@ STR_SORT_BY_RUNNING_COST                                        :Bedriuwskosten
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Vermogen/Bedriuwskosten
 STR_SORT_BY_CARGO_CAPACITY                                      :Frachtkapasiteit
 STR_SORT_BY_RANGE                                               :Beryk
+STR_SORT_BY_POPULATION                                          :Ynwenners
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Pausear spul
@@ -368,15 +367,15 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Ofslúte
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Kaart fan 'e wrâld
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Ekstra sichtber diel
 STR_MAP_MENU_SIGN_LIST                                          :Buordsjeslist
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Stêden list
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Sticht in stêd
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Subsydzjes
@@ -641,7 +640,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalist
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Magnaat
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mongoal
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Tycoon fan 'e Ieuw
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} berikt'{STRING}' status!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} fan {COMPANY} berikt '{STRING}' status!
@@ -863,13 +862,8 @@ STR_GAME_OPTIONS_CURRENCY_EEK                                   :Estlânske kroa
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Oanpasse...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Mjitienhied
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Mjitienhied seleksje
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Imperiaal
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metriesk
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Auto's
@@ -1028,7 +1022,7 @@ STR_CONFIG_SETTING_CAPTION                                      :{WHITE}Avansear
 
 STR_CONFIG_SETTING_OFF                                          :út
 STR_CONFIG_SETTING_ON                                           :oan
-STR_CONFIG_SETTING_DISABLED                                     :utskeakele
+STR_CONFIG_SETTING_DISABLED                                     :Útskeakele
 
 STR_CONFIG_SETTING_COMPANIES_OFF                                :Ût
 STR_CONFIG_SETTING_COMPANIES_OWN                                :Eigen bedriuw
@@ -1058,8 +1052,8 @@ STR_CONFIG_SETTING_INFLATION                                    :Ynflaasje: {STR
 STR_CONFIG_SETTING_SELECTGOODS                                  :Bringst allinich besoargje by in stasjon as der fraach nei is: {STRING}
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD             :Mei de hân te betsjinjen boumetoade foar primêre yndustryen: {STRING}
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NONE        :Gjin
-STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NORMAL      :lyk as oare yndustryen
-STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_PROSPECTING :probearje
+STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NORMAL      :Lyk as oare yndustryen
+STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_PROSPECTING :Probearje
 STR_CONFIG_SETTING_MULTIPINDTOWN                                :Meardere ferlykbere yndustryen de sted tastean: {STRING}
 STR_CONFIG_SETTING_SHOWFINANCES                                 :Finansjeel oersjoch oan it ein fan it jier sjen litte: {STRING}
 STR_CONFIG_SETTING_NONSTOP_BY_DEFAULT                           :Nije oarder binne standert 'non-stop': {STRING}
@@ -1075,9 +1069,9 @@ STR_CONFIG_SETTING_ALLOW_FUND_ROAD                              :Finansierje fan
 STR_CONFIG_SETTING_ALLOW_GIVE_MONEY                             :Jild jaan oan oarde bedriuwen tastean: {STRING}
 STR_CONFIG_SETTING_FREIGHT_TRAINS                               :Gewichtsfaktor foar vracht om swiere treinen te simulearje: {STRING}
 STR_CONFIG_SETTING_PLANE_CRASHES                                :Oantal fleanmasine ûngelokken: {STRING}
-STR_CONFIG_SETTING_PLANE_CRASHES_NONE                           :gjin
-STR_CONFIG_SETTING_PLANE_CRASHES_REDUCED                        :minder
-STR_CONFIG_SETTING_PLANE_CRASHES_NORMAL                         :gewoan
+STR_CONFIG_SETTING_PLANE_CRASHES_NONE                           :Gjin
+STR_CONFIG_SETTING_PLANE_CRASHES_REDUCED                        :Minder
+STR_CONFIG_SETTING_PLANE_CRASHES_NORMAL                         :Gewoan
 STR_CONFIG_SETTING_STOP_ON_TOWN_ROAD                            :Stean ta dat Ienrjochtingsbuordsjes pleatst wurde troch de stêd behearde dyken: {STRING}
 STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD                      :Stean ta dat Ienrjochtingsbuordsjes pleatst wurde troch de tsjinstander behearde dyken: {STRING}
 STR_CONFIG_SETTING_ADJACENT_STATIONS                            :Bouwe oanbuorjende stasjons tastean: {STRING}
@@ -1088,8 +1082,8 @@ STR_CONFIG_SETTING_NEVER_EXPIRE_AIRPORTS                        :Fleanfjilden fe
 
 STR_CONFIG_SETTING_WARN_LOST_VEHICLE                            :Warskôgje as in reau it paad bjuster is: {STRING}
 STR_CONFIG_SETTING_ORDER_REVIEW                                 :Opennij besjen reau' oarders: {STRING}
-STR_CONFIG_SETTING_ORDER_REVIEW_OFF                             :nee
-STR_CONFIG_SETTING_ORDER_REVIEW_EXDEPOT                         :ja, mar slút stilsteande reau ût
+STR_CONFIG_SETTING_ORDER_REVIEW_OFF                             :Nee
+STR_CONFIG_SETTING_ORDER_REVIEW_EXDEPOT                         :Ja, mar slút stilsteande reau ût
 STR_CONFIG_SETTING_ORDER_REVIEW_ON                              :fan alle reau
 STR_CONFIG_SETTING_WARN_INCOME_LESS                             :Warskôgje as de fertsjinsten fan in reau negatyf binne: {STRING}
 STR_CONFIG_SETTING_NEVER_EXPIRE_VEHICLES                        :Reau ferrinne litte kin net: {STRING}
@@ -1262,6 +1256,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :Hiel snel
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :Begjin stêdgrutte fermenigfuldiger: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Helje frjemde stikken dyk fourt by it bouen fan nije routes: {STRING}
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interface
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}konstruksje
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Auto's
@@ -1431,10 +1426,6 @@ STR_FACE_GLASSES                                                :Bril:
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Multiplayer
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Ferbining:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Kies tusken internetspul of yn Lokaal netwurk spul (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :Ynternet
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Namme fan spieler:
 
 STR_NETWORK_SERVER_LIST_GAME_NAME                               :{BLACK}Namme
@@ -1469,7 +1460,6 @@ STR_NETWORK_START_SERVER_CAPTION                                :{WHITE}Start in
 
 STR_NETWORK_START_SERVER_NEW_GAME_NAME                          :{BLACK}Spulnamme:
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Ynternet
 STR_NETWORK_START_SERVER_SPECTATORS_SELECT                      :{BLACK}{NUM} taskôger{P "" s}
 STR_NETWORK_START_SERVER_NUMBER_OF_SPECTATORS                   :{BLACK}Maksimaal tal taskôgers:
 
@@ -1618,6 +1608,10 @@ STR_CONTENT_ERROR_COULD_NOT_EXTRACT                             :{WHITE}Kin it d
 
 
 # Transparency settings window
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_OFF                                  :{BLACK}Ut
@@ -2062,6 +2056,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Tsjinste
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} fan {STRING} nei {STRING}{YELLOW} ({COMPANY}{YELLOW}, oant {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klik om te sentrearen op yndusty/stêd. Ctrl+klick iepent in nij sichtber diel op yndustry/stêd lokaasje
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_STATION                                        :{YELLOW}{STATION} {STATION_FEATURES}
 STR_STATION_LIST_WAYPOINT                                       :{YELLOW}{WAYPOINT}
@@ -2077,7 +2073,8 @@ STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}
 STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Aksepteart: {WHITE}{CARGO_LIST}
 
 
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Ferskriklik
@@ -2765,6 +2762,8 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Kin stop
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Spul basjeare op Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

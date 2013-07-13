@@ -313,7 +313,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Pindala:
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Rahvaarv
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Nimi
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Kuupäev
 # These are used in dropdowns
@@ -334,7 +333,8 @@ STR_SORT_BY_LENGTH                                              :Pikkus
 STR_SORT_BY_LIFE_TIME                                           :Allesjäänud eluaeg
 STR_SORT_BY_TIMETABLE_DELAY                                     :Hilinemine sõiduplaanis
 STR_SORT_BY_FACILITY                                            :Jaama tüüp
-STR_SORT_BY_WAITING                                             :Ootava kauba väärtus
+STR_SORT_BY_WAITING_TOTAL                                       :Kaupa kokku
+STR_SORT_BY_WAITING_AVAILABLE                                   :Kaupa saadaval
 STR_SORT_BY_RATING_MAX                                          :Kõrgeim kaubahinnang
 STR_SORT_BY_RATING_MIN                                          :Madalaim kaubahinnang
 STR_SORT_BY_ENGINE_ID                                           :MootoriID (klassikaline)
@@ -346,6 +346,7 @@ STR_SORT_BY_RUNNING_COST                                        :Käituskulud
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Võimsus- ja käituskulud
 STR_SORT_BY_CARGO_CAPACITY                                      :Kandevõime
 STR_SORT_BY_RANGE                                               :Vahekaugus
+STR_SORT_BY_POPULATION                                          :Rahvaarv
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Seisata mäng
@@ -358,6 +359,8 @@ STR_TOOLBAR_TOOLTIP_DISPLAY_SUBSIDIES                           :{BLACK}Kuva toe
 STR_TOOLBAR_TOOLTIP_DISPLAY_LIST_OF_COMPANY_STATIONS            :{BLACK}Kuvab ettevõtte jaamade nimistu
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_FINANCES                    :{BLACK}Kuva ettevõtte finantsolukord
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_GENERAL                     :{BLACK}Kuva üldine info ettevõtte kohta
+STR_TOOLBAR_TOOLTIP_DISPLAY_STORY_BOOK                          :{BLACK}Näite juturaamatut
+STR_TOOLBAR_TOOLTIP_DISPLAY_GOALS_LIST                          :{BLACK}Näita eesmärke
 STR_TOOLBAR_TOOLTIP_DISPLAY_GRAPHS                              :{BLACK}Kuva graafikuid
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_LEAGUE                      :{BLACK}Kuva ettevõtete edetabel
 STR_TOOLBAR_TOOLTIP_FUND_CONSTRUCTION_OF_NEW                    :{BLACK}Rahasta uute ehitiste konstrueerimist
@@ -428,19 +431,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Välju
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Maailmakaart
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Lisa vaateaken
 STR_MAP_MENU_SIGN_LIST                                          :Siltide nimekiri
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Linnanimistu
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Raja linn
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Toetused
-STR_SUBSIDIES_MENU_GOAL                                         :Praegused eesmärgid
 ############ range ends here
 
 ############ range for graph menu starts
@@ -707,7 +709,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalist
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Magnaat
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mogul
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Sajandi suurärimees
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} saavutas '{STRING}' staatuse!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} {COMPANY}'st saavutas '{STRING}' staatuse!
@@ -935,13 +937,8 @@ STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Lõuna-Aafrika 
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Omatehtud...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Mõõtühikud
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Mõõtühikute valik
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Mittemeetriline
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Meetriline
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Sõidukid
@@ -1607,11 +1604,15 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Keskmine linna 
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Mittevajaliku eemaldamine teedeehitusel: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Eemalda tupikteed kui rahastatakse kohalikku teedeehitust
 
+STR_CONFIG_SETTING_SHORT_PATH_SATURATION                        :Liikluskoormus kõrgema läbilaskevõimega raja otsimiseks: {STRING}
+STR_CONFIG_SETTING_SHORT_PATH_SATURATION_HELPTEXT               :Kauba vedamisel ühest jaamast teise saab kasutada mitu rada. Kaubajaotusel arvestatakse läbilaskevõimet ja liikluskoormust. Kui liikluskoormus on suurem kui läbilaskevõime, suunatakse kaup kõigepealt kõrgema läbilaskevõimega radadele. Läbilaskevõime arvutamine ei ole täpne; antud seaded määravad liikluskoormuse millal kaup suunatakse järgmisele rajale. Ülekoormuse vältimiseks on soovitatav liikluskoormus alla 100%.
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Kasutajaliides
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Ehitamine
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Sõidukid
 STR_CONFIG_SETTING_STATIONS                                     :{ORANGE}Jaamad
 STR_CONFIG_SETTING_ECONOMY                                      :{ORANGE}Majandus
+STR_CONFIG_SETTING_LINKGRAPH                                    :{ORANGE}Kaubajaotus
 STR_CONFIG_SETTING_AI                                           :{ORANGE}Konkurendid
 STR_CONFIG_SETTING_DISPLAY_OPTIONS                              :{ORANGE}Kuvaseaded
 STR_CONFIG_SETTING_INTERACTION                                  :{ORANGE}Suhtlemine
@@ -1835,10 +1836,8 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Vaheta k
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Võrgumäng
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Ühendus:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Valimine interneti- või kohtvõrkmängu vahel
-STR_NETWORK_SERVER_LIST_LAN                                     :kohtvõrk (LAN)
-STR_NETWORK_SERVER_LIST_INTERNET                                :Internet
+STR_NETWORK_SERVER_LIST_ADVERTISED_NO                           :Ei
+STR_NETWORK_SERVER_LIST_ADVERTISED_YES                          :Jah
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Mängija nimi:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Teised mängijad tunnevad sind selle nime järgi
 
@@ -1897,8 +1896,8 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Mängu n
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Sea parool
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Kaitse oma mäng parooliga, kui sa ei taha, et kõik sellele ligi pääseksid
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Internet
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (reklaami)
+STR_NETWORK_START_SERVER_UNADVERTISED                           :Jah
+STR_NETWORK_START_SERVER_ADVERTISED                             :Jah
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} klient{P "" i}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Suurim klientide arv:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Määra suurim klientide arv. Kõik vabad kohad ei pea täidetud olema
@@ -2137,6 +2136,7 @@ STR_CONTENT_SELECT_UPDATES_CAPTION                              :{BLACK}Märgi u
 STR_CONTENT_SELECT_UPDATES_CAPTION_TOOLTIP                      :{BLACK}Tähista allalaaditavaks kõik olemasoleva sisu uuendused
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Eemalda märgistus kõigilt
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Eemaldatakse allalaadimise märgistus
+STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER_CAPTION                  :{WHITE}Sa oled lahkumas OpenTTD-st!
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Sildi- ja nimefilter:
 STR_CONTENT_OPEN_URL                                            :{BLACK}Külasta lehekülge
 STR_CONTENT_OPEN_URL_TOOLTIP                                    :{BLACK}Külasta lehekülge selle sisu jaoks.
@@ -2205,6 +2205,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Vaheta l
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Õhuliinide läbipaistvuse vahetamine. Ctrl+klõps lukustab
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Vaheta laadimisnäidikute läbipaistvust. Ctrl+klõps lukustab
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Muuda esemed nähtamatuks, mitte läbipaistvaks
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Mõjupiirkonna näitamine
@@ -2932,10 +2936,12 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW} Üheks
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW} Linna omavalitusele ettevõtte hinnangu tõstmise eesmärgil altkäemaksu pakkumine. Vahele jäädes tuleb trahvi maksta.{} Hind: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Eesmärgid
+STR_GOALS_CAPTION                                               :{WHITE}{COMPANY} eesmärgid
+STR_GOALS_SPECTATOR_CAPTION                                     :{WHITE}Üldeesmärgid
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Globaalsed eesmärgid:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Mitte ühtegi -
+STR_GOALS_SPECTATOR_NONE                                        :{ORANGE}- Kehtetu -
 STR_GOALS_COMPANY_TITLE                                         :{BLACK}Ettevõtte eesmärgid:
 STR_GOALS_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                    :{BLACK}Kliki sihtmärgil et liikuda põhikuvas tööstuse/linna/ruudu asukohale. Ctrl+klõps avab uue vaateakna tööstuse/linna/ruudu asukohas
 
@@ -2974,6 +2980,9 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Juba toe
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} kohast {STRING} kohta {STRING}{YELLOW} ({COMPANY}{YELLOW}, kuni {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Vajuta pakkumisele, et näha linna või tööstuse asukohta. Ctrl+klõps avab uue vaate ettevõtte/linna asukohast
 
+# Story book window
+STR_STORY_BOOK_SPECTATOR_CAPTION                                :{WHITE}Üldjuturaamat
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Jaamanimed - nimel vajutades viiakse vaade jaamale. Ctrl+klõps avab jaama asukohas uue vaate.
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Mitme asja valimiseks kasuta Ctrl-klahvi
@@ -3000,8 +3009,9 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Hinnangud
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Näita jaamahinnangut
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Kohaliku veoteenuse hinnang:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+STR_STATION_VIEW_GROUP                                          :{BLACK}Rühmitusalus
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Kohutav
@@ -3128,7 +3138,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Kanalid
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Jaamad:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Jaama ruudud
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Lennuväljad
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/a ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/a
 
 # Industry directory
@@ -3744,7 +3753,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Sõidupl
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Sõiduplaani alustatakse {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Alustuskuupäev
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Vali sõiduplaani alguskuupäev
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Muuda aega
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Muuda, kaua esile tõstetud sihtpunkti peale aega peaks kuluma
@@ -4272,6 +4280,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Silti ei
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Transport Tycoon Deluxe'il põhinev simulatsioonimäng
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Algse Transport Tycoon Deluxe DOSi versiooni graafika.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Algse Transport Tycoon Deluxe DOSi (Saksa) versiooni graafika.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Algse Transport Tycoon Deluxe Windowsi versiooni graafika.
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Algse Transport Tycoon Deluxe DOSi versiooni helid.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Algse Transport Tycoon Deluxe Windowsi versiooni helid.
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :Ilma häälteta helipakk.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Algse Transport Tycoon Deluxe Windowsi versiooni muusika.
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :Muusikakomplekt ilma igasuguse muusikata.
 
 ##id 0x2000
 # Town building names

@@ -98,13 +98,13 @@ void Textbuf::DelChar(bool backspace)
 /**
  * Delete a character from a textbuffer, either with 'Delete' or 'Backspace'
  * The character is delete from the position the caret is at
- * @param delmode Type of deletion, either WKC_BACKSPACE or WKC_DELETE
+ * @param keycode Type of deletion, either WKC_BACKSPACE or WKC_DELETE
  * @return Return true on successful change of Textbuf, or false otherwise
  */
-bool Textbuf::DeleteChar(int delmode)
+bool Textbuf::DeleteChar(uint16 keycode)
 {
-	if (delmode == WKC_BACKSPACE || delmode == WKC_DELETE) {
-		bool backspace = delmode == WKC_BACKSPACE;
+	if (keycode == WKC_BACKSPACE || keycode == WKC_DELETE) {
+		bool backspace = keycode == WKC_BACKSPACE;
 		if (CanDelChar(backspace)) {
 			this->DelChar(backspace);
 			return true;
@@ -112,8 +112,8 @@ bool Textbuf::DeleteChar(int delmode)
 		return false;
 	}
 
-	if (delmode == (WKC_CTRL | WKC_BACKSPACE) || delmode == (WKC_CTRL | WKC_DELETE)) {
-		bool backspace = delmode == (WKC_CTRL | WKC_BACKSPACE);
+	if (keycode == (WKC_CTRL | WKC_BACKSPACE) || keycode == (WKC_CTRL | WKC_DELETE)) {
+		bool backspace = keycode == (WKC_CTRL | WKC_BACKSPACE);
 
 		if (!CanDelChar(backspace)) return false;
 		WChar c = this->GetNextDelChar(backspace);
@@ -190,7 +190,7 @@ bool Textbuf::InsertClipboard()
 	uint16 pixels = 0, bytes = 0, chars = 0;
 	WChar c;
 	for (const char *ptr = utf8_buf; (c = Utf8Consume(&ptr)) != '\0';) {
-		if (!IsPrintable(c)) break;
+		if (!IsValidChar(c, this->afilter)) break;
 
 		byte len = Utf8CharLen(c);
 		if (this->bytes + bytes + len > this->max_bytes) break;
@@ -276,12 +276,12 @@ WChar Textbuf::MoveCaretRight()
 /**
  * Handle text navigation with arrow keys left/right.
  * This defines where the caret will blink and the next character interaction will occur
- * @param navmode Direction in which navigation occurs (WKC_CTRL |) WKC_LEFT, (WKC_CTRL |) WKC_RIGHT, WKC_END, WKC_HOME
+ * @param keycode Direction in which navigation occurs (WKC_CTRL |) WKC_LEFT, (WKC_CTRL |) WKC_RIGHT, WKC_END, WKC_HOME
  * @return Return true on successful change of Textbuf, or false otherwise
  */
-bool Textbuf::MovePos(int navmode)
+bool Textbuf::MovePos(uint16 keycode)
 {
-	switch (navmode) {
+	switch (keycode) {
 		case WKC_LEFT:
 			if (this->CanMoveCaretLeft()) {
 				this->MoveCaretLeft();
@@ -364,6 +364,7 @@ Textbuf::Textbuf(uint16 max_bytes, uint16 max_chars)
 	assert(max_bytes != 0);
 	assert(max_chars != 0);
 
+	this->afilter    = CS_ALPHANUMERAL;
 	this->max_bytes  = max_bytes;
 	this->max_chars  = max_chars == UINT16_MAX ? max_bytes : max_chars;
 	this->caret      = true;
@@ -448,4 +449,50 @@ bool Textbuf::HandleCaret()
 		return true;
 	}
 	return false;
+}
+
+HandleKeyPressResult Textbuf::HandleKeyPress(uint16 key, uint16 keycode)
+{
+	bool edited = false;
+
+	switch (keycode) {
+		case WKC_ESC: return HKPR_CANCEL;
+
+		case WKC_RETURN: case WKC_NUM_ENTER: return HKPR_CONFIRM;
+
+#ifdef WITH_COCOA
+		case (WKC_META | 'V'):
+#endif
+		case (WKC_CTRL | 'V'):
+			edited = this->InsertClipboard();
+			break;
+
+#ifdef WITH_COCOA
+		case (WKC_META | 'U'):
+#endif
+		case (WKC_CTRL | 'U'):
+			this->DeleteAll();
+			edited = true;
+			break;
+
+		case WKC_BACKSPACE: case WKC_DELETE:
+		case WKC_CTRL | WKC_BACKSPACE: case WKC_CTRL | WKC_DELETE:
+			edited = this->DeleteChar(keycode);
+			break;
+
+		case WKC_LEFT: case WKC_RIGHT: case WKC_END: case WKC_HOME:
+		case WKC_CTRL | WKC_LEFT: case WKC_CTRL | WKC_RIGHT:
+			this->MovePos(keycode);
+			break;
+
+		default:
+			if (IsValidChar(key, this->afilter)) {
+				edited = this->InsertChar(key);
+			} else {
+				return HKPR_NOT_HANDLED;
+			}
+			break;
+	}
+
+	return edited ? HKPR_EDITING : HKPR_CURSOR;
 }

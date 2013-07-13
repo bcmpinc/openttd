@@ -68,6 +68,8 @@
 #include "../../widgets/vehicle_widget.h"
 #include "../../widgets/viewport_widget.h"
 #include "../../widgets/waypoint_widget.h"
+#include "../../widgets/link_graph_legend_widget.h"
+#include "../../widgets/story_widget.h"
 
 /**
  * Class that handles window interaction. A Window in OpenTTD has two imporant
@@ -365,6 +367,11 @@ public:
 		 */
 		WC_GOALS_LIST                                = ::WC_GOALS_LIST,
 
+		/**
+		 * Story book; %Window numbers:
+		 *   - CompanyID = #StoryBookWidgets
+		 */
+		WC_STORY_BOOK                                = ::WC_STORY_BOOK,
 
 		/**
 		 * Station list; %Window numbers:
@@ -744,6 +751,12 @@ public:
 		 *   - 0 = #SpriteAlignerWidgets
 		 */
 		WC_SPRITE_ALIGNER                            = ::WC_SPRITE_ALIGNER,
+
+		/**
+		 * Linkgraph legend; Window numbers:
+		 *   - 0 = #LinkGraphWidgets
+		 */
+		WC_LINKGRAPH_LEGEND                          = ::WC_LINKGRAPH_LEGEND,
 
 		WC_INVALID                                   = ::WC_INVALID,                                   ///< Invalid window.
 	};
@@ -1326,8 +1339,10 @@ public:
 	/* automatically generated from ../../widgets/goal_widget.h */
 	/** Widgets of the #GoalListWindow class. */
 	enum GoalListWidgets {
-		WID_GL_PANEL                                 = ::WID_GL_PANEL,                                 ///< Panel of the window.
-		WID_GL_SCROLLBAR                             = ::WID_GL_SCROLLBAR,                             ///< Scrollbar of the panel.
+		WID_GOAL_CAPTION                             = ::WID_GOAL_CAPTION,                             ///< Caption of the window.
+		WID_GOAL_GOAL                                = ::WID_GOAL_GOAL,                                ///< Goal text column of the goal list.
+		WID_GOAL_PROGRESS                            = ::WID_GOAL_PROGRESS,                            ///< Goal progress column of the goal list.
+		WID_GOAL_SCROLLBAR                           = ::WID_GOAL_SCROLLBAR,                           ///< Scrollbar of the goal list.
 	};
 
 	/** Widgets of the #GoalQuestionWindow class. */
@@ -1480,6 +1495,25 @@ public:
 		WID_SGI_CONTENT_DOWNLOAD                     = ::WID_SGI_CONTENT_DOWNLOAD,                     ///< Content Download button.
 		WID_SGI_AI_SETTINGS                          = ::WID_SGI_AI_SETTINGS,                          ///< AI button.
 		WID_SGI_EXIT                                 = ::WID_SGI_EXIT,                                 ///< Exit button.
+	};
+
+	/* automatically generated from ../../widgets/link_graph_legend_widget.h */
+	/** Widgets of the WC_LINKGRAPH_LEGEND. */
+	enum LinkGraphLegendWidgets {
+		WID_LGL_CAPTION                              = ::WID_LGL_CAPTION,                              ///< Caption widget.
+		WID_LGL_SATURATION                           = ::WID_LGL_SATURATION,                           ///< Saturation legend.
+		WID_LGL_SATURATION_FIRST                     = ::WID_LGL_SATURATION_FIRST,
+		WID_LGL_SATURATION_LAST                      = ::WID_LGL_SATURATION_LAST,
+		WID_LGL_COMPANIES                            = ::WID_LGL_COMPANIES,                            ///< Company selection widget.
+		WID_LGL_COMPANY_FIRST                        = ::WID_LGL_COMPANY_FIRST,
+		WID_LGL_COMPANY_LAST                         = ::WID_LGL_COMPANY_LAST,
+		WID_LGL_COMPANIES_ALL                        = ::WID_LGL_COMPANIES_ALL,
+		WID_LGL_COMPANIES_NONE                       = ::WID_LGL_COMPANIES_NONE,
+		WID_LGL_CARGOES                              = ::WID_LGL_CARGOES,                              ///< Cargo selection widget.
+		WID_LGL_CARGO_FIRST                          = ::WID_LGL_CARGO_FIRST,
+		WID_LGL_CARGO_LAST                           = ::WID_LGL_CARGO_LAST,
+		WID_LGL_CARGOES_ALL                          = ::WID_LGL_CARGOES_ALL,
+		WID_LGL_CARGOES_NONE                         = ::WID_LGL_CARGOES_NONE,
 	};
 
 	/* automatically generated from ../../widgets/main_widget.h */
@@ -1964,6 +1998,7 @@ public:
 		WID_BRAS_IMAGE                               = ::WID_BRAS_IMAGE,                               ///< Panel used at each cell of the matrix.
 		WID_BRAS_MATRIX_SCROLL                       = ::WID_BRAS_MATRIX_SCROLL,                       ///< Scrollbar of the matrix widget.
 
+		WID_BRAS_SHOW_NEWST_DEFSIZE                  = ::WID_BRAS_SHOW_NEWST_DEFSIZE,                  ///< Selection for default-size button for newstation.
 		WID_BRAS_SHOW_NEWST_ADDITIONS                = ::WID_BRAS_SHOW_NEWST_ADDITIONS,                ///< Selection for newstation class selection list.
 		WID_BRAS_SHOW_NEWST_MATRIX                   = ::WID_BRAS_SHOW_NEWST_MATRIX,                   ///< Selection for newstation image matrix.
 		WID_BRAS_SHOW_NEWST_RESIZE                   = ::WID_BRAS_SHOW_NEWST_RESIZE,                   ///< Selection for panel and resize at bottom right for newstation.
@@ -2140,11 +2175,13 @@ public:
 		WID_SM_MAP_BORDER                            = ::WID_SM_MAP_BORDER,                            ///< Border around the smallmap.
 		WID_SM_MAP                                   = ::WID_SM_MAP,                                   ///< Panel containing the smallmap.
 		WID_SM_LEGEND                                = ::WID_SM_LEGEND,                                ///< Bottom panel to display smallmap legends.
+		WID_SM_BLANK                                 = ::WID_SM_BLANK,                                 ///< Empty button as placeholder.
 		WID_SM_ZOOM_IN                               = ::WID_SM_ZOOM_IN,                               ///< Button to zoom in one step.
 		WID_SM_ZOOM_OUT                              = ::WID_SM_ZOOM_OUT,                              ///< Button to zoom out one step.
 		WID_SM_CONTOUR                               = ::WID_SM_CONTOUR,                               ///< Button to select the contour view (height map).
 		WID_SM_VEHICLES                              = ::WID_SM_VEHICLES,                              ///< Button to select the vehicles view.
 		WID_SM_INDUSTRIES                            = ::WID_SM_INDUSTRIES,                            ///< Button to select the industries view.
+		WID_SM_LINKSTATS                             = ::WID_SM_LINKSTATS,                             ///< Button to select the link stats view.
 		WID_SM_ROUTES                                = ::WID_SM_ROUTES,                                ///< Button to select the routes view.
 		WID_SM_VEGETATION                            = ::WID_SM_VEGETATION,                            ///< Button to select the vegetation view.
 		WID_SM_OWNERS                                = ::WID_SM_OWNERS,                                ///< Button to select the owners view.
@@ -2160,6 +2197,10 @@ public:
 	/** Widgets of the #StationViewWindow class. */
 	enum StationViewWidgets {
 		WID_SV_CAPTION                               = ::WID_SV_CAPTION,                               ///< Caption of the window.
+		WID_SV_SORT_ORDER                            = ::WID_SV_SORT_ORDER,                            ///< 'Sort order' button
+		WID_SV_SORT_BY                               = ::WID_SV_SORT_BY,                               ///< 'Sort by' button
+		WID_SV_GROUP                                 = ::WID_SV_GROUP,                                 ///< label for "group by"
+		WID_SV_GROUP_BY                              = ::WID_SV_GROUP_BY,                              ///< 'Group by' button
 		WID_SV_WAITING                               = ::WID_SV_WAITING,                               ///< List of waiting cargo.
 		WID_SV_SCROLLBAR                             = ::WID_SV_SCROLLBAR,                             ///< Scrollbar.
 		WID_SV_ACCEPT_RATING_LIST                    = ::WID_SV_ACCEPT_RATING_LIST,                    ///< List of accepted cargoes / rating of cargoes.
@@ -2210,6 +2251,17 @@ public:
 		WID_S_LEFT                                   = ::WID_S_LEFT,                                   ///< Left part of the statusbar; date is shown there.
 		WID_S_MIDDLE                                 = ::WID_S_MIDDLE,                                 ///< Middle part; current news or company name or *** SAVING *** or *** PAUSED ***.
 		WID_S_RIGHT                                  = ::WID_S_RIGHT,                                  ///< Right part; bank balance.
+	};
+
+	/* automatically generated from ../../widgets/story_widget.h */
+	/** Widgets of the #GoalListWindow class. */
+	enum StoryBookWidgets {
+		WID_SB_CAPTION                               = ::WID_SB_CAPTION,                               ///< Caption of the window.
+		WID_SB_SEL_PAGE                              = ::WID_SB_SEL_PAGE,                              ///< Page selector.
+		WID_SB_PAGE_PANEL                            = ::WID_SB_PAGE_PANEL,                            ///< Page body.
+		WID_SB_SCROLLBAR                             = ::WID_SB_SCROLLBAR,                             ///< Scrollbar of the goal list.
+		WID_SB_PREV_PAGE                             = ::WID_SB_PREV_PAGE,                             ///< Prev button.
+		WID_SB_NEXT_PAGE                             = ::WID_SB_NEXT_PAGE,                             ///< Next button.
 	};
 
 	/* automatically generated from ../../widgets/subsidy_widget.h */
@@ -2290,6 +2342,8 @@ public:
 		WID_TN_STATIONS                              = ::WID_TN_STATIONS,                              ///< Station menu.
 		WID_TN_FINANCES                              = ::WID_TN_FINANCES,                              ///< Finance menu.
 		WID_TN_COMPANIES                             = ::WID_TN_COMPANIES,                             ///< Company menu.
+		WID_TN_STORY                                 = ::WID_TN_STORY,                                 ///< Story menu.
+		WID_TN_GOAL                                  = ::WID_TN_GOAL,                                  ///< Goal menu.
 		WID_TN_GRAPHS                                = ::WID_TN_GRAPHS,                                ///< Graph menu.
 		WID_TN_LEAGUE                                = ::WID_TN_LEAGUE,                                ///< Company league menu.
 		WID_TN_INDUSTRIES                            = ::WID_TN_INDUSTRIES,                            ///< Industry menu.
@@ -2342,8 +2396,8 @@ public:
 	/* automatically generated from ../../widgets/town_widget.h */
 	/** Widgets of the #TownDirectoryWindow class. */
 	enum TownDirectoryWidgets {
-		WID_TD_SORT_NAME                             = ::WID_TD_SORT_NAME,                             ///< Sort by town name.
-		WID_TD_SORT_POPULATION                       = ::WID_TD_SORT_POPULATION,                       ///< Sort by town population.
+		WID_TD_SORT_ORDER                            = ::WID_TD_SORT_ORDER,                            ///< Direction of sort dropdown.
+		WID_TD_SORT_CRITERIA                         = ::WID_TD_SORT_CRITERIA,                         ///< Criteria of sort dropdown.
 		WID_TD_LIST                                  = ::WID_TD_LIST,                                  ///< List of towns.
 		WID_TD_SCROLLBAR                             = ::WID_TD_SCROLLBAR,                             ///< Scrollbar for the town list.
 		WID_TD_WORLD_POPULATION                      = ::WID_TD_WORLD_POPULATION,                      ///< The world's population.

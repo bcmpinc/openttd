@@ -409,7 +409,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Površin
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Prebivalstvo
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Ime
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Datum
 # These are used in dropdowns
@@ -430,7 +429,6 @@ STR_SORT_BY_LENGTH                                              :Dolžina
 STR_SORT_BY_LIFE_TIME                                           :Preostala življenjska doba
 STR_SORT_BY_TIMETABLE_DELAY                                     :Zamuda urnika
 STR_SORT_BY_FACILITY                                            :Vrsta postaje
-STR_SORT_BY_WAITING                                             :Čakanje vrednosti tovora
 STR_SORT_BY_RATING_MAX                                          :Najvišja ocena tovora
 STR_SORT_BY_RATING_MIN                                          :Najnižja ocena tovora
 STR_SORT_BY_ENGINE_ID                                           :ID motorja (klasično urejanje)
@@ -442,6 +440,7 @@ STR_SORT_BY_RUNNING_COST                                        :Cena delovanja
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Moč/Cena delovanja
 STR_SORT_BY_CARGO_CAPACITY                                      :Zmogljivost tovora
 STR_SORT_BY_RANGE                                               :Domet
+STR_SORT_BY_POPULATION                                          :Prebivalstvo
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Premor
@@ -524,19 +523,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Izhod
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Zemljevid sveta
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Dodaten pogled
 STR_MAP_MENU_SIGN_LIST                                          :Seznam napisov
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Imenik mest
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Ustanovi mesto
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Subvencije
-STR_SUBSIDIES_MENU_GOAL                                         :Trenutni cilji
 ############ range ends here
 
 ############ range for graph menu starts
@@ -803,7 +801,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalist
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Magnat
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Glavar
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Velekapitalist stoletja
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} dosega naslov '{STRING}'!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} iz podjetja {COMPANY} prejema naslov '{STRING}'!
@@ -1031,13 +1029,8 @@ STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Južnoafriški 
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Po meri...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Merske enote
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Izbor merskih enot
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Colski
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metrični
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Cestna vozila
@@ -1644,6 +1637,7 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Povprečna veli
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Odstrani absurdne cestne elemente med gradnjo cest: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Odstrani slepe odseke cest med financirano obnovo cest.
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Vmesnik
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Gradnja
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Vozila
@@ -1867,10 +1861,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Spremeni
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Več igralcev
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Povezava:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Izberi med internetom ali lokalno mrezo (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :Lokalno omrežje
-STR_NETWORK_SERVER_LIST_INTERNET                                :Internet
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Ime igralca:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}To je ime, po katerem te prepoznajo drugi igralci
 
@@ -1929,8 +1919,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Ime bo p
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Nastavi geslo
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Zaščiti igro z geslom, če želiš preprečiti dostop nepovabljenim
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :Lokalno omrežje / Internet
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (oglašuj)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} gost{P "" a i ov}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Dovoljeno število gostov:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Izberite največje število gostov. Ni potrebno, da so vsi prisotni
@@ -2237,6 +2225,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Prozoren
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Preklop prosojnosti za pogone. Ctrl+Klik za zaklepanje
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Preklop na prosojnost za prikaz polnenja. Ctrl+Klik za zaklepanje
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Nastavi predmete nevidne namesto prosojne
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Osvetlitev območja zajema
@@ -2957,7 +2949,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Kupi en
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Podkupi lokalno oblast za izboljšavo svojih ocen kljub tveganju resnih kazni ob odkritju.{}Cena: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Cilji
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Globalni cilji:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Brez -
@@ -2999,6 +2990,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Že subv
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}Prevoz {STRING.r} od {STRING} do {STRING}{YELLOW} ({COMPANY}{YELLOW}, do {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klikni na storitev za pogled na industrijo/mesto. Ctrl+Klik odpre nov pogled na lokaciji industrije/mesta
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Imena postaj - klikni na ime za pogled na postajo. Ctrl+Klik odpre nov pogled na lokaciji postaje
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Drži Ctrl za izbor več stvari
@@ -3025,8 +3018,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Ocene
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Prikaz ocen postaje
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Lokalne ocene transportnih storitev:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Nizkotno
@@ -3153,7 +3146,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Kanali
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Postaje:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Polja postaj
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Letališča
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/leto ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/leto
 
 # Industry directory
@@ -3769,7 +3761,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Ta urnik
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Ta urnik se bo začel ob {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Začetni datum
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Izberi datum kot začetno točko tega urnika
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Spremeni čas
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Spremeni čas, ki naj bi ga označeni ukaz porabil
@@ -4297,6 +4288,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Ni mogo�
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Simulacija, temelječa na Transport Tycoonu Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Originalna grafika Transport Tycoon Deluxe za različico DOS.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Originalna grafika Transport Tycoon Deluxe za nemško različico DOS.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Originalna grafika Transport Tycoon Deluxe za različico oken(windows).
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Originalni zvoki Transport Tycoon Deluxe različice DOS.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Originalni zvoki Transport Tycoon Deluxe različice oken(windows).
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :Zvočni paket brez zvoka.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Originalna glasba Transport Tycoon Deluxe različice oken(windows).
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :Glasbeni paket z vključeno glasbo.
 
 ##id 0x2000
 # Town building names

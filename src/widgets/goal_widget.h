@@ -15,8 +15,10 @@
 
 /** Widgets of the #GoalListWindow class. */
 enum GoalListWidgets {
-	WID_GL_PANEL,     ///< Panel of the window.
-	WID_GL_SCROLLBAR, ///< Scrollbar of the panel.
+	WID_GOAL_CAPTION,   ///< Caption of the window.
+	WID_GOAL_GOAL,      ///< Goal text column of the goal list.
+	WID_GOAL_PROGRESS,  ///< Goal progress column of the goal list.
+	WID_GOAL_SCROLLBAR, ///< Scrollbar of the goal list.
 };
 
 /** Widgets of the #GoalQuestionWindow class. */

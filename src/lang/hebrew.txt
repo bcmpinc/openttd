@@ -270,7 +270,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}איזו
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}אכלוסיה
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}שם
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}תאריך
 # These are used in dropdowns
@@ -291,7 +290,6 @@ STR_SORT_BY_LENGTH                                              :אורך
 STR_SORT_BY_LIFE_TIME                                           :זמן חיים נותר
 STR_SORT_BY_TIMETABLE_DELAY                                     :עיכוב בלוח זמנים
 STR_SORT_BY_FACILITY                                            :סוג תחנה
-STR_SORT_BY_WAITING                                             :ערך הסחורה שמחכה
 STR_SORT_BY_RATING_MAX                                          :דירוג מטען גבוה ביותר
 STR_SORT_BY_RATING_MIN                                          :דירוג מטען נמוך ביותר
 STR_SORT_BY_ENGINE_ID                                           :מספר קטר
@@ -303,6 +301,7 @@ STR_SORT_BY_RUNNING_COST                                        :עלות הפע
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :כח/עלות הפעלה
 STR_SORT_BY_CARGO_CAPACITY                                      :קיבולת סחורה
 STR_SORT_BY_RANGE                                               :טווח
+STR_SORT_BY_POPULATION                                          :אכלוסיה
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}השהה משחק
@@ -385,19 +384,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :יציאה
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :מפת העולם
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :השקפה נוספת
 STR_MAP_MENU_SIGN_LIST                                          :רשימת שלטים
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :מדריך הערים
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :ייסד עיר
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :סובסידיות
-STR_SUBSIDIES_MENU_GOAL                                         :מטרות נוכחיות
 ############ range ends here
 
 ############ range for graph menu starts
@@ -664,7 +662,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :קפיטליס�
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :איל הון
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :איל הון
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :טיקון המאה
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} הגיעה למעמד '{STRING}'!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}'{2:STRING}' הגיע לדרגת {NBSP}{1:COMPANY} מ {NBSP}{0:PRESIDENT_NAME}
@@ -892,13 +890,8 @@ STR_GAME_OPTIONS_CURRENCY_ZAR                                   :(ZAR) ראנד 
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :אחר...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}יחידות מידה
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}בחירת יחידות מדידה
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :אימפריאל
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :מטרית
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :השיטה הבינלאומית
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}רכבי כביש
@@ -1564,6 +1557,7 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :גודל ממו
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :הסר רכיבי-דרך לא הגיוניים במהלך בניית דרכים: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :הסר קצות כבישים ללא מוצא בעת סלילה מחדש ממומנת של כבישים
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}ממשק חזותי
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}בנייה
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}כלי תחבורה
@@ -1792,10 +1786,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK} שנה 
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}משחק רשת
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK} :חיבור
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK} :(LAN)בחר משחק באינטרנט/רשת מקומית
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :אינטרנט
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK} :שם השחקן
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}זהו שמך כפי שיצפה ע"י המשתתפים האחרים
 
@@ -1854,8 +1844,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}השם �
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}קבע סיסמה
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}הגן על המשחק שלך עם סיסמה אם אתה לא רוצה שהוא יהיה זמין לכולם
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / אינטרנט
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :(אינטרנט (פרסם
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} לקוח{P "" "ות"}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}מקסימום לקוחות:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK} :מספר משתתפים מירבי
@@ -2162,6 +2150,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}שנה �
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}שנה שקיפות עבור עמודי חשמל
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}שנה שקיפות עבור מצביעי הטענה
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}הסתר במקום הפוך לשקוף
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}הדגשת שטח הכיסוי
@@ -2889,7 +2881,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}רכו�
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}שחד את הרשות המקומית כדי להגדיל את הדרוג שלך בעיר תוך כדי סיכון להתפס ולשלם קנס חמור.{}עלות: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}מטרות
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}מטרות גלובליות:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- אין -
@@ -2931,6 +2922,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK} :שיר
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} מ-{STRING} אל {STRING}{YELLOW} ({COMPANY}{YELLOW}, עד {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}לחץ על שירות כדי להתמקד על עיר/תעשייה. Ctrl+לחיצה פותח חלונית תצוגה חדשה על מיקום העיר/תעשייה
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}שמות תחנות - לחץ על השם כדי להתמקד בתחנה. Ctrl+לחיצה פותח חלונית תצוגה חדשה על מיקום התחנה
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}לחץ והחזק מקש קונטרל כדי לבחור יותר מפריט אחד
@@ -2957,8 +2950,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}דירוג
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}הצג את דירוג השירות
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK} :דירוג מקומי של שירותי הובלה
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :מחריד
@@ -3085,7 +3078,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}תעלו
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}תחנות:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}משבצות תחנה
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}נמלי תעופה
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/שנה ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/שנה
 
 # Industry directory
@@ -3701,7 +3693,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}לוח �
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}לוח זמנים זה יתחיל ב-{STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}תאריך התחלה
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}בחר תאריך להיות נקודת ההתחלה של לוח זמנים זה
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}שנה זמן
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}שנה את פרק הזמן לשהייה ביעד שנבחר
@@ -4229,6 +4220,8 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}לא נ�
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :משחק סימולציה המבוסס על תחבורה, הון ופאר
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

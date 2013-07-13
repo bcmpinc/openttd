@@ -284,6 +284,11 @@ enum WindowClass {
 	 */
 	WC_GOALS_LIST,
 
+	/**
+	 * Story book; %Window numbers:
+	 *   - CompanyID = #StoryBookWidgets
+	 */
+	WC_STORY_BOOK,
 
 	/**
 	 * Station list; %Window numbers:
@@ -664,6 +669,12 @@ enum WindowClass {
 	 */
 	WC_SPRITE_ALIGNER,
 
+	/**
+	 * Linkgraph legend; Window numbers:
+	 *   - 0 = #LinkGraphWidgets
+	 */
+	WC_LINKGRAPH_LEGEND,
+
 	WC_INVALID = 0xFFFF, ///< Invalid window.
 };
 
@@ -679,5 +690,11 @@ struct Window;
 
 /** Number to differentiate different windows of the same class */
 typedef int32 WindowNumber;
+
+/** State of handling an event. */
+enum EventState {
+	ES_HANDLED,     ///< The passed event is handled.
+	ES_NOT_HANDLED, ///< The passed event is not handled.
+};
 
 #endif /* WINDOW_TYPE_H */

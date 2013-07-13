@@ -12,16 +12,109 @@
 #ifndef STATION_BASE_H
 #define STATION_BASE_H
 
+#include "core/random_func.hpp"
 #include "base_station_base.h"
 #include "newgrf_airport.h"
 #include "cargopacket.h"
 #include "industry_type.h"
+#include "linkgraph/linkgraph_type.h"
 #include "newgrf_storage.h"
+#include <map>
 
 typedef Pool<BaseStation, StationID, 32, 64000> StationPool;
 extern StationPool _station_pool;
 
 static const byte INITIAL_STATION_RATING = 175;
+
+/**
+ * Flow statistics telling how much flow should be sent along a link. This is
+ * done by creating "flow shares" and using std::map's upper_bound() method to
+ * look them up with a random number. A flow share is the difference between a
+ * key in a map and the previous key. So one key in the map doesn't actually
+ * mean anything by itself.
+ */
+class FlowStat {
+public:
+	typedef std::map<uint32, StationID> SharesMap;
+
+	/**
+	 * Invalid constructor. This can't be called as a FlowStat must not be
+	 * empty. However, the constructor must be defined and reachable for
+	 * FlwoStat to be used in a std::map.
+	 */
+	inline FlowStat() {NOT_REACHED();}
+
+	/**
+	 * Create a FlowStat with an initial entry.
+	 * @param st Station the initial entry refers to.
+	 * @param flow Amount of flow for the initial entry.
+	 */
+	inline FlowStat(StationID st, uint flow)
+	{
+		assert(flow > 0);
+		this->shares[flow] = st;
+	}
+
+	/**
+	 * Add some flow to the end of the shares map. Only do that if you know
+	 * that the station isn't in the map yet. Anything else may lead to
+	 * inconsistencies.
+	 * @param st Remote station.
+	 * @param flow Amount of flow to be added.
+	 */
+	inline void AppendShare(StationID st, uint flow)
+	{
+		assert(flow > 0);
+		this->shares[(--this->shares.end())->first + flow] = st;
+	}
+
+	uint GetShare(StationID st) const;
+
+	void ChangeShare(StationID st, int flow);
+
+	/**
+	 * Get the actual shares as a const pointer so that they can be iterated
+	 * over.
+	 * @return Actual shares.
+	 */
+	inline const SharesMap *GetShares() const { return &this->shares; }
+
+	/**
+	 * Swap the shares maps, and thus the content of this FlowStat with the
+	 * other one.
+	 * @param other FlowStat to swap with.
+	 */
+	inline void SwapShares(FlowStat &other) { this->shares.swap(other.shares); }
+
+	/**
+	 * Get a station a package can be routed to. This done by drawing a
+	 * random number between 0 and sum_shares and then looking that up in
+	 * the map with lower_bound. So each share gets selected with a
+	 * probability dependent on its flow.
+	 * @return A station ID from the shares map.
+	 */
+	inline StationID GetVia() const
+	{
+		assert(!this->shares.empty());
+		return this->shares.upper_bound(RandomRange((--this->shares.end())->first - 1))->second;
+	}
+
+	StationID GetVia(StationID excluded, StationID excluded2 = INVALID_STATION) const;
+
+	void Invalidate();
+
+private:
+	SharesMap shares;  ///< Shares of flow to be sent via specified station (or consumed locally).
+};
+
+/** Flow descriptions by origin stations. */
+class FlowStatMap : public std::map<StationID, FlowStat> {
+public:
+	void AddFlow(StationID origin, StationID via, uint amount);
+	void PassOnFlow(StationID origin, StationID via, uint amount);
+	void DeleteFlows(StationID via);
+	void FinalizeLocalConsumption(StationID self);
+};
 
 /**
  * Stores station stats for a single cargo.
@@ -74,7 +167,10 @@ struct GoodsEntry {
 		time_since_pickup(255),
 		rating(INITIAL_STATION_RATING),
 		last_speed(0),
-		last_age(255)
+		last_age(255),
+		link_graph(INVALID_LINK_GRAPH),
+		node(INVALID_NODE),
+		max_waiting_cargo(0)
 	{}
 
 	byte acceptance_pickup; ///< Status of this cargo, see #GoodsEntryStatus.
@@ -108,12 +204,53 @@ struct GoodsEntry {
 	byte amount_fract;      ///< Fractional part of the amount in the cargo list
 	StationCargoList cargo; ///< The cargo packets of cargo waiting in this station
 
+	LinkGraphID link_graph; ///< Link graph this station belongs to.
+	NodeID node;            ///< ID of node in link graph referring to this goods entry.
+	FlowStatMap flows;      ///< Planned flows through this station.
+	uint max_waiting_cargo; ///< Max cargo from this station waiting at any station.
+
 	/**
 	 * Reports whether a vehicle has ever tried to load the cargo at this station.
 	 * This does not imply that there was cargo available for loading. Refer to GES_PICKUP for that.
 	 * @return true if vehicle tried to load.
 	 */
 	bool HasVehicleEverTriedLoading() const { return this->last_speed != 0; }
+
+	/**
+	 * Does this cargo have a rating at this station?
+	 * @return true if the cargo has a rating, i.e. pickup has been attempted.
+	 */
+	inline bool HasRating() const
+	{
+		return HasBit(this->acceptance_pickup, GES_PICKUP);
+	}
+
+	uint GetSumFlowVia(StationID via) const;
+
+	/**
+	 * Get the best next hop for a cargo packet from station source.
+	 * @param source Source of the packet.
+	 * @return The chosen next hop or INVALID_STATION if none was found.
+	 */
+	inline StationID GetVia(StationID source) const
+	{
+		FlowStatMap::const_iterator flow_it(this->flows.find(source));
+		return flow_it != this->flows.end() ? flow_it->second.GetVia() : INVALID_STATION;
+	}
+
+	/**
+	 * Get the best next hop for a cargo packet from station source, optionally
+	 * excluding one or two stations.
+	 * @param source Source of the packet.
+	 * @param excluded If this station would be chosen choose the second best one instead.
+	 * @param excluded2 Second station to be excluded, if != INVALID_STATION.
+	 * @return The chosen next hop or INVALID_STATION if none was found.
+	 */
+	inline StationID GetVia(StationID source, StationID excluded, StationID excluded2 = INVALID_STATION) const
+	{
+		FlowStatMap::const_iterator flow_it(this->flows.find(source));
+		return flow_it != this->flows.end() ? flow_it->second.GetVia(excluded, excluded2) : INVALID_STATION;
+	}
 };
 
 /** All airport-related information. Only valid if tile != INVALID_TILE. */
@@ -319,6 +456,8 @@ public:
 	/* virtual */ uint32 GetNewGRFVariable(const ResolverObject *object, byte variable, byte parameter, bool *available) const;
 
 	/* virtual */ void GetTileArea(TileArea *ta, StationType type) const;
+
+	void RunAverages();
 };
 
 #define FOR_ALL_STATIONS(var) FOR_ALL_BASE_STATIONS_OF_TYPE(Station, var)

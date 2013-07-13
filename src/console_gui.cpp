@@ -158,8 +158,8 @@ static const struct NWidgetPart _nested_console_window_widgets[] = {
 	NWidget(WWT_EMPTY, INVALID_COLOUR, WID_C_BACKGROUND), SetResize(1, 1),
 };
 
-static const WindowDesc _console_window_desc(
-	WDP_MANUAL, 0, 0,
+static WindowDesc _console_window_desc(
+	WDP_MANUAL, NULL, 0, 0,
 	WC_CONSOLE, WC_NONE,
 	0,
 	_nested_console_window_widgets, lengthof(_nested_console_window_widgets)
@@ -171,13 +171,13 @@ struct IConsoleWindow : Window
 	int line_height;   ///< Height of one line of text in the console.
 	int line_offset;
 
-	IConsoleWindow() : Window()
+	IConsoleWindow() : Window(&_console_window_desc)
 	{
 		_iconsole_mode = ICONSOLE_OPENED;
 		this->line_height = FONT_HEIGHT_NORMAL + ICON_LINE_SPACING;
 		this->line_offset = GetStringBoundingBox("] ").width + 5;
 
-		this->InitNested(&_console_window_desc, 0);
+		this->InitNested(0);
 		ResizeWindow(this, _screen.width, _screen.height / 3);
 	}
 
@@ -290,46 +290,13 @@ struct IConsoleWindow : Window
 				MarkWholeScreenDirty();
 				break;
 
-#ifdef WITH_COCOA
-			case (WKC_META | 'V'):
-#endif
-			case (WKC_CTRL | 'V'):
-				if (_iconsole_cmdline.InsertClipboard()) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
 			case (WKC_CTRL | 'L'):
 				IConsoleCmdExec("clear");
 				break;
 
-#ifdef WITH_COCOA
-			case (WKC_META | 'U'):
-#endif
-			case (WKC_CTRL | 'U'):
-				_iconsole_cmdline.DeleteAll();
-				this->SetDirty();
-				break;
-
-			case WKC_BACKSPACE: case WKC_DELETE:
-				if (_iconsole_cmdline.DeleteChar(keycode)) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
-			case WKC_LEFT: case WKC_RIGHT: case WKC_END: case WKC_HOME:
-				if (_iconsole_cmdline.MovePos(keycode)) {
-					IConsoleResetHistoryPos();
-					this->SetDirty();
-				}
-				break;
-
 			default:
-				if (IsValidChar(key, CS_ALPHANUMERAL)) {
+				if (_iconsole_cmdline.HandleKeyPress(key, keycode) != HKPR_NOT_HANDLED) {
 					IConsoleWindow::scroll = 0;
-					_iconsole_cmdline.InsertChar(key);
 					IConsoleResetHistoryPos();
 					this->SetDirty();
 				} else {

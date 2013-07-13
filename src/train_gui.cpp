@@ -215,12 +215,12 @@ static void TrainDetailsInfoTab(const Vehicle *v, int left, int right, int y)
 	if (RailVehInfo(v->engine_type)->railveh_type == RAILVEH_WAGON) {
 		SetDParam(0, v->engine_type);
 		SetDParam(1, v->value);
-		DrawString(left, right, y, STR_VEHICLE_DETAILS_TRAIN_WAGON_VALUE, TC_FROMSTRING, SA_LEFT | SA_STRIP);
+		DrawString(left, right, y, STR_VEHICLE_DETAILS_TRAIN_WAGON_VALUE);
 	} else {
 		SetDParam(0, v->engine_type);
 		SetDParam(1, v->build_year);
 		SetDParam(2, v->value);
-		DrawString(left, right, y, STR_VEHICLE_DETAILS_TRAIN_ENGINE_BUILT_AND_VALUE, TC_FROMSTRING, SA_LEFT | SA_STRIP);
+		DrawString(left, right, y, STR_VEHICLE_DETAILS_TRAIN_ENGINE_BUILT_AND_VALUE);
 	}
 }
 
@@ -276,7 +276,7 @@ static void GetCargoSummaryOfArticulatedVehicle(const Train *v, CargoSummary *su
 		}
 
 		item->capacity += v->cargo_cap;
-		item->amount += v->cargo.Count();
+		item->amount += v->cargo.StoredCount();
 		if (item->source == INVALID_STATION) item->source = v->cargo.Source();
 	} while ((v = v->Next()) != NULL && v->IsArticulatedPart());
 }
@@ -311,7 +311,7 @@ int GetTrainDetailsWndVScroll(VehicleID veh_id, TrainDetailsWindowTabs det_tab)
 		CargoArray act_cargo;
 		CargoArray max_cargo;
 		for (const Vehicle *v = Vehicle::Get(veh_id); v != NULL; v = v->Next()) {
-			act_cargo[v->cargo_type] += v->cargo.Count();
+			act_cargo[v->cargo_type] += v->cargo.StoredCount();
 			max_cargo[v->cargo_type] += v->cargo_cap;
 		}
 
@@ -424,7 +424,7 @@ void DrawTrainDetails(const Train *v, int left, int right, int y, int vscroll_po
 		Money feeder_share = 0;
 
 		for (const Vehicle *u = v; u != NULL; u = u->Next()) {
-			act_cargo[u->cargo_type] += u->cargo.Count();
+			act_cargo[u->cargo_type] += u->cargo.StoredCount();
 			max_cargo[u->cargo_type] += u->cargo_cap;
 			feeder_share             += u->cargo.FeederShare();
 		}

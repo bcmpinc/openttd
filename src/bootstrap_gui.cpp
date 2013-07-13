@@ -37,8 +37,8 @@ static const struct NWidgetPart _background_widgets[] = {
 /**
  * Window description for the background window to prevent smearing.
  */
-static const WindowDesc _background_desc(
-	WDP_MANUAL, 0, 0,
+static WindowDesc _background_desc(
+	WDP_MANUAL, NULL, 0, 0,
 	WC_BOOTSTRAP, WC_NONE,
 	0,
 	_background_widgets, lengthof(_background_widgets)
@@ -47,9 +47,9 @@ static const WindowDesc _background_desc(
 /** The background for the game. */
 class BootstrapBackground : public Window {
 public:
-	BootstrapBackground() : Window()
+	BootstrapBackground() : Window(&_background_desc)
 	{
-		this->InitNested(&_background_desc, 0);
+		this->InitNested(0);
 		CLRBITS(this->flags, WF_WHITE_BORDER);
 		ResizeWindow(this, _screen.width, _screen.height);
 	}
@@ -70,8 +70,8 @@ static const NWidgetPart _nested_boostrap_download_status_window_widgets[] = {
 };
 
 /** Window description for the download window */
-static const WindowDesc _bootstrap_download_status_window_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _bootstrap_download_status_window_desc(
+	WDP_CENTER, NULL, 0, 0,
 	WC_NETWORK_STATUS_WINDOW, WC_NONE,
 	WDF_MODAL,
 	_nested_boostrap_download_status_window_widgets, lengthof(_nested_boostrap_download_status_window_widgets)
@@ -115,8 +115,8 @@ static const NWidgetPart _bootstrap_query_widgets[] = {
 };
 
 /** The window description for the query. */
-static const WindowDesc _bootstrap_query_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _bootstrap_query_desc(
+	WDP_CENTER, NULL, 0, 0,
 	WC_CONFIRM_POPUP_QUERY, WC_NONE,
 	0,
 	_bootstrap_query_widgets, lengthof(_bootstrap_query_widgets)
@@ -128,9 +128,9 @@ class BootstrapAskForDownloadWindow : public Window, ContentCallback {
 
 public:
 	/** Start listening to the content client events. */
-	BootstrapAskForDownloadWindow() : Window()
+	BootstrapAskForDownloadWindow() : Window(&_bootstrap_query_desc)
 	{
-		this->InitNested(&_bootstrap_query_desc, WN_CONFIRM_POPUP_QUERY_BOOTSTRAP);
+		this->InitNested(WN_CONFIRM_POPUP_QUERY_BOOTSTRAP);
 		_network_content_client.AddCallback(this);
 	}
 

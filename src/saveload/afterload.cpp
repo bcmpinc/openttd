@@ -636,7 +636,12 @@ bool AfterLoadGame()
 	SetDate(_date, _date_fract);
 
 	/*
-	 * Force the old behaviour for compatibility reasons with old savegames.
+	 * Force the old behaviour for compatibility reasons with old savegames. As new
+	 * settings can only be loaded from new savegames loading old savegames with new
+	 * versions of OpenTTD will normally initialize settings newer than the savegame
+	 * version with "new game" defaults which the player can define to their liking.
+	 * For some settings we override that to keep the behaviour the same as when the
+	 * game was saved.
 	 *
 	 * Note that there is no non-stop in here. This is because the setting could have
 	 * either value in TTDPatch. To convert it properly the user has to make sure the
@@ -648,9 +653,27 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(21))   _settings_game.vehicle.train_acceleration_model = 0;
 	if (IsSavegameVersionBefore(90))   _settings_game.vehicle.plane_speed = 4;
 	if (IsSavegameVersionBefore(95))   _settings_game.vehicle.dynamic_engines = 0;
-	if (IsSavegameVersionBefore(133))  _settings_game.vehicle.roadveh_acceleration_model = 0;
-	if (IsSavegameVersionBefore(159))  _settings_game.vehicle.max_train_length = 50;
+	if (IsSavegameVersionBefore(96))   _settings_game.economy.station_noise_level = false;
+	if (IsSavegameVersionBefore(133)) {
+		_settings_game.vehicle.roadveh_acceleration_model = 0;
+		_settings_game.vehicle.train_slope_steepness = 3;
+	}
+	if (IsSavegameVersionBefore(134))  _settings_game.economy.feeder_payment_share = 75;
+	if (IsSavegameVersionBefore(138))  _settings_game.vehicle.plane_crashes = 2;
+	if (IsSavegameVersionBefore(139))  _settings_game.vehicle.roadveh_slope_steepness = 7;
+	if (IsSavegameVersionBefore(143))  _settings_game.economy.allow_town_level_crossings = true;
+	if (IsSavegameVersionBefore(159)) {
+		_settings_game.vehicle.max_train_length = 50;
+		_settings_game.construction.max_bridge_length = 64;
+		_settings_game.construction.max_tunnel_length = 64;
+	}
 	if (IsSavegameVersionBefore(166))  _settings_game.economy.infrastructure_maintenance = false;
+	if (IsSavegameVersionBefore(183)) {
+		_settings_game.linkgraph.distribution_pax = DT_MANUAL;
+		_settings_game.linkgraph.distribution_mail = DT_MANUAL;
+		_settings_game.linkgraph.distribution_armoured = DT_MANUAL;
+		_settings_game.linkgraph.distribution_default = DT_MANUAL;
+	}
 
 	/* Load the sprites */
 	GfxLoadSprites();
@@ -1539,7 +1562,7 @@ bool AfterLoadGame()
 		FOR_ALL_STATIONS(st) {
 			for (CargoID c = 0; c < NUM_CARGO; c++) {
 				st->goods[c].last_speed = 0;
-				if (st->goods[c].cargo.Count() != 0) SetBit(st->goods[c].acceptance_pickup, GoodsEntry::GES_PICKUP);
+				if (st->goods[c].cargo.AvailableCount() != 0) SetBit(st->goods[c].acceptance_pickup, GoodsEntry::GES_PICKUP);
 			}
 		}
 	}
@@ -2761,6 +2784,36 @@ bool AfterLoadGame()
 		_settings_game.script.settings_profile = IsInsideMM(_old_diff_level, SP_BEGIN, SP_END) ? _old_diff_level : (uint)SP_MEDIUM;
 	}
 
+	if (IsSavegameVersionBefore(182)) {
+		Aircraft *v;
+		/* Aircraft acceleration variable was bonkers */
+		FOR_ALL_AIRCRAFT(v) {
+			if (v->subtype <= AIR_AIRCRAFT) {
+				const AircraftVehicleInfo *avi = AircraftVehInfo(v->engine_type);
+				v->acceleration = avi->acceleration;
+			}
+		}
+
+		/* Blocked tiles could be reserved due to a bug, which causes
+		 * other places to assert upon e.g. station reconstruction. */
+		for (TileIndex t = 0; t < map_size; t++) {
+			if (HasStationTileRail(t) && IsStationTileBlocked(t)) {
+				SetRailStationReservation(t, false);
+			}
+		}
+	}
+
+	if (IsSavegameVersionBefore(184)) {
+		/* The global units configuration is split up in multiple configurations. */
+		extern uint8 _old_units;
+		_settings_game.locale.units_velocity = Clamp(_old_units, 0, 2);
+		_settings_game.locale.units_power    = Clamp(_old_units, 0, 2);
+		_settings_game.locale.units_weight   = Clamp(_old_units, 1, 2);
+		_settings_game.locale.units_volume   = Clamp(_old_units, 1, 2);
+		_settings_game.locale.units_force    = 2;
+		_settings_game.locale.units_height   = Clamp(_old_units, 0, 2);
+	}
+
 	/* Road stops is 'only' updating some caches */
 	AfterLoadRoadStops();
 	AfterLoadLabelMaps();
@@ -2771,6 +2824,8 @@ bool AfterLoadGame()
 	InitializeWindowsAndCaches();
 	/* Restore the signals */
 	ResetSignalHandlers();
+
+	AfterLoadLinkGraphs();
 	return true;
 }
 

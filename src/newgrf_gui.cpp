@@ -159,7 +159,7 @@ struct NewGRFParametersWindow : public Window {
 	bool action14present;  ///< True if action14 information is present.
 	bool editable;         ///< Allow editing parameters.
 
-	NewGRFParametersWindow(const WindowDesc *desc, GRFConfig *c, bool editable) : Window(),
+	NewGRFParametersWindow(WindowDesc *desc, GRFConfig *c, bool editable) : Window(desc),
 		grf_config(c),
 		clicked_button(UINT_MAX),
 		clicked_dropdown(false),
@@ -170,11 +170,11 @@ struct NewGRFParametersWindow : public Window {
 	{
 		this->action14present = (c->num_valid_params != lengthof(c->param) || c->param_info.Length() != 0);
 
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_NP_SCROLLBAR);
 		this->GetWidget<NWidgetStacked>(WID_NP_SHOW_NUMPAR)->SetDisplayedPlane(this->action14present ? SZSP_HORIZONTAL : 0);
 		this->GetWidget<NWidgetStacked>(WID_NP_SHOW_DESCRIPTION)->SetDisplayedPlane(this->action14present ? 0 : SZSP_HORIZONTAL);
-		this->FinishInitNested(desc);  // Initializes 'this->line_height' as side effect.
+		this->FinishInitNested();  // Initializes 'this->line_height' as side effect.
 
 		this->SetWidgetDisabledState(WID_NP_RESET, !this->editable);
 
@@ -215,7 +215,7 @@ struct NewGRFParametersWindow : public Window {
 
 				resize->width = 1;
 				resize->height = this->line_height;
-				size->height = GB(this->GetWidget<NWidgetCore>(widget)->widget_data, MAT_ROW_START, MAT_ROW_BITS) * this->line_height;
+				size->height = 5 * this->line_height;
 				break;
 
 			case WID_NP_DESCRIPTION:
@@ -460,9 +460,7 @@ struct NewGRFParametersWindow : public Window {
 
 	virtual void OnResize()
 	{
-		NWidgetCore *nwi = this->GetWidget<NWidgetCore>(WID_NP_BACKGROUND);
-		this->vscroll->SetCapacity(nwi->current_y / this->line_height);
-		nwi->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
+		this->vscroll->SetCapacityFromWidget(this, WID_NP_BACKGROUND);
 	}
 
 	/**
@@ -500,6 +498,7 @@ static const NWidgetPart _nested_newgrf_parameter_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_MAUVE),
 		NWidget(WWT_CAPTION, COLOUR_MAUVE), SetDataTip(STR_NEWGRF_PARAMETERS_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_MAUVE),
 	EndContainer(),
 	NWidget(NWID_SELECTION, INVALID_COLOUR, WID_NP_SHOW_NUMPAR),
 		NWidget(WWT_PANEL, COLOUR_MAUVE), SetResize(1, 0), SetFill(1, 0), SetPIP(4, 0, 4),
@@ -511,7 +510,7 @@ static const NWidgetPart _nested_newgrf_parameter_widgets[] = {
 		EndContainer(),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL),
-		NWidget(WWT_MATRIX, COLOUR_MAUVE, WID_NP_BACKGROUND), SetMinimalSize(188, 182), SetResize(1, 1), SetFill(1, 0), SetDataTip(0x501, STR_NULL), SetScrollbar(WID_NP_SCROLLBAR),
+		NWidget(WWT_MATRIX, COLOUR_MAUVE, WID_NP_BACKGROUND), SetMinimalSize(188, 182), SetResize(1, 1), SetFill(1, 0), SetMatrixDataTip(1, 0, STR_NULL), SetScrollbar(WID_NP_SCROLLBAR),
 		NWidget(NWID_VSCROLLBAR, COLOUR_MAUVE, WID_NP_SCROLLBAR),
 	EndContainer(),
 	NWidget(NWID_SELECTION, INVALID_COLOUR, WID_NP_SHOW_DESCRIPTION),
@@ -528,8 +527,8 @@ static const NWidgetPart _nested_newgrf_parameter_widgets[] = {
 };
 
 /** Window definition for the change grf parameters window */
-static const WindowDesc _newgrf_parameters_desc(
-	WDP_CENTER, 500, 208,
+static WindowDesc _newgrf_parameters_desc(
+	WDP_CENTER, "settings_newgrf_config", 500, 208,
 	WC_GRF_PARAMETERS, WC_NONE,
 	0,
 	_nested_newgrf_parameter_widgets, lengthof(_nested_newgrf_parameter_widgets)
@@ -619,7 +618,7 @@ struct NewGRFWindow : public Window, NewGRFScanCallback {
 	Scrollbar *vscroll;
 	Scrollbar *vscroll2;
 
-	NewGRFWindow(const WindowDesc *desc, bool editable, bool show_params, bool execute, GRFConfig **orig_list) : filter_editbox(EDITBOX_MAX_SIZE)
+	NewGRFWindow(WindowDesc *desc, bool editable, bool show_params, bool execute, GRFConfig **orig_list) : Window(desc), filter_editbox(EDITBOX_MAX_SIZE)
 	{
 		this->avail_sel   = NULL;
 		this->avail_pos   = -1;
@@ -635,17 +634,21 @@ struct NewGRFWindow : public Window, NewGRFScanCallback {
 		CopyGRFConfigList(&this->actives, *orig_list, false);
 		GetGRFPresetList(&_grf_preset_list);
 
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_NS_SCROLLBAR);
 		this->vscroll2 = this->GetScrollbar(WID_NS_SCROLL2BAR);
 
 		this->GetWidget<NWidgetStacked>(WID_NS_SHOW_REMOVE)->SetDisplayedPlane(this->editable ? 0 : 1);
 		this->GetWidget<NWidgetStacked>(WID_NS_SHOW_APPLY)->SetDisplayedPlane(this->editable ? 0 : this->show_params ? 1 : SZSP_HORIZONTAL);
-		this->FinishInitNested(desc, WN_GAME_OPTIONS_NEWGRF_STATE);
+		this->FinishInitNested(WN_GAME_OPTIONS_NEWGRF_STATE);
 
 		this->querystrings[WID_NS_FILTER] = &this->filter_editbox;
 		this->filter_editbox.cancel_button = QueryString::ACTION_CLEAR;
-		this->SetFocusedWidget(WID_NS_FILTER);
+		if (editable) {
+			this->SetFocusedWidget(WID_NS_FILTER);
+		} else {
+			this->DisableWidget(WID_NS_FILTER);
+		}
 
 		this->avails.SetListing(this->last_sorting);
 		this->avails.SetFiltering(this->last_filtering);
@@ -1165,10 +1168,8 @@ struct NewGRFWindow : public Window, NewGRFScanCallback {
 				int i = 0;
 				for (const GRFConfig *c = this->actives; c != NULL; c = c->next, i++) {}
 
-				this->vscroll->SetCapacityFromWidget(this, WID_NS_FILE_LIST);
 				this->vscroll->SetCount(i + 1); // Reserve empty space for drag and drop handling.
 
-				this->vscroll2->SetCapacityFromWidget(this, WID_NS_AVAIL_LIST);
 				if (this->avail_pos >= 0) this->vscroll2->ScrollTowards(this->avail_pos);
 				break;
 			}
@@ -1865,6 +1866,7 @@ static const NWidgetPart _nested_newgrf_widgets[] = {
 	NWidget(NWID_HORIZONTAL),
 		NWidget(WWT_CLOSEBOX, COLOUR_MAUVE),
 		NWidget(WWT_CAPTION, COLOUR_MAUVE), SetDataTip(STR_NEWGRF_SETTINGS_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_MAUVE),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_MAUVE),
 		NWidgetFunction(NewGRFDisplay), SetPadding(WD_RESIZEBOX_WIDTH, WD_RESIZEBOX_WIDTH, 2, WD_RESIZEBOX_WIDTH),
@@ -1877,8 +1879,8 @@ static const NWidgetPart _nested_newgrf_widgets[] = {
 };
 
 /* Window definition of the manage newgrfs window */
-static const WindowDesc _newgrf_desc(
-	WDP_CENTER, 300, 263,
+static WindowDesc _newgrf_desc(
+	WDP_CENTER, "settings_newgrf", 300, 263,
 	WC_GAME_OPTIONS, WC_NONE,
 	0,
 	_nested_newgrf_widgets, lengthof(_nested_newgrf_widgets)
@@ -1948,8 +1950,8 @@ static const NWidgetPart _nested_scan_progress_widgets[] = {
 };
 
 /** Description of the widgets and other settings of the window. */
-static const WindowDesc _scan_progress_desc(
-	WDP_CENTER, 0, 0,
+static WindowDesc _scan_progress_desc(
+	WDP_CENTER, NULL, 0, 0,
 	WC_MODAL_PROGRESS, WC_NONE,
 	0,
 	_nested_scan_progress_widgets, lengthof(_nested_scan_progress_widgets)
@@ -1961,9 +1963,9 @@ struct ScanProgressWindow : public Window {
 	int scanned;     ///< The number of NewGRFs that we have seen.
 
 	/** Create the window. */
-	ScanProgressWindow() : Window(), last_name(NULL), scanned(0)
+	ScanProgressWindow() : Window(&_scan_progress_desc), last_name(NULL), scanned(0)
 	{
-		this->InitNested(&_scan_progress_desc, 1);
+		this->InitNested(1);
 	}
 
 	/** Free the last name buffer. */

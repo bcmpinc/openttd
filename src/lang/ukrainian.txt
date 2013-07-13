@@ -381,7 +381,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Площ
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}за населенням
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}за назвою
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}за датою
 # These are used in dropdowns
@@ -402,7 +401,6 @@ STR_SORT_BY_LENGTH                                              :за довжи
 STR_SORT_BY_LIFE_TIME                                           :за залишком строку служби
 STR_SORT_BY_TIMETABLE_DELAY                                     :за відхиленням від розкладу
 STR_SORT_BY_FACILITY                                            :за типом станції
-STR_SORT_BY_WAITING                                             :за кількістю вантажу
 STR_SORT_BY_RATING_MAX                                          :за найвищим рейтингом
 STR_SORT_BY_RATING_MIN                                          :за найнижчим рейтингом
 STR_SORT_BY_ENGINE_ID                                           :за ID (класичний порядок)
@@ -414,6 +412,8 @@ STR_SORT_BY_RUNNING_COST                                        :за варті
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :за потужністю/вартістю експ.
 STR_SORT_BY_CARGO_CAPACITY                                      :за місткістю
 STR_SORT_BY_RANGE                                               :за дальністю
+STR_SORT_BY_POPULATION                                          :за населенням
+STR_SORT_BY_RATING                                              :Рейтинг
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Пауза
@@ -426,6 +426,7 @@ STR_TOOLBAR_TOOLTIP_DISPLAY_SUBSIDIES                           :{BLACK}Пока
 STR_TOOLBAR_TOOLTIP_DISPLAY_LIST_OF_COMPANY_STATIONS            :{BLACK}Показати список станцій компанії
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_FINANCES                    :{BLACK}Фінансова інформація
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_GENERAL                     :{BLACK}Головна інформація
+STR_TOOLBAR_TOOLTIP_DISPLAY_GOALS_LIST                          :{BLACK}Показати список завдань
 STR_TOOLBAR_TOOLTIP_DISPLAY_GRAPHS                              :{BLACK}Показати графіки
 STR_TOOLBAR_TOOLTIP_DISPLAY_COMPANY_LEAGUE                      :{BLACK}Показати таблицю компаній
 STR_TOOLBAR_TOOLTIP_FUND_CONSTRUCTION_OF_NEW                    :{BLACK}Фінансувати будівництво нової промисловості
@@ -496,19 +497,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Вихід
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Карта світу
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Додаткове вікно
 STR_MAP_MENU_SIGN_LIST                                          :Список позначок
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Список міст
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Заснувати місто
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Субсидії
-STR_SUBSIDIES_MENU_GOAL                                         :Поточні цілі
 ############ range ends here
 
 ############ range for graph menu starts
@@ -775,7 +775,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Капітал�
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Магнат
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Магнат року
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Магнат сторіччя
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} досягла статусу '{STRING}'!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}Гравець {PRESIDENT_NAME} з {COMPANY} досяг статусу '{STRING}'
@@ -1003,13 +1003,8 @@ STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Південн�
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Власна...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Система одиниць виміру
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Виберіть систему одиниць виміру
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Імперська
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Метрична
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :Міжнародна
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Сторона руху транспорту
@@ -1675,6 +1670,7 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Середнь�
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Прибрати безглузді елементи доріг під час їх будівництва: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Дозволяє видаляти тупіки на дорогах міста під час рекострукції доріг.
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Інтерфейс
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Будівництво
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Транспорт
@@ -1727,6 +1723,7 @@ STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... фо
 STR_CONFIG_ERROR_INVALID_BASE_GRAPHICS_NOT_FOUND                :{WHITE}... базовий набір графіки '{STRING}' не знайдено
 STR_CONFIG_ERROR_INVALID_BASE_SOUNDS_NOT_FOUND                  :{WHITE}... базовий набір звуків '{STRING}' не знайдено
 STR_CONFIG_ERROR_INVALID_BASE_MUSIC_NOT_FOUND                   :{WHITE}... базовий набір музики '{STRING}' не знайдено
+STR_CONFIG_ERROR_OUT_OF_MEMORY                                  :{WHITE}Не вистачає пам'яті
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -1903,10 +1900,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Змін
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Мережева гра
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}З'єднання:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Виберіть гру через інтернет або через локальну мережу(ЛОМ)
-STR_NETWORK_SERVER_LIST_LAN                                     :Локальна
-STR_NETWORK_SERVER_LIST_INTERNET                                :Інтернет
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Ім'я гравця:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Ім'я, за яким тебе розпізнаватимуть інші гравці
 
@@ -1965,8 +1958,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Назв
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Встановити пароль
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Захистіть вашу гру паролем, якщо не бажаєте загального доступу
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :Локальна/Інтернет
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (advertise)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} клієнт{P "" а ів}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Макс. клієнтів:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Виберіть максимальну кількість клієнтів. Не всі слоти мають бути зайняті
@@ -2273,6 +2264,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Пере
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Переключити прозорість для ЛЕП. Утримуйте Ctrl, щоб заблокувати
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Змінити прозорість індикаторів завантаження. Утримуйте Ctrl, щоб заблокувати
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Зробити об'єкти невидимими, а не прозорими
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Підсвічення зони покриття
@@ -3000,7 +2995,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Куп�
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Підкупити місцеву владу для збільшення вашого рейтингу, при викритті загрожує суворим покаранням.{}Вартість: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Цілі
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Глобальні цілі:
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- нема -
@@ -3042,6 +3036,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Приз
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}Перевезення {STRING.r} з {STRING} до {STRING}{YELLOW} ({COMPANY}{YELLOW}, по {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Натисніть на субсидії, щоб показати підприємство/місто у центрі екрану. Утримання Ctrl відкриває нове вікно з видом на підприємство/місто
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Назви станцій - натисніть на назву, щоб показати станцію в центрі екрану. Утримання Ctrl відкриває нове вікно з видом на станцію
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Утримуйте Ctrl для вибору декількох пунктів
@@ -3068,8 +3064,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW}{COMPAN
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Рейтинг
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Показати рейтинг станції
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Місцевий рейтинг транспортної компанії:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :жахливо
@@ -3196,7 +3192,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Кана
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Станції:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Ділянки зі станціями
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Аеропорти
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/рік ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/рік
 
 # Industry directory
@@ -3812,7 +3807,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Цей �
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Цей розклад почнеться о {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Дата початку
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Оберіть дату для початку цього розкладу
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Змінити час
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Змінити час, впродовж якого має виконуватись наказ
@@ -4340,6 +4334,8 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Не м�
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Гра-симулятор, заснована на Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

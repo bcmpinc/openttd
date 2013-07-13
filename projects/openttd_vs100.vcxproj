@@ -131,7 +131,7 @@
       <Culture>0x0809</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;icule.lib;iculx.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -176,7 +176,7 @@
       <Culture>0x0809</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;icule.lib;iculx.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -233,7 +233,7 @@
       <Culture>0x0809</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;icule.lib;iculx.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -280,7 +280,7 @@
       <Culture>0x0809</Culture>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;ws2_32.lib;libpng.lib;zlibstat.lib;lzo2.lib;liblzma.lib;libfreetype2.lib;icuuc.lib;icuin.lib;icudt.lib;icule.lib;iculx.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <IgnoreSpecificDefaultLibraries>LIBCMT.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -318,11 +318,13 @@
     <ClCompile Include="..\src\fileio.cpp" />
     <ClCompile Include="..\src\fios.cpp" />
     <ClCompile Include="..\src\fontcache.cpp" />
+    <ClCompile Include="..\src\fontdetection.cpp" />
     <ClCompile Include="..\src\base_consist.cpp" />
     <ClCompile Include="..\src\gamelog.cpp" />
     <ClCompile Include="..\src\genworld.cpp" />
     <ClCompile Include="..\src\gfx.cpp" />
     <ClCompile Include="..\src\gfxinit.cpp" />
+    <ClCompile Include="..\src\gfx_layout.cpp" />
     <ClCompile Include="..\src\goal.cpp" />
     <ClCompile Include="..\src\ground_vehicle.cpp" />
     <ClCompile Include="..\src\heightmap.cpp" />
@@ -331,6 +333,12 @@
     <ClCompile Include="..\src\ini.cpp" />
     <ClCompile Include="..\src\ini_load.cpp" />
     <ClCompile Include="..\src\landscape.cpp" />
+    <ClCompile Include="..\src\linkgraph\demands.cpp" />
+    <ClCompile Include="..\src\linkgraph\flowmapper.cpp" />
+    <ClCompile Include="..\src\linkgraph\linkgraph.cpp" />
+    <ClCompile Include="..\src\linkgraph\linkgraphjob.cpp" />
+    <ClCompile Include="..\src\linkgraph\linkgraphschedule.cpp" />
+    <ClCompile Include="..\src\linkgraph\mcf.cpp" />
     <ClCompile Include="..\src\map.cpp" />
     <ClCompile Include="..\src\misc.cpp" />
     <ClCompile Include="..\src\mixer.cpp" />
@@ -365,6 +373,7 @@
     <ClCompile Include="..\src\string.cpp" />
     <ClCompile Include="..\src\stringfilter.cpp" />
     <ClCompile Include="..\src\strings.cpp" />
+    <ClCompile Include="..\src\story.cpp" />
     <ClCompile Include="..\src\subsidy.cpp" />
     <ClCompile Include="..\src\textbuf.cpp" />
     <ClCompile Include="..\src\texteff.cpp" />
@@ -442,11 +451,13 @@
     <ClInclude Include="..\src\fileio_type.h" />
     <ClInclude Include="..\src\fios.h" />
     <ClInclude Include="..\src\fontcache.h" />
+    <ClInclude Include="..\src\fontdetection.h" />
     <ClInclude Include="..\src\base_consist.h" />
     <ClInclude Include="..\src\gamelog.h" />
     <ClInclude Include="..\src\gamelog_internal.h" />
     <ClInclude Include="..\src\genworld.h" />
     <ClInclude Include="..\src\gfx_func.h" />
+    <ClInclude Include="..\src\gfx_layout.h" />
     <ClInclude Include="..\src\gfx_type.h" />
     <ClInclude Include="..\src\gfxinit.h" />
     <ClInclude Include="..\src\goal_base.h" />
@@ -469,6 +480,17 @@
     <ClInclude Include="..\src\landscape.h" />
     <ClInclude Include="..\src\landscape_type.h" />
     <ClInclude Include="..\src\language.h" />
+    <ClInclude Include="..\src\linkgraph\demands.h" />
+    <ClInclude Include="..\src\linkgraph\flowmapper.h" />
+    <ClInclude Include="..\src\linkgraph\init.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraph.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraph_base.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraph_gui.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraph_type.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraphjob.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraphjob_base.h" />
+    <ClInclude Include="..\src\linkgraph\linkgraphschedule.h" />
+    <ClInclude Include="..\src\linkgraph\mcf.h" />
     <ClInclude Include="..\src\livery.h" />
     <ClInclude Include="..\src\map_func.h" />
     <ClInclude Include="..\src\map_type.h" />
@@ -570,6 +592,8 @@
     <ClInclude Include="..\src\station_type.h" />
     <ClInclude Include="..\src\statusbar_gui.h" />
     <ClInclude Include="..\src\stdafx.h" />
+    <ClInclude Include="..\src\story_base.h" />
+    <ClInclude Include="..\src\story_type.h" />
     <ClInclude Include="..\src\strgen\strgen.h" />
     <ClInclude Include="..\src\string_func.h" />
     <ClInclude Include="..\src\string_type.h" />
@@ -642,6 +666,7 @@
     <ClCompile Include="..\src\core\math_func.cpp" />
     <ClInclude Include="..\src\core\math_func.hpp" />
     <ClInclude Include="..\src\core\mem_func.hpp" />
+    <ClInclude Include="..\src\core\multimap.hpp" />
     <ClInclude Include="..\src\core\overflowsafe_type.hpp" />
     <ClCompile Include="..\src\core\pool_func.cpp" />
     <ClInclude Include="..\src\core\pool_func.hpp" />
@@ -649,6 +674,7 @@
     <ClCompile Include="..\src\core\random_func.cpp" />
     <ClInclude Include="..\src\core\random_func.hpp" />
     <ClInclude Include="..\src\core\smallmap_type.hpp" />
+    <ClInclude Include="..\src\core\smallmatrix_type.hpp" />
     <ClInclude Include="..\src\core\smallvec_type.hpp" />
     <ClInclude Include="..\src\core\sort_func.hpp" />
     <ClInclude Include="..\src\core\string_compare_type.hpp" />
@@ -674,6 +700,7 @@
     <ClCompile Include="..\src\highscore_gui.cpp" />
     <ClCompile Include="..\src\industry_gui.cpp" />
     <ClCompile Include="..\src\intro_gui.cpp" />
+    <ClCompile Include="..\src\linkgraph\linkgraph_gui.cpp" />
     <ClCompile Include="..\src\main_gui.cpp" />
     <ClCompile Include="..\src\misc_gui.cpp" />
     <ClCompile Include="..\src\music_gui.cpp" />
@@ -695,6 +722,7 @@
     <ClCompile Include="..\src\smallmap_gui.cpp" />
     <ClCompile Include="..\src\station_gui.cpp" />
     <ClCompile Include="..\src\statusbar_gui.cpp" />
+    <ClCompile Include="..\src\story_gui.cpp" />
     <ClCompile Include="..\src\subsidy_gui.cpp" />
     <ClCompile Include="..\src\terraform_gui.cpp" />
     <ClCompile Include="..\src\textfile_gui.cpp" />
@@ -733,6 +761,7 @@
     <ClInclude Include="..\src\widgets\highscore_widget.h" />
     <ClInclude Include="..\src\widgets\industry_widget.h" />
     <ClInclude Include="..\src\widgets\intro_widget.h" />
+    <ClInclude Include="..\src\widgets\link_graph_legend_widget.h" />
     <ClInclude Include="..\src\widgets\main_widget.h" />
     <ClInclude Include="..\src\widgets\misc_widget.h" />
     <ClInclude Include="..\src\widgets\music_widget.h" />
@@ -752,6 +781,7 @@
     <ClInclude Include="..\src\widgets\smallmap_widget.h" />
     <ClInclude Include="..\src\widgets\station_widget.h" />
     <ClInclude Include="..\src\widgets\statusbar_widget.h" />
+    <ClInclude Include="..\src\widgets\story_widget.h" />
     <ClInclude Include="..\src\widgets\subsidy_widget.h" />
     <ClInclude Include="..\src\widgets\terraform_widget.h" />
     <ClInclude Include="..\src\widgets\timetable_widget.h" />
@@ -807,6 +837,7 @@
     <ClCompile Include="..\src\saveload\group_sl.cpp" />
     <ClCompile Include="..\src\saveload\industry_sl.cpp" />
     <ClCompile Include="..\src\saveload\labelmaps_sl.cpp" />
+    <ClCompile Include="..\src\saveload\linkgraph_sl.cpp" />
     <ClCompile Include="..\src\saveload\map_sl.cpp" />
     <ClCompile Include="..\src\saveload\misc_sl.cpp" />
     <ClCompile Include="..\src\saveload\newgrf_sl.cpp" />
@@ -824,6 +855,7 @@
     <ClCompile Include="..\src\saveload\station_sl.cpp" />
     <ClCompile Include="..\src\saveload\storage_sl.cpp" />
     <ClCompile Include="..\src\saveload\strings_sl.cpp" />
+    <ClCompile Include="..\src\saveload\story_sl.cpp" />
     <ClCompile Include="..\src\saveload\subsidy_sl.cpp" />
     <ClCompile Include="..\src\saveload\town_sl.cpp" />
     <ClCompile Include="..\src\saveload\vehicle_sl.cpp" />
@@ -996,6 +1028,7 @@
     <ClInclude Include="..\src\script\api\script_signlist.hpp" />
     <ClInclude Include="..\src\script\api\script_station.hpp" />
     <ClInclude Include="..\src\script\api\script_stationlist.hpp" />
+    <ClInclude Include="..\src\script\api\script_story_page.hpp" />
     <ClInclude Include="..\src\script\api\script_subsidy.hpp" />
     <ClInclude Include="..\src\script\api\script_subsidylist.hpp" />
     <ClInclude Include="..\src\script\api\script_testmode.hpp" />
@@ -1057,6 +1090,7 @@
     <ClCompile Include="..\src\script\api\script_signlist.cpp" />
     <ClCompile Include="..\src\script\api\script_station.cpp" />
     <ClCompile Include="..\src\script\api\script_stationlist.cpp" />
+    <ClCompile Include="..\src\script\api\script_story_page.cpp" />
     <ClCompile Include="..\src\script\api\script_subsidy.cpp" />
     <ClCompile Include="..\src\script\api\script_subsidylist.cpp" />
     <ClCompile Include="..\src\script\api\script_testmode.cpp" />

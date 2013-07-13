@@ -256,7 +256,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Areal: {
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Indbyggertal
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Navn
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Dato
 # These are used in dropdowns
@@ -277,7 +276,6 @@ STR_SORT_BY_LENGTH                                              :Længde
 STR_SORT_BY_LIFE_TIME                                           :Resterende levetid
 STR_SORT_BY_TIMETABLE_DELAY                                     :Køreplans forsinkelse
 STR_SORT_BY_FACILITY                                            :Stationstype
-STR_SORT_BY_WAITING                                             :Værdi af ventende fragt
 STR_SORT_BY_RATING_MAX                                          :Højeste værdi af last
 STR_SORT_BY_RATING_MIN                                          :Laveste værdi af last
 STR_SORT_BY_ENGINE_ID                                           :Lokomotiv ID (klassisk)
@@ -289,6 +287,8 @@ STR_SORT_BY_RUNNING_COST                                        :Driftsomkostnin
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Drivmiddel/omkostninger
 STR_SORT_BY_CARGO_CAPACITY                                      :Lasteevne
 STR_SORT_BY_RANGE                                               :Interval
+STR_SORT_BY_POPULATION                                          :Indbyggertal
+STR_SORT_BY_RATING                                              :Værdi
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Sæt spillet på pause
@@ -371,19 +371,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Afslut
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Kort over verden
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Nyt lokalitetsvindue
 STR_MAP_MENU_SIGN_LIST                                          :Liste over skilte
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Byoversigt
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Stift by
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Tilskudsordninger
-STR_SUBSIDIES_MENU_GOAL                                         :Nuværende mål
 ############ range ends here
 
 ############ range for graph menu starts
@@ -650,7 +649,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalist
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Magnat
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Mogul
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Århundredes Matador
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} får '{STRING}' status!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} fra {COMPANY} får '{STRING}' status!
@@ -757,7 +756,7 @@ STR_NEWS_COMPANY_IN_TROUBLE_TITLE                               :{BIG_FONT}{BLAC
 STR_NEWS_COMPANY_IN_TROUBLE_DESCRIPTION                         :{BIG_FONT}{BLACK}{STRING} vil blive erklæret konkurs eller solgt, hvis ikke ydelsen stiger snart!
 STR_NEWS_COMPANY_MERGER_TITLE                                   :{BIG_FONT}{BLACK}Fussion mellem transportselskaber!
 STR_NEWS_COMPANY_MERGER_DESCRIPTION                             :{BIG_FONT}{BLACK}{STRING} er blevet solgt til {STRING} for {CURRENCY_LONG}!
-STR_NEWS_COMPANY_BANKRUPT_TITLE                                 :{BIG_FONT}{BLACK}Bankerupt!
+STR_NEWS_COMPANY_BANKRUPT_TITLE                                 :{BIG_FONT}{BLACK}Bankerot!
 STR_NEWS_COMPANY_BANKRUPT_DESCRIPTION                           :{BIG_FONT}{BLACK}{STRING} er blevet lukket af kreditorerne og alle ejendomme er solgt!
 STR_NEWS_COMPANY_LAUNCH_TITLE                                   :{BIG_FONT}{BLACK}Nyt transportselskab er startet!
 STR_NEWS_COMPANY_LAUNCH_DESCRIPTION                             :{BIG_FONT}{BLACK}{STRING} starter konstruktion i nærheden af {TOWN}!
@@ -876,15 +875,12 @@ STR_GAME_OPTIONS_CURRENCY_LTL                                   :Litauiske Litas
 STR_GAME_OPTIONS_CURRENCY_KRW                                   :Sydkoreansk Won (KRW)
 STR_GAME_OPTIONS_CURRENCY_ZAR                                   :Sydafrikansk Rand (ZAR)
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Brugerdefineret...
+STR_GAME_OPTIONS_CURRENCY_GEL                                   :Georgiske Lari (GEL)
+STR_GAME_OPTIONS_CURRENCY_IRR                                   :Iranske Rialer (IRR)
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Måleenheder
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Vælg måleenheder
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Britisk standard
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metersystem
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :SI
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Vejkøretøjer
@@ -1101,9 +1097,9 @@ STR_CONFIG_SETTING_SUBSIDY_MULTIPLIER_HELPTEXT                  :Indstil, hvor m
 STR_CONFIG_SETTING_CONSTRUCTION_COSTS                           :Konstruktionspriser: {STRING}
 STR_CONFIG_SETTING_CONSTRUCTION_COSTS_HELPTEXT                  :Indstil prisniveau for køb og konstruktion
 STR_CONFIG_SETTING_RECESSIONS                                   :Kriser: {STRING}
-STR_CONFIG_SETTING_RECESSIONS_HELPTEXT                          :Kriser kan forekomme hvis denne instilling er slået til. Under en krise falder produktionsniveauet markant (produktionsniveauet returnerer til tidligere produktionsniveau når krisen er ovre)
+STR_CONFIG_SETTING_RECESSIONS_HELPTEXT                          :Lavkonjunkturer kan forekomme hvis denne indstilling er slået til. Ved lavkonjunktur falder produktionen markant (produktionen returnerer til tidligere niveau når lavkonjunkturen er ovre)
 STR_CONFIG_SETTING_TRAIN_REVERSING                              :Forbyd toge at køre baglængs i stationer: {STRING}
-STR_CONFIG_SETTING_TRAIN_REVERSING_HELPTEXT                     :Hvis aktiverede tog ikke vil kører baglæns i ikke-terminale stationer, hvis der er en kortere vej til deres næste destination, når der bakkes
+STR_CONFIG_SETTING_TRAIN_REVERSING_HELPTEXT                     :Hvis aktiveret, vil tog ikke vende på ikke-endestationer, også selvom der er en kortere rute til deres næste destination ved at vende
 STR_CONFIG_SETTING_DISASTERS                                    :Katastrofer: {STRING}
 STR_CONFIG_SETTING_DISASTERS_HELPTEXT                           :Slå katastrofer, som lejlighedsvis kan blokere eller ødelægge køretøjer eller infrastruktur, til og fra
 STR_CONFIG_SETTING_CITY_APPROVAL                                :Byrådets holdning til omstrukturering: {STRING}
@@ -1153,7 +1149,7 @@ STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NONE        :Ingen
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_NORMAL      :Som andre industrier
 STR_CONFIG_SETTING_RAW_INDUSTRY_CONSTRUCTION_METHOD_PROSPECTING :Efterforskning
 STR_CONFIG_SETTING_INDUSTRY_PLATFORM                            :Fladt område omkring industier: {STRING}
-STR_CONFIG_SETTING_INDUSTRY_PLATFORM_HELPTEXT                   :Mængden af ​​fladt område omkring en industri. Dette sikrer tom plads vil forblive tilgængelige omkring en industri for bygge spor osv.
+STR_CONFIG_SETTING_INDUSTRY_PLATFORM_HELPTEXT                   :Mængden af fladt område omkring en industri. Dette sikrer tom plads vil forblive tilgængelige omkring en industri for bygge spor osv.
 STR_CONFIG_SETTING_MULTIPINDTOWN                                :Tillad flere af samme slags industri per by: {STRING}
 STR_CONFIG_SETTING_MULTIPINDTOWN_HELPTEXT                       :Normalt vil en by ikke vil have mere end en industri af hver type. Med denne indstilling, vil det give flere industrier af samme type i samme by
 STR_CONFIG_SETTING_SIGNALSIDE                                   :Vis signaler: {STRING}
@@ -1240,7 +1236,7 @@ STR_CONFIG_SETTING_HOVER_DELAY_HELPTEXT                         :Forsinkelse fø
 STR_CONFIG_SETTING_HOVER_DELAY_VALUE                            :Hold markøren i {COMMA} sekund{P 0 "" er}
 STR_CONFIG_SETTING_HOVER_DELAY_DISABLED                         :Højre klik
 STR_CONFIG_SETTING_POPULATION_IN_LABEL                          :Vis byens indbyggertal i bynavnet: {STRING}
-STR_CONFIG_SETTING_POPULATION_IN_LABEL_HELPTEXT                 :Vis befolkningen i ​​byerne i deres etiket på kortet
+STR_CONFIG_SETTING_POPULATION_IN_LABEL_HELPTEXT                 :Vis befolkningen i byerne i deres etiket på kortet
 STR_CONFIG_SETTING_GRAPH_LINE_THICKNESS                         :Linjetykkelse i grafer: {STRING}
 STR_CONFIG_SETTING_GRAPH_LINE_THICKNESS_HELPTEXT                :Bredde af linjerne i graferne. En tynd linie er mere læsbar, en tykkere linje er nemmere at se og det er lettere at skelne mellem farverne
 
@@ -1291,7 +1287,7 @@ STR_CONFIG_SETTING_LIVERIES_NONE                                :Ingen
 STR_CONFIG_SETTING_LIVERIES_OWN                                 :Eget selskab
 STR_CONFIG_SETTING_LIVERIES_ALL                                 :Alle selskaber
 STR_CONFIG_SETTING_PREFER_TEAMCHAT                              :Foretræk hold-chat med <ENTER>: {STRING}
-STR_CONFIG_SETTING_PREFER_TEAMCHAT_HELPTEXT                     :Skift bindingen af ​​virksomheds-intern og offentlig chat til <ENTER> hhv. <Ctrl+ENTER>
+STR_CONFIG_SETTING_PREFER_TEAMCHAT_HELPTEXT                     :Skift bindingen af virksomheds-intern og offentlig chat til <ENTER> hhv. <Ctrl+ENTER>
 STR_CONFIG_SETTING_SCROLLWHEEL_SCROLLING                        :Rulleknappens funktion: {STRING}
 STR_CONFIG_SETTING_SCROLLWHEEL_SCROLLING_HELPTEXT               :Aktiver rulning med to-dimensionelle muse-hjul
 STR_CONFIG_SETTING_SCROLLWHEEL_ZOOM                             :Zoom kort
@@ -1527,7 +1523,7 @@ STR_CONFIG_SETTING_SOFT_LIMIT_DISABLED                          :deaktiveret
 STR_CONFIG_SETTING_ZOOM_MIN                                     :Maksimalt zoom-in niveau: {STRING}
 STR_CONFIG_SETTING_ZOOM_MIN_HELPTEXT                            :Maximalt zoom-in niveau for skærmbilledet. Højere zoom niveau vil øge hukommelseskravet
 STR_CONFIG_SETTING_ZOOM_MAX                                     :Maksimalt zoom-ud niveau: {STRING}
-STR_CONFIG_SETTING_ZOOM_MAX_HELPTEXT                            :Det maksimale udzoomnings niveau for skærmbilledet. Højere udzoomnings niveauer kan forsage forsinkelser i programmet ved brug
+STR_CONFIG_SETTING_ZOOM_MAX_HELPTEXT                            :Det maksimale udzoomnings-niveau for skærmbilledet. Højere niveauer kan forsage forsinkelser i programmet ved brug
 STR_CONFIG_SETTING_ZOOM_LVL_MIN                                 :4x
 STR_CONFIG_SETTING_ZOOM_LVL_IN_2X                               :2x
 STR_CONFIG_SETTING_ZOOM_LVL_NORMAL                              :Normal
@@ -1549,6 +1545,7 @@ STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :Startværdi for
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER_HELPTEXT                :Gennemsnitlig størrelse af storbyer i forhold til normale byer ved start af spillet
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Fjern absurde vejelementer under opførelse af vej: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD_HELPTEXT               :Fjern døde vej-ender i løbet af finansierede vej-rekostruktioner
+
 
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Brugerflade
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Konstruktion
@@ -1602,6 +1599,8 @@ STR_CONFIG_ERROR_INVALID_SAVEGAME_COMPRESSION_ALGORITHM         :{WHITE}... save
 STR_CONFIG_ERROR_INVALID_BASE_GRAPHICS_NOT_FOUND                :{WHITE}... ignorere Basis Grafik sæt '{STRING}': ikke fundet
 STR_CONFIG_ERROR_INVALID_BASE_SOUNDS_NOT_FOUND                  :{WHITE}... ignorere Basis Lyde sæt '{STRING}': ikke fundet
 STR_CONFIG_ERROR_INVALID_BASE_MUSIC_NOT_FOUND                   :{WHITE}... ignorere Basis Musik sæt '{STRING}': ikke fundet
+STR_CONFIG_ERROR_OUT_OF_MEMORY                                  :{WHITE}Utilstrækkelig hukommelse
+STR_CONFIG_ERROR_SPRITECACHE_TOO_BIG                            :{WHITE}Allokering af {BYTES} spritecache fejlede. Spritecachen blev indskrænket til {BYTES}. Dette vil sænke OpenTTDs ydelse. Du kan forsøge at slå 32bpp grafik og/eller zoom-ind niveauer for at reducere hukommelseskravet
 
 # Intro window
 STR_INTRO_CAPTION                                               :{WHITE}OpenTTD {REV}
@@ -1778,10 +1777,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Ændre s
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Netværksspil
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Forbindelse:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Vælg mellem et internet baseret eller et lokalnet baseret spil
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :Internet
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Spiller navn:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Dette er det navn, som andre spillere vil kende dig ved
 
@@ -1840,8 +1835,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}Navnet v
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Sæt kodeord
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Beskyt dit spil med et kodeord hvis du ikke vil have fremmede med
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / Internet
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (bekendtgør spillet)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} klient{P "" er}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Maksimalt antal tilladte klienter:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Vælg det maksimale antal klienter. Det er ikke nødvendigt at fylde dem alle
@@ -2080,6 +2073,10 @@ STR_CONTENT_SELECT_UPDATES_CAPTION                              :{BLACK}Vælg op
 STR_CONTENT_SELECT_UPDATES_CAPTION_TOOLTIP                      :{BLACK}Vælg alt indhold, der er opdateringer til eksisterende indhold, til download
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Fravælg alle
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Fravælg alt indhold fra download
+STR_CONTENT_SEARCH_EXTERNAL                                     :{BLACK}Søg på eksterne websider
+STR_CONTENT_SEARCH_EXTERNAL_TOOLTIP                             :{BLACK}Søgeresultat ikke tilgængeligt på OpenTTD's indholdstjeneste for websteder som ikke er associeret med OpenTTD
+STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER_CAPTION                  :{WHITE}Du forlader OpenTTD!
+STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER                          :{WHITE}Betingelserne for download af indhold fra eksterne websteder varierer.{}Du må referere til de eksterne sites for vejledning i hvordan indholdet skal installeres i OpenTTD.{} Ønsker du at fortsætte?
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Tag/navngiv filter:
 STR_CONTENT_OPEN_URL                                            :{BLACK}Besøg hjemmeside
 STR_CONTENT_OPEN_URL_TOOLTIP                                    :{BLACK}Besøg hjemmesiden for dette indhold
@@ -2148,6 +2145,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Skift ge
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Slå transparens til/fra for køreledninger. CTRL+klik for at låse.
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Slå gennemsigtighed til/fra for laste-indikatorer. CTRL+Klik for at låse værdi.
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}Gør objekter usynlige i stedet for gennemsigtige
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Vis dækningsområde
@@ -2875,7 +2876,6 @@ STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_EXCLUSIVE_TRANSPORT          :{YELLOW}Køb et
 STR_LOCAL_AUTHORITY_ACTION_TOOLTIP_BRIBE                        :{YELLOW}Bestik de lokale myndigheder til at hæve din bedømmelse, med risiko for en stor straf hvis det bliver opdaget.{}Pris: {CURRENCY_LONG}
 
 # Goal window
-STR_GOALS_CAPTION                                               :{WHITE}Mål
 STR_GOALS_GLOBAL_TITLE                                          :{BLACK}Globale mål
 STR_GOALS_TEXT                                                  :{ORANGE}{STRING}
 STR_GOALS_NONE                                                  :{ORANGE}- Ingen -
@@ -2917,6 +2917,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Tilskuds
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} fra {STRING} til {STRING}{YELLOW} ({COMPANY}{YELLOW}, indtil {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klik på servicen for at centrere skærmen over industrien/byen. Ctrl+Klik åbner et nyt vindue ved industriens/byens lokalitet.
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Stationsnavne - klik på et navn for at centrere skærmen over stationen. Ctrl+Klik åbner et nyt vindue ved stationens lokalitet
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Hold Ctrl nede for at vælge mere end én ting
@@ -2933,6 +2935,7 @@ STR_STATION_VIEW_CAPTION                                        :{WHITE}{STATION
 STR_STATION_VIEW_WAITING_TITLE                                  :{BLACK}Venter: {WHITE}{STRING}
 STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_LONG}
 STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} undervejs fra {STATION})
+STR_STATION_VIEW_RESERVED                                       :{YELLOW}({CARGO_SHORT} forbeholdt lastning)
 
 STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}Accepterer
 STR_STATION_VIEW_ACCEPTS_TOOLTIP                                :{BLACK}Vis liste over accepteret last
@@ -2943,8 +2946,8 @@ STR_STATIOV_VIEW_EXCLUSIVE_RIGHTS_COMPANY                       :{YELLOW} {COMPA
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Bedømmelse
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Vis stationens bedømmelse
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Lokal bedømmelse af transportservice:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Rædselsfuld
@@ -3071,7 +3074,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}Kanaler
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD}Stationer:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}Station felter
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}Lufthavne
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}/år ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}/år
 
 # Industry directory
@@ -3451,6 +3453,10 @@ STR_VEHICLE_DETAILS_SERVICING_INTERVAL_PERCENT                  :{BLACK}Servicei
 STR_VEHICLE_DETAILS_INCREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Forøg serviceintervallet med 10. Ctrl+Klik forøger serviceintervallet med 5
 STR_VEHICLE_DETAILS_DECREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Sænk serviceintervallet med 10. Ctrl+Klik nedsætter serviceintervallet med 5
 
+STR_SERVICE_INTERVAL_DROPDOWN_TOOLTIP                           :{BLACK}Ændre serviceintervallets type
+STR_VEHICLE_DETAILS_DEFAULT                                     :Standard
+STR_VEHICLE_DETAILS_DAYS                                        :Dage
+STR_VEHICLE_DETAILS_PERCENT                                     :Procent
 
 STR_QUERY_RENAME_TRAIN_CAPTION                                  :{WHITE}Giv toget et navn
 STR_QUERY_RENAME_ROAD_VEHICLE_CAPTION                           :{WHITE}Giv køretøjet et navn
@@ -3687,7 +3693,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Denne ti
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Denne tidsplan vil starte på {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Startdato
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Vælg dato som startpunkt for denne tidsplan.
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Ændre tid
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}Ændre hvor lang tid den markerede ordre skal tage
@@ -3823,6 +3828,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
 STR_INCOME_FLOAT_INCOME                                         :{GREEN}Indkomst: {CURRENCY_LONG}
 STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Overført: {CURRENCY_LONG}
 STR_FEEDER                                                      :{YELLOW}Overført: {CURRENCY_LONG}
+STR_FEEDER_INCOME_TINY                                          :{TINY_FONT}{YELLOW}Overførsel: {CURRENCY_LONG}{WHITE} / {GREEN}Indtægt: {CURRENCY_LONG}
+STR_FEEDER_INCOME                                               :{YELLOW}Overførsel: {CURRENCY_LONG}{WHITE} / {GREEN}Indtægt: {CURRENCY_LONG}
+STR_FEEDER_COST_TINY                                            :{TINY_FONT}{YELLOW}Overførsel: {CURRENCY_LONG}{WHITE} / {RED}Omkostning: {CURRENCY_LONG}
+STR_FEEDER_COST                                                 :{YELLOW}Overførsel: {CURRENCY_LONG}{WHITE} / {RED}Omkostning: {CURRENCY_LONG}
 STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Anslået Pris: {CURRENCY_LONG}
 STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Anslået Indkomst: {CURRENCY_LONG}
 
@@ -4215,6 +4224,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Kan ikke
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Et simulationsspil baseret på Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :Originalgrafik fra Transport Tycoon Deluxe DOS-version.
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :Originalgrafik fra Transport Tycoon Deluxe DOS (Tysk) version.
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :Originalgrafik fra Transport Tycoon Deluxe Windows-version.
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :Originallyd fra Transport Tycoon Deluxe DOS-version.
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :Originallyd fra Transport Tycoon Deluxe Windows-version.
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :En lydpakke uden lyde.
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :Originalmusik fra Transport Tycoon Deluxe Windows-version.
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :En musikpakke uden musik.
 
 ##id 0x2000
 # Town building names

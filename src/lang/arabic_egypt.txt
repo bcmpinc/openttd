@@ -255,7 +255,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}المس
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}عدد السكان
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}اسم
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}تاريخ
 # These are used in dropdowns
@@ -276,7 +275,6 @@ STR_SORT_BY_LENGTH                                              :الطول
 STR_SORT_BY_LIFE_TIME                                           :العمر المتبقي
 STR_SORT_BY_TIMETABLE_DELAY                                     :تاخير جدولة الاوامر
 STR_SORT_BY_FACILITY                                            :نوع المحطة
-STR_SORT_BY_WAITING                                             :قيمة الشحنة المنتظرة
 STR_SORT_BY_RATING_MAX                                          :اعلى نسبة شحن
 STR_SORT_BY_RATING_MIN                                          :اقل نسبة شحن
 STR_SORT_BY_ENGINE_ID                                           :نوع المحرك (قياسي(
@@ -288,6 +286,7 @@ STR_SORT_BY_RUNNING_COST                                        :تكلفة ال
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :القوة/تكلفة التشغيل
 STR_SORT_BY_CARGO_CAPACITY                                      :سعة الشحن
 STR_SORT_BY_RANGE                                               :مدى
+STR_SORT_BY_POPULATION                                          :عدد السكان
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}ايقاف اللعبة
@@ -370,19 +369,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :خروج
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :خريطة العالم
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :شاشة عرض اضافية
 STR_MAP_MENU_SIGN_LIST                                          :قائمة العلامات
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :دليل المدن
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :جد المدينة
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :العروض
-STR_SUBSIDIES_MENU_GOAL                                         :الاهداف الحالية
 ############ range ends here
 
 ############ range for graph menu starts
@@ -646,7 +644,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :عمدة الت
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :وزير التجارة و النقل
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :ملك التجارة و النقل
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :امبراطور القرن
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}. {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}. {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}حققت شركة {COMPANY} بجدارة'{STRING}'
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}حقق {PRESIDENT_NAME}مدير شركة {COMPANY} '{STRING}' بجدارة
@@ -869,13 +867,8 @@ STR_GAME_OPTIONS_CURRENCY_EEK                                   :كرونا اس
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :مخصص ...
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}وحدات القياس
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}اختيار وحدات القياس
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :امبريل
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :متري
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :النظام الدولي للوحدات ( م-كجم-ث)
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}العربات البرية
@@ -1310,6 +1303,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :سريع جدا
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :مضاعف المدن المبدئي: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :ازالة العوالق اثناء ترميم الطرق: {STRING}
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}النظام البيني
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}البناء
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}المركبات
@@ -1526,10 +1520,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}غير �
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}تعدد اللاعبين
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}اتصال
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}أختر بين لعبة على الإنترنت أو الشبكة المحلية (LAN)
-STR_NETWORK_SERVER_LIST_LAN                                     :شبكة محلية
-STR_NETWORK_SERVER_LIST_INTERNET                                :انترنت
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}أسم اللاعب
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}هذا الآسم الذي ستعرف به في اللعبة
 
@@ -1588,8 +1578,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}أسم �
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}ضع كلمة سر
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}احم لعبتك برقم سري حتى لا تصبح لعبتك مفتوحة للجميع
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :شبكة محلية / انترنت
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :انترنت (دعاية)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM}عميل
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}اقصى عدد عملاء:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}أختر أقصى عدد للعملاء
@@ -1882,6 +1870,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}بدل �
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK} غير شفافية سكك الحديد. مفتاح كنترول للاغلاق.
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}غير الشفافية لنسبة التحميل. مفتاح كنترول للاغلاق.
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}اخفاء الاجرام تماما بدلا من الشفافية
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}وضح منطقة التغطية
@@ -2612,6 +2604,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}العر
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} من {STRING} الى {STRING}{YELLOW} - {COMPANY}{YELLOW}, حتى {DATE_SHORT}-
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}اضغط على الخدمة لتوسيط الخريطة على المصنع/المدينة. اضغط + كنترول لفتح شاشة عرض جديدة للمدينة.
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}اسم المحطة - اضغط على اسم المحطة لتوسيطها في الشاشة. اضغط + كنترول لفتح شاشة عرض جديدة بمنطقة المحطة.
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}اضغط بشكل متواصل على مفتاح كنترول لاختيار اكثر من وحدة
@@ -2636,8 +2630,8 @@ STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}يقبل
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}معدل النقل
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}اظهار معدل النقل للمحطة
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}التقييم المحلي لخدمات النقل:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING} :{YELLOW}{STRING} ) {COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :منعدم
@@ -3344,7 +3338,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}جدول
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}جدولة الاعمال سوف تبدأ في {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}تاريخ البدأ
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}اختر تاريخ كنقطة بداية لجدول الاعمال هذا
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}غير الوقت
 STR_TIMETABLE_WAIT_TIME_TOOLTIP                                 :{BLACK}غير مقدار الزمن الذي يستغرقة الامر
@@ -3847,6 +3840,16 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}لا ي�
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :نسخة مستنسخة من ترانسبورت تايكون ديلوكس
+
+# Translatable descriptions in media/baseset/*.ob* files
+STR_BASEGRAPHICS_DOS_DESCRIPTION                                :النسخة الاصلية من ترانسبورت تايكون ديلوكس الرسومية نسخة الدوس
+STR_BASEGRAPHICS_DOS_DE_DESCRIPTION                             :النسخة الاصلية من ترانسبورت تايكون ديلوكس الالمانية نسخة الدوس
+STR_BASEGRAPHICS_WIN_DESCRIPTION                                :النسخة الاصلية من ترانسبورت تايكون ديلوكس الرسومية نسخة وندوز
+STR_BASESOUNDS_DOS_DESCRIPTION                                  :النسخة الاصلية من ترانسبورت تايكون ديلوكس الصوتية نسخة الدوس
+STR_BASESOUNDS_WIN_DESCRIPTION                                  :النسخة الاصلية من ترانسبورت تايكون ديلوكس الصوتية نسخة وندوز
+STR_BASESOUNDS_NONE_DESCRIPTION                                 :مجموعة صوت بدوت اصوات مضافة
+STR_BASEMUSIC_WIN_DESCRIPTION                                   :النسخة الاصلية من ترانسبورت تايكون ديلوكس الموسيقية نسخة وندوز
+STR_BASEMUSIC_NONE_DESCRIPTION                                  :مجموعة موسيقى بدون موسيقى
 
 ##id 0x2000
 # Town building names

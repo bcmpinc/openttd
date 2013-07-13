@@ -248,21 +248,23 @@ void str_validate(char *str, const char *last, StringValidationSettings settings
 			/* Replace the undesirable character with a question mark */
 			str += len;
 			if ((settings & SVS_REPLACE_WITH_QUESTION_MARK) != 0) *dst++ = '?';
-
-			/* In case of these two special cases assume that they really
-			 * mean SETX/SETXY and also "eat" the parameter. If this was
-			 * not the case the string was broken to begin with and this
-			 * would not break much more. */
-			if (c == SCC_SETX) {
-				str++;
-			} else if (c == SCC_SETXY) {
-				str += 2;
-			}
 		}
 	}
 
 	*dst = '\0';
 }
+
+/**
+ * Scans the string for valid characters and if it finds invalid ones,
+ * replaces them with a question mark '?'.
+ * @param str the string to validate
+ */
+void ValidateString(const char *str)
+{
+	/* We know it is '\0' terminated. */
+	str_validate(const_cast<char *>(str), str + strlen(str) + 1);
+}
+
 
 /**
  * Checks whether the given string is valid, i.e. contains only
@@ -570,10 +572,9 @@ size_t Utf8TrimString(char *s, size_t maxlen)
 }
 
 #ifdef DEFINE_STRNDUP
-#include "core/math_func.hpp"
 char *strndup(const char *s, size_t len)
 {
-	len = min(strlen(s), len);
+	len = ttd_strnlen(s, len);
 	char *tmp = CallocT<char>(len + 1);
 	memcpy(tmp, s, len);
 	return tmp;

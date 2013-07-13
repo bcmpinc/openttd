@@ -255,7 +255,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK}Regiono:
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}Enloĝantaro
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}Nomo
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}Dato
 # These are used in dropdowns
@@ -276,7 +275,6 @@ STR_SORT_BY_LENGTH                                              :Longo
 STR_SORT_BY_LIFE_TIME                                           :Resta vivo
 STR_SORT_BY_TIMETABLE_DELAY                                     :Horara malfruo
 STR_SORT_BY_FACILITY                                            :Stacidoma tipo
-STR_SORT_BY_WAITING                                             :Valoro de atendanta ŝarĝo
 STR_SORT_BY_RATING_MAX                                          :Plejalta ŝarĝotakso
 STR_SORT_BY_RATING_MIN                                          :Malplejalta ŝarĝotakso
 STR_SORT_BY_ENGINE_ID                                           :Maŝina ID (klasika ordigo)
@@ -288,12 +286,13 @@ STR_SORT_BY_RUNNING_COST                                        :Irkosto
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :Potenco/Irkosto
 STR_SORT_BY_CARGO_CAPACITY                                      :Ŝarĝkapablo
 STR_SORT_BY_RANGE                                               :Atingopovo
+STR_SORT_BY_POPULATION                                          :Enloĝantaro
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK}Paŭzigu la ludon
 STR_TOOLBAR_TOOLTIP_FORWARD                                     :{BLACK}Rapide pluirigu la ludon
 STR_TOOLBAR_TOOLTIP_OPTIONS                                     :{BLACK}Opcioj
-STR_TOOLBAR_TOOLTIP_SAVE_GAME_ABANDON_GAME                      :{BLACK}Konservu ludon, foriru de la ludo, fermu
+STR_TOOLBAR_TOOLTIP_SAVE_GAME_ABANDON_GAME                      :{BLACK}Konservu ludon, foriru ludo, forlasi
 STR_TOOLBAR_TOOLTIP_DISPLAY_MAP                                 :{BLACK}Montru mapon
 STR_TOOLBAR_TOOLTIP_DISPLAY_TOWN_DIRECTORY                      :{BLACK}Montru urbaron
 STR_TOOLBAR_TOOLTIP_DISPLAY_SUBSIDIES                           :{BLACK}Montru subvenciojn
@@ -331,18 +330,18 @@ STR_SCENEDIT_TOOLBAR_LANDSCAPE_GENERATION                       :{BLACK}Landaspe
 STR_SCENEDIT_TOOLBAR_TOWN_GENERATION                            :{BLACK}Urba generado
 STR_SCENEDIT_TOOLBAR_INDUSTRY_GENERATION                        :{BLACK}Industria generado
 STR_SCENEDIT_TOOLBAR_ROAD_CONSTRUCTION                          :{BLACK}Vojkonstruado
-STR_SCENEDIT_TOOLBAR_PLANT_TREES                                :{BLACK}Plantu arbojn
+STR_SCENEDIT_TOOLBAR_PLANT_TREES                                :{BLACK}Plantu arbojn. «Shift» aktivigita konstruado/montrante kosto takso
 STR_SCENEDIT_TOOLBAR_PLACE_SIGN                                 :{BLACK}Metu signon
-STR_SCENEDIT_TOOLBAR_PLACE_OBJECT                               :{BLACK}Loku objekton
+STR_SCENEDIT_TOOLBAR_PLACE_OBJECT                               :{BLACK}Loku objekton. «Shift» aktivigita konstruado/montrante kosto takso
 
 ############ range for SE file menu starts
 STR_SCENEDIT_FILE_MENU_SAVE_SCENARIO                            :Konservu scenaron
 STR_SCENEDIT_FILE_MENU_LOAD_SCENARIO                            :Ŝarĝu scenaron
 STR_SCENEDIT_FILE_MENU_SAVE_HEIGHTMAP                           :Konservu altecmapon
 STR_SCENEDIT_FILE_MENU_LOAD_HEIGHTMAP                           :Ŝarĝu altecmapon
-STR_SCENEDIT_FILE_MENU_QUIT_EDITOR                              :Fermu kreilon
+STR_SCENEDIT_FILE_MENU_QUIT_EDITOR                              :Forlasi scenaro kreilo
 STR_SCENEDIT_FILE_MENU_SEPARATOR                                :
-STR_SCENEDIT_FILE_MENU_QUIT                                     :Fermu
+STR_SCENEDIT_FILE_MENU_QUIT                                     :Forlasi
 ############ range for SE file menu starts
 
 ############ range for settings menu starts
@@ -358,7 +357,7 @@ STR_SETTINGS_MENU_SHOW_COMPETITOR_SIGNS                         :Konkurantaj sig
 STR_SETTINGS_MENU_FULL_ANIMATION                                :Plena animado
 STR_SETTINGS_MENU_FULL_DETAIL                                   :Plenaj detaloj
 STR_SETTINGS_MENU_TRANSPARENT_BUILDINGS                         :Travideblaj konstruaĵoj
-STR_SETTINGS_MENU_TRANSPARENT_SIGNS                             :Travideblaj staciosignoj
+STR_SETTINGS_MENU_TRANSPARENT_SIGNS                             :Travideblaj signoj
 ############ range ends here
 
 ############ range for file menu starts
@@ -369,19 +368,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :Fermu
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :Mondomapo
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :Plia vidujo
 STR_MAP_MENU_SIGN_LIST                                          :Afiŝa listo
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :Urba katalogo
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :Urbo troviĝas.
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :Subvencioj
-STR_SUBSIDIES_MENU_GOAL                                         :Aktualaj celoj
 ############ range ends here
 
 ############ range for graph menu starts
@@ -444,7 +442,7 @@ STR_NEWS_MENU_MESSAGE_HISTORY_MENU                              :Mesaĝa Histori
 STR_ABOUT_MENU_LAND_BLOCK_INFO                                  :Landkvadrataj informoj
 STR_ABOUT_MENU_SEPARATOR                                        :
 STR_ABOUT_MENU_TOGGLE_CONSOLE                                   :Baskuligi Konzolon
-STR_ABOUT_MENU_AI_DEBUG                                         :Sencimigo de AI
+STR_ABOUT_MENU_AI_DEBUG                                         :AI/Ludo skripto sencimigo
 STR_ABOUT_MENU_SCREENSHOT                                       :Ekranfoto
 STR_ABOUT_MENU_ZOOMIN_SCREENSHOT                                :Pligrandiga ekranfoto
 STR_ABOUT_MENU_DEFAULTZOOM_SCREENSHOT                           :Ekranfoto defaŭlte zoma
@@ -646,7 +644,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :Kapitalisto
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :Manaĝisto
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :Potenculo
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :Plej potenca de la Jarcento
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} atingis staton de '{STRING}'!
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} de {COMPANY} atingis staton de '{STRING}'!
@@ -798,7 +796,7 @@ STR_NEWS_VEHICLE_IS_GETTING_OLD                                 :{WHITE}{VEHICLE
 STR_NEWS_VEHICLE_IS_GETTING_VERY_OLD                            :{WHITE}{VEHICLE} tre malnoviĝis
 STR_NEWS_VEHICLE_IS_GETTING_VERY_OLD_AND                        :{WHITE}{VEHICLE} tro malnoviĝis kaj postulas anstataŭiĝon
 STR_NEWS_TRAIN_IS_STUCK                                         :{WHITE}{VEHICLE} ne povas trovi padon por daŭrigi.
-STR_NEWS_VEHICLE_IS_LOST                                        :{WHITE}{VEHICLE} estas perdita.
+STR_NEWS_VEHICLE_IS_LOST                                        :{WHITE}{VEHICLE} estas perdita
 STR_NEWS_VEHICLE_IS_UNPROFITABLE                                :{WHITE}{VEHICLE} pasintjare gajnis {CURRENCY_LONG}
 
 STR_NEWS_ORDER_REFIT_FAILED                                     :{WHITE}{VEHICLE} haltis ĉar komanda transformo fiaskis
@@ -840,7 +838,7 @@ STR_GAME_OPTIONS_CURRENCY_UNITS_DROPDOWN_TOOLTIP                :{BLACK}Elekto d
 STR_GAME_OPTIONS_CURRENCY_GBP                                   :Brita Pundo (GBP)
 STR_GAME_OPTIONS_CURRENCY_USD                                   :Amerika Dolaro (USD)
 STR_GAME_OPTIONS_CURRENCY_EUR                                   :Eŭro (EUR)
-STR_GAME_OPTIONS_CURRENCY_JPY                                   :Enoj (¥)
+STR_GAME_OPTIONS_CURRENCY_JPY                                   :Enoj (JPY)
 STR_GAME_OPTIONS_CURRENCY_ATS                                   :Aŭstriaj Ŝilingoj (ATS)
 STR_GAME_OPTIONS_CURRENCY_BEF                                   :Belgaj Frankoj (BEF)
 STR_GAME_OPTIONS_CURRENCY_CHF                                   :Svisaj Frankoj (CHF)
@@ -866,15 +864,12 @@ STR_GAME_OPTIONS_CURRENCY_SKK                                   :Slovakaj Koruno
 STR_GAME_OPTIONS_CURRENCY_BRL                                   :Brazilaj Realoj (BRL)
 STR_GAME_OPTIONS_CURRENCY_EEK                                   :Estona Krono (EEK)
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :Alia...
+STR_GAME_OPTIONS_CURRENCY_GEL                                   :Kartvela Lario (GEL)
+STR_GAME_OPTIONS_CURRENCY_IRR                                   :Irana Rialo (IRR)
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}Mezurunuoj
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}Elekto de mezurunuoj
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :Angla sistemo
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :Metra sistemo
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :Sistemo Internacia
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}Stratveturiloj
@@ -1042,6 +1037,10 @@ STR_CONFIG_SETTING_RESTRICT_CHANGED_AGAINST_DEFAULT             :agordoj kiuj ma
 STR_CONFIG_SETTING_RESTRICT_CHANGED_AGAINST_NEW                 :Agordoj kiu malsimilas al via novajuldaj agordoj
 
 STR_CONFIG_SETTING_TYPE_DROPDOWN_ALL                            :Ĉiuj agordoj
+STR_CONFIG_SETTING_TYPE_DROPDOWN_GAME_MENU                      :Ludo agordojn (stokite en savoj, nur tuŝas novajn ludojn)
+STR_CONFIG_SETTING_TYPE_DROPDOWN_GAME_INGAME                    :Ludo agordojn (stokite en savo; tuŝas nur kuranta ludo)
+STR_CONFIG_SETTING_TYPE_DROPDOWN_COMPANY_MENU                   :Kompanio agordojn (stokite en savoj, nur tuŝas novajn ludojn)
+STR_CONFIG_SETTING_TYPE_DROPDOWN_COMPANY_INGAME                 :Kompanio agordojn (stokita en savu; tuŝas nur kuranta kompanio)
 
 STR_CONFIG_SETTING_OFF                                          :Malaktiva
 STR_CONFIG_SETTING_ON                                           :Aktiva
@@ -1116,7 +1115,7 @@ STR_CONFIG_SETTING_STOP_ON_TOWN_ROAD                            :Permesu trairaj
 STR_CONFIG_SETTING_STOP_ON_COMPETITOR_ROAD                      :Permesu trairajn strathaltejojn sur stratoj posedataj de konkurantoj: {STRING}
 STR_CONFIG_SETTING_ADJACENT_STATIONS                            :Permesu konstrui staciojn apude: {STRING}
 STR_CONFIG_SETTING_DYNAMIC_ENGINES                              :Ebligu multoblajn NewGRF-motorarojn: {STRING}
-STR_CONFIG_SETTING_DYNAMIC_ENGINES_EXISTING_VEHICLES            :{WHITE}Ne eblas ŝanĝi ĉi tiujn agordon dum veturiloj ĉeestas.
+STR_CONFIG_SETTING_DYNAMIC_ENGINES_EXISTING_VEHICLES            :{WHITE}Ne eblas ŝanĝi ĉi tiujn agordon dum veturiloj ĉeestas
 
 STR_CONFIG_SETTING_NEVER_EXPIRE_AIRPORTS                        :Flughavenoj neniam antikviĝas: {STRING}
 
@@ -1310,6 +1309,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :Tre rapide
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :Komenca urbgrandeca multobligo: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :Forigu sensensajn straterojn dum stratkonstruado: {STRING}
 
+
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}Interfaco
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}Konstruado
 STR_CONFIG_SETTING_VEHICLES                                     :{ORANGE}Veturiloj
@@ -1358,7 +1358,7 @@ STR_INTRO_HIGHSCORE                                             :{BLACK}Altpoent
 STR_INTRO_ADVANCED_SETTINGS                                     :{BLACK}Avancitaj agordoj
 STR_INTRO_NEWGRF_SETTINGS                                       :{BLACK}Agordoj de NewGRF
 STR_INTRO_ONLINE_CONTENT                                        :{BLACK}Provu Enretan Enhavon
-STR_INTRO_QUIT                                                  :{BLACK}Fermu
+STR_INTRO_QUIT                                                  :{BLACK}Forlasi
 
 STR_INTRO_TOOLTIP_NEW_GAME                                      :{BLACK}Starti novan ludon. Stir-Klak por preterpasi mapan agordon.
 STR_INTRO_TOOLTIP_LOAD_GAME                                     :{BLACK}Ŝarĝu konservitan ludon
@@ -1382,7 +1382,7 @@ STR_INTRO_TOOLTIP_QUIT                                          :{BLACK}Fermu 'O
 STR_INTRO_TRANSLATION                                           :{BLACK}Ĉi tiu traduko ne havas {NUM} teksto{P "" j}. Bonvolu helpu fari OpenTTD pli bona per estigi traduktiston. Vidi readme.txt por detaloj.
 
 # Quit window
-STR_QUIT_CAPTION                                                :{WHITE}Fermi
+STR_QUIT_CAPTION                                                :{WHITE}Forlasi
 STR_QUIT_ARE_YOU_SURE_YOU_WANT_TO_EXIT_OPENTTD                  :{YELLOW}Ĉu vi vere volas fermi la ludon kaj reiri al {STRING}?
 STR_QUIT_YES                                                    :{BLACK}Jes
 STR_QUIT_NO                                                     :{BLACK}Ne
@@ -1516,10 +1516,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}Ŝanĝi 
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}Pluraj ludantoj
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}Konekto:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}Elektu inter interreta kaj lokareta ludo
-STR_NETWORK_SERVER_LIST_LAN                                     :Loka reto
-STR_NETWORK_SERVER_LIST_INTERNET                                :Interreto
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}Ludantnomo:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}Ĉi tio estas la nomo per kiu la aliaj ekkonas vin
 
@@ -1578,8 +1574,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}La ludno
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}Agordu pasvorton
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}Protektu vian ludon per pasvorto por ne publike atingebligi ĝin
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :Loka reto / Interreto
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Interreto (reklamu)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} kliento{P "" j}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}Klienta maksimumo:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}Elektu klientan maksimumon. Ne ĉiuj lokoj estas plenigendaj
@@ -1805,6 +1799,9 @@ STR_CONTENT_SELECT_ALL_CAPTION_TOOLTIP                          :{BLACK}Marki ĉ
 STR_CONTENT_SELECT_UPDATES_CAPTION                              :{BLACK}Elektu ĝisdatigojn.
 STR_CONTENT_UNSELECT_ALL_CAPTION                                :{BLACK}Malelekti ĉiujn
 STR_CONTENT_UNSELECT_ALL_CAPTION_TOOLTIP                        :{BLACK}Marki ĉiujn enhavojn neelŝutotan
+STR_CONTENT_SEARCH_EXTERNAL                                     :{BLACK}Serĉo eksteraj retejoj
+STR_CONTENT_SEARCH_EXTERNAL_TOOLTIP                             :{BLACK} Serĉu enhavo ne estas disponebla en OpenTTD enhavon servon en retejoj ne asocias al OpenTTD
+STR_CONTENT_SEARCH_EXTERNAL_DISCLAIMER_CAPTION                  :{WHITE}Vi forlase OpenTTD!
 STR_CONTENT_FILTER_TITLE                                        :{BLACK}Etikeda/noma filtro:
 STR_CONTENT_DOWNLOAD_CAPTION                                    :{BLACK}Elŝuti
 STR_CONTENT_DOWNLOAD_CAPTION_TOOLTIP                            :{BLACK}Komencu elŝuti la elektitan enhavon.
@@ -1867,6 +1864,10 @@ STR_TRANSPARENT_BRIDGES_TOOLTIP                                 :{BLACK}Baskulig
 STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}Baskuligi travideblecon de aĵoj kiel lumturoj kaj antenoj. Stir+Klak por ŝlosi.
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}Baskuligi travideblecon de katenarion. Stir+Klak por ŝlosi.
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}Baskuligi travideblecon de ŝarĝindikiloj. Stir+Klak por ŝlosi.
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}Ŝarĝregiona marko
@@ -2252,6 +2253,7 @@ STR_SAVELOAD_OSKTITLE                                           :{BLACK}Entajpu 
 # World generation
 STR_MAPGEN_WORLD_GENERATION_CAPTION                             :{WHITE}Mondgenerado
 STR_MAPGEN_MAPSIZE                                              :{BLACK}Mapgrandeco:
+STR_MAPGEN_MAPSIZE_TOOLTIP                                      :{BLACK}Selektu la grandeco de la mapo en azuleĥoj. La nombro de disponeblaj azuleĥoj estos iom pli malgranda
 STR_MAPGEN_BY                                                   :{BLACK}*
 STR_MAPGEN_NUMBER_OF_TOWNS                                      :{BLACK}Kiom da urboj:
 STR_MAPGEN_DATE                                                 :{BLACK}Dato:
@@ -2533,6 +2535,8 @@ STR_SUBSIDIES_SUBSIDISED_TITLE                                  :{BLACK}Servoj s
 STR_SUBSIDIES_SUBSIDISED_FROM_TO                                :{ORANGE}{STRING} de {STRING} al {STRING}{YELLOW} ({COMPANY}{YELLOW}, ĝis {DATE_SHORT})
 STR_SUBSIDIES_TOOLTIP_CLICK_ON_SERVICE_TO_CENTER                :{BLACK}Klaku servon por centri vidon ĉe la industrio/urbo. Stir+Klak por malfermi novan vidujon ĉe la loko.
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_TOOLTIP                                        :{BLACK}Stacionomoj - klaku nomon por centri vidon ĉe la stacio. Stir+Klak por malfermi novan vidujon ĉe la stacioloko.
 STR_STATION_LIST_USE_CTRL_TO_SELECT_MORE                        :{BLACK}Tenu la CTRL-klavon por elekti plurajn erojn
@@ -2549,6 +2553,7 @@ STR_STATION_VIEW_CAPTION                                        :{WHITE}{STATION
 STR_STATION_VIEW_WAITING_TITLE                                  :{BLACK}Atendas: {WHITE}{STRING}
 STR_STATION_VIEW_WAITING_CARGO                                  :{WHITE}{CARGO_LONG}
 STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO_SHORT} survoje de {STATION})
+STR_STATION_VIEW_RESERVED                                       :{YELLOW}({CARGO_SHORT} rezervita por ŝarĝu)
 
 STR_STATION_VIEW_ACCEPTS_BUTTON                                 :{BLACK}Akceptas
 STR_STATION_VIEW_ACCEPTS_TOOLTIP                                :{BLACK}Montri liston de akceptataj ŝarĝoj.
@@ -2557,8 +2562,8 @@ STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}Akcepti�
 
 STR_STATION_VIEW_RATINGS_BUTTON                                 :{BLACK}Takso
 STR_STATION_VIEW_RATINGS_TOOLTIP                                :{BLACK}Montru stacian takson
-STR_STATION_VIEW_CARGO_RATINGS_TITLE                            :{BLACK}Loka takso de transportservoj:
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 STR_CARGO_RATING_APPALLING                                      :Plorige
@@ -3031,6 +3036,10 @@ STR_VEHICLE_DETAILS_SERVICING_INTERVAL_PERCENT                  :{BLACK}Prizorga
 STR_VEHICLE_DETAILS_INCREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Pliigu prizorgintervalon
 STR_VEHICLE_DETAILS_DECREASE_SERVICING_INTERVAL_TOOLTIP         :{BLACK}Malpliigu prizorgintervalon
 
+STR_SERVICE_INTERVAL_DROPDOWN_TOOLTIP                           :{BLACK}Ŝanĝi la tipo de servon intervalon
+STR_VEHICLE_DETAILS_DEFAULT                                     :Defaŭlto
+STR_VEHICLE_DETAILS_DAYS                                        :Tagoj
+STR_VEHICLE_DETAILS_PERCENT                                     :Procentaĵo
 
 STR_QUERY_RENAME_TRAIN_CAPTION                                  :{WHITE}Nomu trajnon
 STR_QUERY_RENAME_ROAD_VEHICLE_CAPTION                           :{WHITE}Nomi stratveturilon
@@ -3257,7 +3266,6 @@ STR_TIMETABLE_STATUS_NOT_STARTED                                :{BLACK}Ĉi tiu 
 STR_TIMETABLE_STATUS_START_AT                                   :{BLACK}Ĉi tiu horaro komenciĝos je {STRING}
 
 STR_TIMETABLE_STARTING_DATE                                     :{BLACK}Komencodato
-STR_TIMETABLE_STARTING_DATE_TOOLTIP                             :{BLACK}Elekti daton por komenci ĉi tiun horaron.
 
 STR_TIMETABLE_CHANGE_TIME                                       :{BLACK}Ŝanĝu tempon
 
@@ -3332,6 +3340,7 @@ STR_AI_LIST_CANCEL_TOOLTIP                                      :{BLACK}Ne ŝan�
 
 # AI Parameters
 STR_AI_SETTINGS_CAPTION                                         :{WHITE}{STRING} Parametroj
+STR_AI_SETTINGS_CAPTION_AI                                      :AI
 STR_AI_SETTINGS_CLOSE                                           :{BLACK}Fermi
 STR_AI_SETTINGS_RESET                                           :{BLACK}Reŝargo
 STR_AI_SETTINGS_SETTING                                         :{STRING}: {ORANGE}{STRING}
@@ -3363,6 +3372,10 @@ STR_INCOME_FLOAT_INCOME_SMALL                                   :{TINY_FONT}{GRE
 STR_INCOME_FLOAT_INCOME                                         :{GREEN}Enspezo: {CURRENCY_LONG}
 STR_FEEDER_TINY                                                 :{TINY_FONT}{YELLOW}Transigo: {CURRENCY_LONG}
 STR_FEEDER                                                      :{YELLOW}Transigo: {CURRENCY_LONG}
+STR_FEEDER_INCOME_TINY                                          :{TINY_FONT}{YELLOW}Tradona: {CURRENCY_LONG}{WHITE} / {GREEN}Revenuo: {CURRENCY_LONG}
+STR_FEEDER_INCOME                                               :{YELLOW}Tradona: {CURRENCY_LONG}{WHITE} / {GREEN}Revenuo: {CURRENCY_LONG}
+STR_FEEDER_COST_TINY                                            :{TINY_FONT}{YELLOW}Tradona: {CURRENCY_LONG}{WHITE} / {RED}Kosta: {CURRENCY_LONG}
+STR_FEEDER_COST                                                 :{YELLOW}Tradona: {CURRENCY_LONG}{WHITE} / {RED}Kosto: {CURRENCY_LONG}
 STR_MESSAGE_ESTIMATED_COST                                      :{WHITE}Atendata Kosto: {CURRENCY_LONG}
 STR_MESSAGE_ESTIMATED_INCOME                                    :{WHITE}Atendata enspezo: {CURRENCY_LONG}
 
@@ -3754,6 +3767,8 @@ STR_ERROR_CAN_T_DELETE_SIGN                                     :{WHITE}Ne eblas
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Al simulado ludo bazita sur Transport Tycoon Deluxe
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names

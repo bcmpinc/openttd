@@ -303,11 +303,11 @@ struct NewGRFInspectWindow : Window {
 		this->SetDirty();
 	}
 
-	NewGRFInspectWindow(const WindowDesc *desc, WindowNumber wno) : Window()
+	NewGRFInspectWindow(WindowDesc *desc, WindowNumber wno) : Window(desc)
 	{
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_NGRFI_SCROLLBAR);
-		this->FinishInitNested(desc, wno);
+		this->FinishInitNested(wno);
 
 		this->vscroll->SetCount(0);
 		this->SetWidgetDisabledState(WID_NGRFI_PARENT, GetFeatureHelper(this->window_number)->GetParent(GetFeatureIndex(this->window_number)) == UINT32_MAX);
@@ -507,6 +507,7 @@ static const NWidgetPart _nested_newgrf_inspect_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY, WID_NGRFI_CAPTION), SetDataTip(STR_NEWGRF_INSPECT_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_NGRFI_PARENT), SetDataTip(STR_NEWGRF_INSPECT_PARENT_BUTTON, STR_NEWGRF_INSPECT_PARENT_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(NWID_HORIZONTAL),
@@ -518,8 +519,8 @@ static const NWidgetPart _nested_newgrf_inspect_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _newgrf_inspect_desc(
-	WDP_AUTO, 400, 300,
+static WindowDesc _newgrf_inspect_desc(
+	WDP_AUTO, "newgrf_inspect", 400, 300,
 	WC_NEWGRF_INSPECT, WC_NONE,
 	0,
 	_nested_newgrf_inspect_widgets, lengthof(_nested_newgrf_inspect_widgets)
@@ -630,11 +631,11 @@ struct SpriteAlignerWindow : Window {
 	SpriteID current_sprite; ///< The currently shown sprite
 	Scrollbar *vscroll;
 
-	SpriteAlignerWindow(const WindowDesc *desc, WindowNumber wno) : Window()
+	SpriteAlignerWindow(WindowDesc *desc, WindowNumber wno) : Window(desc)
 	{
-		this->CreateNestedTree(desc);
+		this->CreateNestedTree();
 		this->vscroll = this->GetScrollbar(WID_SA_SCROLLBAR);
-		this->FinishInitNested(desc, wno);
+		this->FinishInitNested(wno);
 
 		/* Oh yes, we assume there is at least one normal sprite! */
 		while (GetSpriteType(this->current_sprite) != ST_NORMAL) this->current_sprite++;
@@ -814,7 +815,6 @@ struct SpriteAlignerWindow : Window {
 	virtual void OnResize()
 	{
 		this->vscroll->SetCapacityFromWidget(this, WID_SA_LIST);
-		this->GetWidget<NWidgetCore>(WID_SA_LIST)->widget_data = (this->vscroll->GetCapacity() << MAT_ROW_START) + (1 << MAT_COL_START);
 	}
 };
 
@@ -864,7 +864,7 @@ static const NWidgetPart _nested_sprite_aligner_widgets[] = {
 			NWidget(NWID_VERTICAL), SetPIP(10, 5, 10),
 				NWidget(WWT_TEXTBTN, COLOUR_GREY, WID_SA_PICKER), SetDataTip(STR_SPRITE_ALIGNER_PICKER_BUTTON, STR_SPRITE_ALIGNER_PICKER_TOOLTIP), SetFill(1, 0),
 				NWidget(NWID_HORIZONTAL),
-					NWidget(WWT_MATRIX, COLOUR_GREY, WID_SA_LIST), SetResize(1, 1), SetDataTip(0x101, STR_NULL), SetFill(1, 1), SetScrollbar(WID_SA_SCROLLBAR),
+					NWidget(WWT_MATRIX, COLOUR_GREY, WID_SA_LIST), SetResize(1, 1), SetMatrixDataTip(1, 0, STR_NULL), SetFill(1, 1), SetScrollbar(WID_SA_SCROLLBAR),
 					NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_SA_SCROLLBAR),
 				EndContainer(),
 			EndContainer(),
@@ -872,8 +872,8 @@ static const NWidgetPart _nested_sprite_aligner_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _sprite_aligner_desc(
-	WDP_AUTO, 400, 300,
+static WindowDesc _sprite_aligner_desc(
+	WDP_AUTO, "sprite_aligner", 400, 300,
 	WC_SPRITE_ALIGNER, WC_NONE,
 	0,
 	_nested_sprite_aligner_widgets, lengthof(_nested_sprite_aligner_widgets)

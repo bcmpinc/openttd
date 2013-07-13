@@ -266,8 +266,17 @@ enum Commands {
 	CMD_CUSTOM_NEWS_ITEM,             ///< create a custom news message
 	CMD_CREATE_GOAL,                  ///< create a new goal
 	CMD_REMOVE_GOAL,                  ///< remove a goal
+	CMD_SET_GOAL_TEXT,                ///< update goal text of a goal
+	CMD_SET_GOAL_PROGRESS,            ///< update goal progress text of a goal
+	CMD_SET_GOAL_COMPLETED,           ///< update goal completed status of a goal
 	CMD_GOAL_QUESTION,                ///< ask a goal related question
 	CMD_GOAL_QUESTION_ANSWER,         ///< answer(s) to CMD_GOAL_QUESTION
+	CMD_CREATE_STORY_PAGE,            ///< create a new story page
+	CMD_CREATE_STORY_PAGE_ELEMENT,    ///< create a new story page element
+	CMD_UPDATE_STORY_PAGE_ELEMENT,    ///< update a story page element
+	CMD_SET_STORY_PAGE_TITLE,         ///< update title of a story page
+	CMD_SHOW_STORY_PAGE,              ///< show a story page
+	CMD_REMOVE_STORY_PAGE,            ///< remove a story page
 	CMD_LEVEL_LAND,                   ///< level land
 
 	CMD_BUILD_LOCK,                   ///< build a lock

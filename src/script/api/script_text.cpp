@@ -11,8 +11,11 @@
 
 #include "../../stdafx.h"
 #include "../../string_func.h"
+#include "../../strings_func.h"
 #include "script_text.hpp"
 #include "../../table/control_codes.h"
+
+#include "table/strings.h"
 
 ScriptText::ScriptText(HSQUIRRELVM vm) :
 	ZeroedMemoryAllocator()
@@ -69,6 +72,7 @@ SQInteger ScriptText::_SetParam(int parameter, HSQUIRRELVM vm)
 			sq_getstring(vm, -1, &value);
 
 			this->params[parameter] = strdup(SQ2OTTD(value));
+			ValidateString(this->params[parameter]);
 			break;
 		}
 
@@ -144,6 +148,7 @@ SQInteger ScriptText::_set(HSQUIRRELVM vm)
 		const SQChar *key;
 		sq_getstring(vm, 2, &key);
 		const char *key_string = SQ2OTTD(key);
+		ValidateString(key_string);
 
 		if (strncmp(key_string, "param_", 6) != 0 || strlen(key_string) > 8) return SQ_ERROR;
 		k = atoi(key_string + 6);
@@ -190,4 +195,15 @@ char *ScriptText::_GetEncodedText(char *p, char *lastofp, int &param_count)
 	}
 
 	return p;
+}
+
+const char *Text::GetDecodedText()
+{
+	const char *encoded_text = this->GetEncodedText();
+	if (encoded_text == NULL) return NULL;
+
+	static char buf[1024];
+	::SetDParamStr(0, encoded_text);
+	::GetString(buf, STR_JUST_RAW_STRING, lastof(buf));
+	return buf;
 }

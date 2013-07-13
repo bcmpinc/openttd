@@ -1012,6 +1012,12 @@ check_params() {
 
 	if [ -d "$ROOT_DIR/.svn" ] && [ -n "`svn help 2>/dev/null`" ]; then
 		log 1 "checking revision... svn detection"
+	elif [ -d "$ROOT_DIR/../.svn" ] && [ -n "`svn help 2>/dev/null`" ] && [ -n "`LC_ALL=C svn info $ROOT_DIR/.. | grep '^URL:.*tags$'`" ]; then
+		# subversion changed its behaviour; now not all folders have a .svn folder,
+		# but only the root folder. Since making tags requires a (sparse) checkout
+		# of the tags folder, the folder of the tag does not have a .svn folder
+		# anymore and this fails to detect the subversion repository checkout.
+		log 1 "checking revision... svn detection (tag)"
 	elif [ -d "$ROOT_DIR/.git" ] && [ -n "`git help 2>/dev/null`" ]; then
 		log 1 "checking revision... git detection"
 	elif [ -d "$ROOT_DIR/.hg" ] && [ -n "`hg help 2>/dev/null`" ]; then
@@ -1481,12 +1487,15 @@ make_cflags_and_ldflags() {
 			LDFLAGS="$LDFLAGS -mwin32"
 		fi
 		if [ "$os" = "MINGW" ] || [ "$os" = "CYGWIN" ]; then
-			flags="$flags -mno-cygwin"
+			if [ $cc_version -lt 46 ]; then
+				flags="$flags -mno-cygwin"
+				LDFLAGS="$LDFLAGS -mno-cygwin"
+			fi
 
 			if [ "$enable_console" != "0" ]; then
-				LDFLAGS="$LDFLAGS -mno-cygwin -Wl,--subsystem,console"
+				LDFLAGS="$LDFLAGS -Wl,--subsystem,console"
 			else
-				LDFLAGS="$LDFLAGS -mno-cygwin -Wl,--subsystem,windows"
+				LDFLAGS="$LDFLAGS -Wl,--subsystem,windows"
 			fi
 
 			LIBS="$LIBS -lws2_32 -lwinmm -lgdi32 -ldxguid -lole32"
@@ -1709,9 +1718,9 @@ make_cflags_and_ldflags() {
 
 		# Some icu-configs have the 'feature' of not adding a space where others do add the space
 		if [ "$static_icu" != "0" ]; then
-			LIBS="$LIBS `$icu_config --ldflags-searchpath` `$icu_config --ldflags-libsonly | tr '\n\r' '  ' | sed s/licu/lsicu/g`"
+			LIBS="$LIBS `$icu_config --ldflags-searchpath` `$icu_config --ldflags-libsonly --ldflags-layout | tr '\n\r' '  ' | sed s/licu/lsicu/g`"
 		else
-			LIBS="$LIBS `$icu_config --ldflags-searchpath` `$icu_config --ldflags-libsonly | tr '\n\r' '  '`"
+			LIBS="$LIBS `$icu_config --ldflags-searchpath` `$icu_config --ldflags-libsonly --ldflags-layout | tr '\n\r' '  '`"
 		fi
 	fi
 
@@ -1745,7 +1754,7 @@ make_cflags_and_ldflags() {
 			fi
 		fi
 
-		if [ "$have_non_const_iconv" != "no" ]; then
+		if [ "$os" != "OSX" ] && [ "$have_non_const_iconv" != "no" ]; then
 			CFLAGS="$CFLAGS -DHAVE_NON_CONST_ICONV"
 		fi
 	fi
@@ -3429,7 +3438,7 @@ generate_settings() {
 }
 
 generate_grf() {
-	STAGE="[GRF]"
+	STAGE="[BASESET]"
 
 	make_sed
 
@@ -3479,7 +3488,7 @@ generate_src_osx() {
 				CFLAGS="-isysroot $osx_sdk_path $CFLAGS_orig"
 				LDFLAGS="-Wl,-syslibroot,$osx_sdk_path $LDFLAGS_orig"
 			fi
-			CFLAGS="$CFLAGS -D_SQ64 -DHAVE_NON_CONST_ICONV -DNO_QUICKTIME -UENABLE_COCOA_QUICKDRAW"
+			CFLAGS="$CFLAGS -D_SQ64 -DNO_QUICKTIME -UENABLE_COCOA_QUICKDRAW"
 			LIBS="`echo $LIBS | sed 's/-framework QuickTime//'`"
 		fi
 
@@ -3638,6 +3647,7 @@ showhelp() {
 	echo "  --with-makedepend[=makedepend] enables makedepend support"
 	echo "  --with-ccache                  enables ccache support"
 	echo "  --with-distcc                  enables distcc support"
+	echo "  --without-grfcodec             disable usage of grfcodec and re-generation of base sets"
 	echo ""
 	echo "Some influential environment variables:"
 	echo "  CC                             C compiler command"
@@ -3648,6 +3658,9 @@ showhelp() {
 	echo "  LDFLAGS                        linker flags, e.g. -L<lib dir> if you"
 	echo "                                 have libraries in a nonstandard"
 	echo "                                 directory <lib dir>"
+	echo "  CFLAGS_BUILD                   C compiler flags for build time tool generation"
+	echo "  CXXFLAGS_BUILD                 C++ compiler flags for build time tool generation"
+	echo "  LDFLAGS_BUILD                  linker flags for build time tool generation"
 	echo ""
 	echo "Use these variables to override the choices made by 'configure' or to help"
 	echo "it to find libraries and programs with nonstandard names/locations."

@@ -1,6 +1,5 @@
-OpenTTD readme
-Last updated:    2013-02-07
-Release version: 1.3.0-beta2
+Last updated:    2013-06-01
+Release version: 1.3.1
 ------------------------------------------------------------------------
 
 
@@ -22,6 +21,7 @@ Table of contents
 7.0) Compiling
  * 7.1) Required/optional libraries
  * 7.2) Supported compilers
+ * 7.3) Compilation of base sets
 8.0) Translating
  * 8.1) Translation
  * 8.2) Previewing
@@ -218,9 +218,9 @@ The Windows installer can optionally download and install these packages.
 4.1.2) Original Transport Tycoon Deluxe graphics and sound files
 ------ ---------------------------------------------------------
 If you want to play with the original Transport Tycoon Deluxe data files you
-have to copy the data files from the CD-ROM into the data/ directory. It does
-not matter whether you copy them from the DOS or Windows version of Transport
-Tycoon Deluxe. The Windows install can optionally copy these files.
+have to copy the data files from the CD-ROM into the baseset/ directory. It
+does not matter whether you copy them from the DOS or Windows version of
+Transport Tycoon Deluxe. The Windows install can optionally copy these files.
 You need to copy the following files:
  - sample.cat
  - trg1r.grf or TRG1.GRF
@@ -409,7 +409,6 @@ Information logged:
   original Transport Tycoon version
 * Running a modified OpenTTD build
 * Changing settings affecting NewGRF behaviour (non-network-safe settings)
-* Changing landscape (by cheat)
 * Triggering NewGRF bugs
 
 No personal information is stored.
@@ -501,21 +500,15 @@ open most older savegames or use the content downloading system.
 Without libSDL/liballegro on non-Windows and non-MacOS X machines you have
 no graphical user interface; you would be building a dedicated server.
 
-To recompile the extra graphics needed to play with the original Transport
-Tycoon Deluxe graphics you need GRFCodec (which includes NFORenum) as well.
-GRFCodec can be found at: http://www.openttd.org/download-grfcodec
-The compilation of these extra graphics does generally not happen, unless
-you remove the graphics file using 'make maintainer-clean'.
-
 7.2) Supported compilers
 ---- -------------------
 The following compilers are known to compile OpenTTD:
   - Microsoft Visual C++ (MSVC) 2005, 2008 and 2010.
     Version 2005 gives bogus warnings about scoping issues.
-  - GNU Compiler Collection (GCC) 3.3 - 4.7.
+  - GNU Compiler Collection (GCC) 3.3 - 4.4, 4.6 - 4.8.
     Versions 4.1 and earlier give bogus warnings about uninitialised variables.
-    Versions 4.4 - 4.6 give bogus warnings about freeing non-heap objects.
-    Versions 4.5 and later give invalid warnings when lto is enabled.
+    Versions 4.4, 4.6 give bogus warnings about freeing non-heap objects.
+    Versions 4.6 and later give invalid warnings when lto is enabled.
   - Intel C++ Compiler (ICC) 12.0.
   - Clang/LLVM 2.9 - 3.0
     Version 2.9 gives bogus warnings about code nonconformity.
@@ -524,6 +517,8 @@ The following compilers are known not to compile OpenTTD:
   - Microsoft Visual C++ (MSVC) 2003 and earlier.
   - GNU Compiler Collection (GCC) 3.2 and earlier.
     These old versions fail due to OpenTTD's template usage.
+  - GNU Compiler Collection (GCC) 4.5. It optimizes enums too aggressively.
+    See http://bugs.openttd.org/task/5513 and references therein.
   - Intel C++ Compiler (ICC) 11.1 and earlier.
     Version 10.0 and earlier fail a configure check and fail with recent system
         headers.
@@ -534,6 +529,21 @@ The following compilers are known not to compile OpenTTD:
 
 If any of these compilers can compile OpenTTD again, please let us know.
 Patches to support more compilers are welcome.
+
+7.3) Compilation of base sets
+-----------------------------
+To recompile the extra graphics needed to play with the original Transport
+Tycoon Deluxe graphics you need GRFCodec (which includes NFORenum) as well.
+GRFCodec can be found at: http://www.openttd.org/download-grfcodec
+The compilation of these extra graphics does generally not happen, unless
+you remove the graphics file using 'make maintainer-clean'.
+
+Re-compilation of the base sets, thus also use of --maintainer-clean can
+leave the repository in a modified state as different grfcodec versions can
+cause binary differences in the resulting grf. Also translations might have
+been added for the base sets which are not yet included in the base set
+information files. Use the configure option --without-grfcodec to avoid
+modification of the base set files by the build process.
 
 
 8.0) Translating
@@ -572,10 +582,9 @@ Note: Do not alter the following parts of the file:
 8.2) Previewing
 ---- ----------
 In order to view the translation in the game, you need to compile your language
-file with the strgen utility. You can download the precompiled strgen from:
-http://www.openttd.org/download-strgen
-To compile it yourself just take the normal OpenTTD sources and build that.
-During the build process the strgen utility will be made.
+file with the strgen utility. As this utility is tailored to a specific OpenTTD
+version, you need to compile it yourself. Just take the normal OpenTTD sources
+and build that. During the build process the strgen utility will be made.
 
 strgen is a command-line utility. It takes the language filename as parameter.
 Example:
@@ -640,6 +649,7 @@ The OpenTTD team (in alphabetical order):
   Albert Hofkamp (Alberth)        - GUI expert
   Jean-François Claeys (Belugas)  - GUI, newindustries and more
   Matthijs Kooijman (blathijs)    - Pathfinder-guru, pool rework
+  Ulf Hermann (fonsinchen)        - Cargo Distribution
   Christoph Elsenhans (frosch)    - General coding
   Loïc Guilloux (glx)             - Windows Expert
   Michael Lutz (michi_cc)         - Path based signals

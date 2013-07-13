@@ -44,6 +44,7 @@
 #define WindowClass OTTDWindowClass
 #define ScriptOrder OTTDScriptOrder
 #define Palette     OTTDPalette
+#define GlyphID     OTTDGlyphID
 
 #include <CoreServices/CoreServices.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -53,6 +54,7 @@
 #undef WindowClass
 #undef ScriptOrder
 #undef Palette
+#undef GlyphID
 
 /* remove the variables that CoreServices defines, but we define ourselves too */
 #undef bool
@@ -74,5 +76,10 @@ typedef int NSInteger;
 typedef unsigned int NSUInteger;
 #endif /* __LP64__ */
 #endif /* NSInteger */
+
+/* OS X SDK versions >= 10.5 have a non-const iconv. */
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5
+#	define HAVE_NON_CONST_ICONV
+#endif
 
 #endif /* MACOS_STDAFX_H */

@@ -18,6 +18,7 @@
 #include "date_func.h"
 #include "vehicle_base.h"
 #include "rail_gui.h"
+#include "linkgraph/linkgraph.h"
 #include "saveload/saveload.h"
 
 Year      _cur_year;   ///< Current year, starting at 0
@@ -204,12 +205,15 @@ static void OnNewYear()
 	/* check if we reached the maximum year, decrement dates by a year */
 	} else if (_cur_year == MAX_YEAR + 1) {
 		Vehicle *v;
-		uint days_this_year;
+		int days_this_year;
 
 		_cur_year--;
 		days_this_year = IsLeapYear(_cur_year) ? DAYS_IN_LEAP_YEAR : DAYS_IN_YEAR;
 		_date -= days_this_year;
 		FOR_ALL_VEHICLES(v) v->date_of_last_service -= days_this_year;
+
+		LinkGraph *lg;
+		FOR_ALL_LINK_GRAPHS(lg) lg->ShiftDates(-days_this_year);
 
 #ifdef ENABLE_NETWORK
 		/* Because the _date wraps here, and text-messages expire by game-days, we have to clean out

@@ -71,11 +71,9 @@ public:
 
 /** Action of transferring cargo from a vehicle to a station. */
 class CargoTransfer : public CargoMovement<VehicleCargoList, StationCargoList> {
-protected:
-	CargoPayment *payment;  ///< Payment object for registering transfer credits.
 public:
-	CargoTransfer(VehicleCargoList *source, StationCargoList *destination, uint max_move, CargoPayment *payment) :
-			CargoMovement<VehicleCargoList, StationCargoList>(source, destination, max_move), payment(payment) {}
+	CargoTransfer(VehicleCargoList *source, StationCargoList *destination, uint max_move) :
+			CargoMovement<VehicleCargoList, StationCargoList>(source, destination, max_move) {}
 	bool operator()(CargoPacket *cp);
 };
 
@@ -99,9 +97,10 @@ public:
 
 /** Action of returning previously reserved cargo from the vehicle to the station. */
 class CargoReturn: public CargoMovement<VehicleCargoList, StationCargoList> {
+	StationID next;
 public:
-	CargoReturn(VehicleCargoList *source, StationCargoList *destination, uint max_move) :
-			CargoMovement<VehicleCargoList, StationCargoList>(source, destination, max_move) {}
+	CargoReturn(VehicleCargoList *source, StationCargoList *destination, uint max_move, StationID next) :
+			CargoMovement<VehicleCargoList, StationCargoList>(source, destination, max_move), next(next) {}
 	bool operator()(CargoPacket *cp);
 };
 
@@ -110,6 +109,37 @@ class CargoShift : public CargoMovement<VehicleCargoList, VehicleCargoList> {
 public:
 	CargoShift(VehicleCargoList *source, VehicleCargoList *destination, uint max_move) :
 			CargoMovement<VehicleCargoList, VehicleCargoList>(source, destination, max_move) {}
+	bool operator()(CargoPacket *cp);
+};
+
+/** Action of rerouting cargo between different cargo lists and/or next hops. */
+template<class Tlist>
+class CargoReroute : public CargoMovement<Tlist, Tlist> {
+protected:
+	StationID avoid;
+	StationID avoid2;
+	const GoodsEntry *ge;
+public:
+	CargoReroute(Tlist *source, Tlist *dest, uint max_move, StationID avoid, StationID avoid2, const GoodsEntry *ge) :
+			CargoMovement<Tlist, Tlist>(source, dest, max_move), avoid(avoid), avoid2(avoid2), ge(ge) {}
+};
+
+/** Action of rerouting cargo in a station. */
+class StationCargoReroute : public CargoReroute<StationCargoList> {
+public:
+	StationCargoReroute(StationCargoList *source, StationCargoList *dest, uint max_move, StationID avoid, StationID avoid2, const GoodsEntry *ge) :
+				CargoReroute<StationCargoList>(source, dest, max_move, avoid, avoid2, ge) {}
+	bool operator()(CargoPacket *cp);
+};
+
+/** Action of rerouting cargo staged for transfer in a vehicle. */
+class VehicleCargoReroute : public CargoReroute<VehicleCargoList> {
+public:
+	VehicleCargoReroute(VehicleCargoList *source, VehicleCargoList *dest, uint max_move, StationID avoid, StationID avoid2, const GoodsEntry *ge) :
+			CargoReroute<VehicleCargoList>(source, dest, max_move, avoid, avoid2, ge)
+	{
+		assert(this->max_move <= source->ActionCount(VehicleCargoList::MTA_TRANSFER));
+	}
 	bool operator()(CargoPacket *cp);
 };
 

@@ -43,9 +43,9 @@ static const uint INVALID_DATAPOINT_POS = UINT_MAX;  // Used to determine if the
 /****************/
 
 struct GraphLegendWindow : Window {
-	GraphLegendWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	GraphLegendWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
-		this->InitNested(desc, window_number);
+		this->InitNested(window_number);
 
 		for (CompanyID c = COMPANY_FIRST; c < MAX_COMPANIES; c++) {
 			if (!HasBit(_legend_excluded_companies, c)) this->LowerWidget(c + WID_GL_FIRST_COMPANY);
@@ -140,8 +140,8 @@ static const NWidgetPart _nested_graph_legend_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _graph_legend_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _graph_legend_desc(
+	WDP_AUTO, "graph_legend", 0, 0,
 	WC_GRAPH_LEGEND, WC_NONE,
 	0,
 	_nested_graph_legend_widgets, lengthof(_nested_graph_legend_widgets)
@@ -463,8 +463,8 @@ protected:
 	}
 
 
-	BaseGraphWindow(int widget, StringID format_str_y_axis) :
-			Window(),
+	BaseGraphWindow(WindowDesc *desc, int widget, StringID format_str_y_axis) :
+			Window(desc),
 			format_str_y_axis(format_str_y_axis)
 	{
 		SetWindowDirty(WC_GRAPH_LEGEND, 0);
@@ -472,12 +472,12 @@ protected:
 		this->graph_widget = widget;
 	}
 
-	void InitializeWindow(const WindowDesc *desc, WindowNumber number)
+	void InitializeWindow(WindowNumber number)
 	{
 		/* Initialise the dataset */
 		this->UpdateStatistics(true);
 
-		this->InitNested(desc, number);
+		this->InitNested(number);
 	}
 
 public:
@@ -504,7 +504,7 @@ public:
 			}
 		} else {
 			/* Draw the label under the data point rather than on the grid line. */
-			SetDParamMaxValue(0, this->x_values_start + this->num_on_x_axis * this->x_values_increment);
+			SetDParamMaxValue(0, this->x_values_start + this->num_on_x_axis * this->x_values_increment, 0, FS_SMALL);
 			x_label_width = GetStringBoundingBox(STR_GRAPH_Y_LABEL_NUMBER).width;
 		}
 
@@ -611,10 +611,10 @@ public:
 /********************/
 
 struct OperatingProfitGraphWindow : BaseGraphWindow {
-	OperatingProfitGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
+	OperatingProfitGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
 	{
-		this->InitializeWindow(desc, window_number);
+		this->InitializeWindow(window_number);
 	}
 
 	virtual OverflowSafeInt64 GetGraphData(const Company *c, int j)
@@ -629,6 +629,7 @@ static const NWidgetPart _nested_operating_profit_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_GRAPH_OPERATING_PROFIT_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_CV_KEY_BUTTON), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_GRAPH_KEY_BUTTON, STR_GRAPH_KEY_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CV_BACKGROUND),
@@ -642,8 +643,8 @@ static const NWidgetPart _nested_operating_profit_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _operating_profit_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _operating_profit_desc(
+	WDP_AUTO, "graph_operating_profit", 0, 0,
 	WC_OPERATING_PROFIT, WC_NONE,
 	0,
 	_nested_operating_profit_widgets, lengthof(_nested_operating_profit_widgets)
@@ -661,10 +662,10 @@ void ShowOperatingProfitGraph()
 /****************/
 
 struct IncomeGraphWindow : BaseGraphWindow {
-	IncomeGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
+	IncomeGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
 	{
-		this->InitializeWindow(desc, window_number);
+		this->InitializeWindow(window_number);
 	}
 
 	virtual OverflowSafeInt64 GetGraphData(const Company *c, int j)
@@ -679,6 +680,7 @@ static const NWidgetPart _nested_income_graph_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_GRAPH_INCOME_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_CV_KEY_BUTTON), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_GRAPH_KEY_BUTTON, STR_GRAPH_KEY_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CV_BACKGROUND),
@@ -692,8 +694,8 @@ static const NWidgetPart _nested_income_graph_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _income_graph_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _income_graph_desc(
+	WDP_AUTO, "graph_income", 0, 0,
 	WC_INCOME_GRAPH, WC_NONE,
 	0,
 	_nested_income_graph_widgets, lengthof(_nested_income_graph_widgets)
@@ -709,10 +711,10 @@ void ShowIncomeGraph()
 /*******************/
 
 struct DeliveredCargoGraphWindow : BaseGraphWindow {
-	DeliveredCargoGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_CV_GRAPH, STR_JUST_COMMA)
+	DeliveredCargoGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_CV_GRAPH, STR_JUST_COMMA)
 	{
-		this->InitializeWindow(desc, window_number);
+		this->InitializeWindow(window_number);
 	}
 
 	virtual OverflowSafeInt64 GetGraphData(const Company *c, int j)
@@ -727,6 +729,7 @@ static const NWidgetPart _nested_delivered_cargo_graph_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_GRAPH_CARGO_DELIVERED_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_CV_KEY_BUTTON), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_GRAPH_KEY_BUTTON, STR_GRAPH_KEY_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CV_BACKGROUND),
@@ -740,8 +743,8 @@ static const NWidgetPart _nested_delivered_cargo_graph_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _delivered_cargo_graph_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _delivered_cargo_graph_desc(
+	WDP_AUTO, "graph_delivered_cargo", 0, 0,
 	WC_DELIVERED_CARGO, WC_NONE,
 	0,
 	_nested_delivered_cargo_graph_widgets, lengthof(_nested_delivered_cargo_graph_widgets)
@@ -757,10 +760,10 @@ void ShowDeliveredCargoGraph()
 /***********************/
 
 struct PerformanceHistoryGraphWindow : BaseGraphWindow {
-	PerformanceHistoryGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_PHG_GRAPH, STR_JUST_COMMA)
+	PerformanceHistoryGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_PHG_GRAPH, STR_JUST_COMMA)
 	{
-		this->InitializeWindow(desc, window_number);
+		this->InitializeWindow(window_number);
 	}
 
 	virtual OverflowSafeInt64 GetGraphData(const Company *c, int j)
@@ -782,6 +785,7 @@ static const NWidgetPart _nested_performance_history_widgets[] = {
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_PHG_DETAILED_PERFORMANCE), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_PERFORMANCE_DETAIL_KEY, STR_GRAPH_PERFORMANCE_DETAIL_TOOLTIP),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_PHG_KEY), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_GRAPH_KEY_BUTTON, STR_GRAPH_KEY_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_PHG_BACKGROUND),
@@ -795,8 +799,8 @@ static const NWidgetPart _nested_performance_history_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _performance_history_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _performance_history_desc(
+	WDP_AUTO, "graph_performance", 0, 0,
 	WC_PERFORMANCE_HISTORY, WC_NONE,
 	0,
 	_nested_performance_history_widgets, lengthof(_nested_performance_history_widgets)
@@ -812,10 +816,10 @@ void ShowPerformanceHistoryGraph()
 /*****************/
 
 struct CompanyValueGraphWindow : BaseGraphWindow {
-	CompanyValueGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
+	CompanyValueGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_CV_GRAPH, STR_JUST_CURRENCY_SHORT)
 	{
-		this->InitializeWindow(desc, window_number);
+		this->InitializeWindow(window_number);
 	}
 
 	virtual OverflowSafeInt64 GetGraphData(const Company *c, int j)
@@ -830,6 +834,7 @@ static const NWidgetPart _nested_company_value_graph_widgets[] = {
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_GRAPH_COMPANY_VALUES_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_PUSHTXTBTN, COLOUR_GREY, WID_CV_KEY_BUTTON), SetMinimalSize(50, 0), SetMinimalTextLines(1, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM + 2), SetDataTip(STR_GRAPH_KEY_BUTTON, STR_GRAPH_KEY_TOOLTIP),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CV_BACKGROUND),
@@ -843,8 +848,8 @@ static const NWidgetPart _nested_company_value_graph_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _company_value_graph_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _company_value_graph_desc(
+	WDP_AUTO, "graph_company_value", 0, 0,
 	WC_COMPANY_VALUE, WC_NONE,
 	0,
 	_nested_company_value_graph_widgets, lengthof(_nested_company_value_graph_widgets)
@@ -861,8 +866,8 @@ void ShowCompanyValueGraph()
 
 struct PaymentRatesGraphWindow : BaseGraphWindow {
 	bool first_init; ///< This value is true until the first initialization of the window has finished.
-	PaymentRatesGraphWindow(const WindowDesc *desc, WindowNumber window_number) :
-			BaseGraphWindow(WID_CPR_GRAPH, STR_JUST_CURRENCY_SHORT)
+	PaymentRatesGraphWindow(WindowDesc *desc, WindowNumber window_number) :
+			BaseGraphWindow(desc, WID_CPR_GRAPH, STR_JUST_CURRENCY_SHORT)
 	{
 		this->first_init = true;
 		this->num_on_x_axis = 20;
@@ -874,7 +879,7 @@ struct PaymentRatesGraphWindow : BaseGraphWindow {
 		/* Initialise the dataset */
 		this->OnHundredthTick();
 
-		this->InitNested(desc, window_number);
+		this->InitNested(window_number);
 
 		this->UpdateLoweredWidgets();
 	}
@@ -1044,6 +1049,7 @@ static const NWidgetPart _nested_cargo_payment_rates_widgets[] = {
 		NWidget(WWT_CLOSEBOX, COLOUR_GREY),
 		NWidget(WWT_CAPTION, COLOUR_GREY), SetDataTip(STR_GRAPH_CARGO_PAYMENT_RATES_CAPTION, STR_TOOLTIP_WINDOW_TITLE_DRAG_THIS),
 		NWidget(WWT_SHADEBOX, COLOUR_GREY),
+		NWidget(WWT_DEFSIZEBOX, COLOUR_GREY),
 		NWidget(WWT_STICKYBOX, COLOUR_GREY),
 	EndContainer(),
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CPR_BACKGROUND), SetMinimalSize(568, 128),
@@ -1073,8 +1079,8 @@ static const NWidgetPart _nested_cargo_payment_rates_widgets[] = {
 	EndContainer(),
 };
 
-static const WindowDesc _cargo_payment_rates_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _cargo_payment_rates_desc(
+	WDP_AUTO, "graph_cargo_payment_rates", 0, 0,
 	WC_PAYMENT_RATES, WC_NONE,
 	0,
 	_nested_cargo_payment_rates_widgets, lengthof(_nested_cargo_payment_rates_widgets)
@@ -1147,9 +1153,9 @@ private:
 	}
 
 public:
-	CompanyLeagueWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	CompanyLeagueWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
-		this->InitNested(desc, window_number);
+		this->InitNested(window_number);
 		this->companies.ForceRebuild();
 		this->companies.NeedResort();
 	}
@@ -1262,8 +1268,8 @@ static const NWidgetPart _nested_company_league_widgets[] = {
 	NWidget(WWT_PANEL, COLOUR_GREY, WID_CL_BACKGROUND), SetMinimalSize(400, 0), SetMinimalTextLines(15, WD_FRAMERECT_TOP + WD_FRAMERECT_BOTTOM),
 };
 
-static const WindowDesc _company_league_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _company_league_desc(
+	WDP_AUTO, "league", 0, 0,
 	WC_COMPANY_LEAGUE, WC_NONE,
 	0,
 	_nested_company_league_widgets, lengthof(_nested_company_league_widgets)
@@ -1282,11 +1288,11 @@ struct PerformanceRatingDetailWindow : Window {
 	static CompanyID company;
 	int timeout;
 
-	PerformanceRatingDetailWindow(const WindowDesc *desc, WindowNumber window_number) : Window()
+	PerformanceRatingDetailWindow(WindowDesc *desc, WindowNumber window_number) : Window(desc)
 	{
 		this->UpdateCompanyStats();
 
-		this->InitNested(desc, window_number);
+		this->InitNested(window_number);
 		this->OnInvalidateData(INVALID_COMPANY);
 	}
 
@@ -1561,8 +1567,8 @@ static const NWidgetPart _nested_performance_rating_detail_widgets[] = {
 	NWidgetFunction(MakePerformanceDetailPanels),
 };
 
-static const WindowDesc _performance_rating_detail_desc(
-	WDP_AUTO, 0, 0,
+static WindowDesc _performance_rating_detail_desc(
+	WDP_AUTO, "league_details", 0, 0,
 	WC_PERFORMANCE_DETAIL, WC_NONE,
 	0,
 	_nested_performance_rating_detail_widgets, lengthof(_nested_performance_rating_detail_widgets)

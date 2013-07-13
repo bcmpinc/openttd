@@ -256,7 +256,6 @@ STR_MEASURE_AREA_HEIGHTDIFF                                     :{BLACK} پھی�
 
 
 # These are used in buttons
-STR_SORT_BY_CAPTION_POPULATION                                  :{BLACK}آبادی
 STR_SORT_BY_CAPTION_NAME                                        :{BLACK}نام
 STR_SORT_BY_CAPTION_DATE                                        :{BLACK}تاریخ
 # These are used in dropdowns
@@ -277,7 +276,6 @@ STR_SORT_BY_LENGTH                                              :لمبائی
 STR_SORT_BY_LIFE_TIME                                           :بقیھ زندگی
 STR_SORT_BY_TIMETABLE_DELAY                                     :ٹایم ٹیبل تاخیر
 STR_SORT_BY_FACILITY                                            :طرزِ اسٹیشن
-STR_SORT_BY_WAITING                                             :قیمتِ منتظر سامان
 STR_SORT_BY_RATING_MAX                                          :سامانی سرِ فھرست درجھ بندی
 STR_SORT_BY_RATING_MIN                                          :سامانی پیشِ فھرست درجھ بندی
 STR_SORT_BY_ENGINE_ID                                           :انجن کی شناخت (کلاسیکی چھانٹ)
@@ -289,6 +287,7 @@ STR_SORT_BY_RUNNING_COST                                        :قیمتِ رو
 STR_SORT_BY_POWER_VS_RUNNING_COST                               :قیمتِ رواں/ طاقت
 STR_SORT_BY_CARGO_CAPACITY                                      :سامان کی گنجایش
 STR_SORT_BY_RANGE                                               :پہنچ
+STR_SORT_BY_POPULATION                                          :آبادی
 
 # Tooltips for the main toolbar
 STR_TOOLBAR_TOOLTIP_PAUSE_GAME                                  :{BLACK} کھیل میں وقفھ لیجیئے
@@ -371,19 +370,18 @@ STR_FILE_MENU_SEPARATOR                                         :
 STR_FILE_MENU_EXIT                                              :باہر نکلو
 ############ range ends here
 
-############ range for map menu starts
+# map menu
 STR_MAP_MENU_MAP_OF_WORLD                                       :دنیا کا نقشھ
 STR_MAP_MENU_EXTRA_VIEW_PORT                                    :اضافی منظر
 STR_MAP_MENU_SIGN_LIST                                          :اشاروں کی فھرست
-############ range for town menu starts, yet the town directory is shown in the map menu in the scenario editor
+
+############ range for town menu starts
 STR_TOWN_MENU_TOWN_DIRECTORY                                    :کتبِ قصبھ جات
-############ end of the 'Display map' dropdown
 STR_TOWN_MENU_FOUND_TOWN                                        :قصبھ قائم کیجیئے
-############ end of the 'Town' dropdown
+############ range ends here
 
 ############ range for subsidies menu starts
 STR_SUBSIDIES_MENU_SUBSIDIES                                    :امداد
-STR_SUBSIDIES_MENU_GOAL                                         :موجودہ اہداف
 ############ range ends here
 
 ############ range for graph menu starts
@@ -646,7 +644,7 @@ STR_HIGHSCORE_PERFORMANCE_TITLE_CAPITALIST                      :سرمایہ د
 STR_HIGHSCORE_PERFORMANCE_TITLE_MAGNATE                         :امیر و اثر پزیر
 STR_HIGHSCORE_PERFORMANCE_TITLE_MOGUL                           :مُغل
 STR_HIGHSCORE_PERFORMANCE_TITLE_TYCOON_OF_THE_CENTURY           :صدی کا ٹائیکون
-STR_HIGHSCORE_NAME                                              :{BIG_FONT}{PRESIDENT_NAME}, {COMPANY}
+STR_HIGHSCORE_NAME                                              :{PRESIDENT_NAME}, {COMPANY}
 STR_HIGHSCORE_STATS                                             :{BIG_FONT}'{STRING}'   ({COMMA})
 STR_HIGHSCORE_COMPANY_ACHIEVES_STATUS                           :{BIG_FONT}{BLACK}{COMPANY} '{STRING}' کا درجہ حاصل کرتا ہے
 STR_HIGHSCORE_PRESIDENT_OF_COMPANY_ACHIEVES_STATUS              :{BIG_FONT}{WHITE}{PRESIDENT_NAME} جو {COMPANY} سے تعلق رکھتا ہے۔ '{STRING}' کا درجہ حاصل کرتا ہے
@@ -870,13 +868,8 @@ STR_GAME_OPTIONS_CURRENCY_ZAR                                   :جنوبی اف
 STR_GAME_OPTIONS_CURRENCY_CUSTOM                                :اپنی مرضی کی ۔۔۔
 ############ end of currency region
 
-STR_GAME_OPTIONS_MEASURING_UNITS_FRAME                          :{BLACK}پیمائشی اکائیاں
-STR_GAME_OPTIONS_MEASURING_UNITS_DROPDOWN_TOOLTIP               :{BLACK}پیمائشی اکائیاں اختیار کریں
 
 ############ start of measuring units region
-STR_GAME_OPTIONS_MEASURING_UNITS_IMPERIAL                       :اِمپیریل
-STR_GAME_OPTIONS_MEASURING_UNITS_METRIC                         :میٹرک
-STR_GAME_OPTIONS_MEASURING_UNITS_SI                             :اکائیوں کا بین الاقوامی نظام
 ############ end of measuring units region
 
 STR_GAME_OPTIONS_ROAD_VEHICLES_FRAME                            :{BLACK}گاڑیاں
@@ -1092,8 +1085,8 @@ STR_CONFIG_SETTING_ROAD_VEHICLE_QUEUEING                        :گاڑیوں ک
 STR_CONFIG_SETTING_AUTOSCROLL                                   :ونڈو کو پین کرو جب ماؤس کنارے پر ہو: {STRING}
 STR_CONFIG_SETTING_BRIBE                                        :مقامی اتھارٹی کی رشوت کی اجازت دیں: {STRING}
 STR_CONFIG_SETTING_ALLOW_EXCLUSIVE                              :خصوصی نقل و حمل کے حقوق کو خریدنے کی اجازت: {STRING}
-STR_CONFIG_SETTING_ALLOW_FUND_BUILDINGS                         :فنڈنگ ​​عمارتوں کی اجازت: {STRING}
-STR_CONFIG_SETTING_ALLOW_FUND_ROAD                              :مقامی سڑکوں کی تعمیر نو فنڈنگ ​​کی اجازت: {STRING}
+STR_CONFIG_SETTING_ALLOW_FUND_BUILDINGS                         :فنڈنگ عمارتوں کی اجازت: {STRING}
+STR_CONFIG_SETTING_ALLOW_FUND_ROAD                              :مقامی سڑکوں کی تعمیر نو فنڈنگ کی اجازت: {STRING}
 STR_CONFIG_SETTING_ALLOW_GIVE_MONEY                             :دوسری کمپنیوں کو پیسے بھیجنے کی اجازت: {STRING}
 STR_CONFIG_SETTING_FREIGHT_TRAINS                               :مال گاڑیوں کو وزنی دکھانے کے لئے وزن کا ضارب: {STRING}
 STR_CONFIG_SETTING_PLANE_CRASHES                                :ہوائی جہازوں کے حادثوں کی تعداد: {STRING}
@@ -1287,6 +1280,7 @@ STR_CONFIG_SETTING_TOWN_GROWTH_FAST                             :تیز
 STR_CONFIG_SETTING_TOWN_GROWTH_VERY_FAST                        :بہت تیز
 STR_CONFIG_SETTING_CITY_SIZE_MULTIPLIER                         :شہر کا شروعاتی ضارب: {STRING}
 STR_CONFIG_SETTING_MODIFIED_ROAD_REBUILD                        :سڑک کی تعمیر کے دوران غلط تعمیر شدہ حصوں کو ہٹا دے: {STRING}
+
 
 STR_CONFIG_SETTING_GUI                                          :{ORANGE}انٹرفیس
 STR_CONFIG_SETTING_CONSTRUCTION                                 :{ORANGE}تعمیرات
@@ -1504,10 +1498,6 @@ STR_FACE_TIE_EARRING_TOOLTIP                                    :{BLACK}ٹائی
 
 # Network server list
 STR_NETWORK_SERVER_LIST_CAPTION                                 :{WHITE}زیادہ کھلاڑی
-STR_NETWORK_SERVER_LIST_CONNECTION                              :{BLACK}کنکشن:
-STR_NETWORK_SERVER_LIST_CONNECTION_TOOLTIP                      :{BLACK}انٹرنیٹ یا LAN کھیل میں سے کوئی ایک اختیار کریں
-STR_NETWORK_SERVER_LIST_LAN                                     :LAN
-STR_NETWORK_SERVER_LIST_INTERNET                                :انٹرنیٹ
 STR_NETWORK_SERVER_LIST_PLAYER_NAME                             :{BLACK}کھلاڑی کا نام:
 STR_NETWORK_SERVER_LIST_ENTER_NAME_TOOLTIP                      :{BLACK}دوسرے کھلاڑی آپ کو اس نام سے جانیں گے
 
@@ -1566,8 +1556,6 @@ STR_NETWORK_START_SERVER_NEW_GAME_NAME_TOOLTIP                  :{BLACK}کھیل
 STR_NETWORK_START_SERVER_SET_PASSWORD                           :{BLACK}پاس ورڈ رکھیں
 STR_NETWORK_START_SERVER_PASSWORD_TOOLTIP                       :{BLACK}اگر آپ اس کھیل کو ہر کسی کی پہنچ سے بچانا چاہتے ہیں تو کھیل کو پاس ورڈ سے محفوظ بنا لیں
 
-STR_NETWORK_START_SERVER_LAN_INTERNET                           :LAN / انٹرنیٹ
-STR_NETWORK_START_SERVER_INTERNET_ADVERTISE                     :Internet (advertise)
 STR_NETWORK_START_SERVER_CLIENTS_SELECT                         :{BLACK}{NUM} کلائینٹ{P "" س}
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS                      :{BLACK}زیادہ سے زیادہ کلائینٹ:
 STR_NETWORK_START_SERVER_NUMBER_OF_CLIENTS_TOOLTIP              :{BLACK}زیادہ سے زیادہ کلائینٹس کی تعداد کا انتخاب کریں
@@ -1874,6 +1862,10 @@ STR_TRANSPARENT_STRUCTURES_TOOLTIP                              :{BLACK}بنیا
 STR_TRANSPARENT_CATENARY_TOOLTIP                                :{BLACK}catenary کی شفافیت کی تدویم کریں۔ محدوظ کرنے کے لئے Ctrl+Click دبائیں
 STR_TRANSPARENT_LOADING_TOOLTIP                                 :{BLACK}لوڈ کرنے کے نشانوں کی شفافیت کی تدویم کریں۔ محدوظ کرنے کے لئے Ctrl+Click دبائیں
 STR_TRANSPARENT_INVISIBLE_TOOLTIP                               :{BLACK}چیزوں کو شفاف کی بجائے غائب کر دیں
+
+# Linkgraph legend window
+
+# Linkgraph legend window and linkgraph legend in smallmap
 
 # Base for station construction window(s)
 STR_STATION_BUILD_COVERAGE_AREA_TITLE                           :{BLACK}کوریج والے علاقے کو واضح کریں
@@ -2235,6 +2227,8 @@ STR_GOAL_QUESTION_CAPTION_ERROR                                 :خرابی
 
 # Subsidies window
 
+# Story book window
+
 # Station list window
 STR_STATION_LIST_STATION                                        :{YELLOW}{STATION} {STATION_FEATURES}
 STR_STATION_LIST_WAYPOINT                                       :{YELLOW}{WAYPOINT}
@@ -2251,7 +2245,8 @@ STR_STATION_VIEW_EN_ROUTE_FROM                                  :{YELLOW}({CARGO
 STR_STATION_VIEW_ACCEPTS_CARGO                                  :{BLACK}منظور کرتا ہے: {WHITE}{CARGO_LIST}
 
 
-STR_STATION_VIEW_CARGO_RATING                                   :{WHITE}{STRING}: {YELLOW}{STRING} ({COMMA}%)
+
+
 
 ############ range for rating starts
 ############ range for rating ends
@@ -2295,7 +2290,6 @@ STR_COMPANY_INFRASTRUCTURE_VIEW_CANALS                          :{WHITE}نہری
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATION_SECT                    :{GOLD} اسٹیشن:
 STR_COMPANY_INFRASTRUCTURE_VIEW_STATIONS                        :{WHITE}اسٹیشن کی ٹائل
 STR_COMPANY_INFRASTRUCTURE_VIEW_AIRPORTS                        :{WHITE}ہوائی اڈے
-STR_COMPANY_INFRASTRUCTURE_VIEW_COST                            :{WHITE}{1:CURRENCY_LONG}سالانہ ({0:COMMA})
 STR_COMPANY_INFRASTRUCTURE_VIEW_TOTAL                           :{WHITE}{CURRENCY_LONG}سالانہ
 
 # Industry directory
@@ -2675,6 +2669,8 @@ STR_ERROR_AIRCRAFT_NOT_ENOUGH_RANGE                             :{WHITE} ۔ ۔ �
 
 # Translatable comment for OpenTTD's desktop shortcut
 STR_DESKTOP_SHORTCUT_COMMENT                                    :Transport Tycoon Deluxe کا ھم جنس
+
+# Translatable descriptions in media/baseset/*.ob* files
 
 ##id 0x2000
 # Town building names
