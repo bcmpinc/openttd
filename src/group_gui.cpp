@@ -32,7 +32,6 @@
 
 typedef GUIList<const Group*> GUIGroupList;
 
-	GRP_WIDGET_GROUP_INFO,
 static const NWidgetPart _nested_group_widgets[] = {
 	NWidget(NWID_HORIZONTAL), // Window header
 		NWidget(WWT_CLOSEBOX, COLOUR_GREY),
@@ -52,7 +51,7 @@ static const NWidgetPart _nested_group_widgets[] = {
 						SetFill(1, 0), SetResize(0, 1), SetScrollbar(WID_GL_LIST_GROUP_SCROLLBAR),
 				NWidget(NWID_VSCROLLBAR, COLOUR_GREY, WID_GL_LIST_GROUP_SCROLLBAR),
 			EndContainer(),
-			NWidget(WWT_PANEL, COLOUR_GREY, GRP_WIDGET_GROUP_INFO), SetMinimalSize(200, 25), SetFill(1, 0), EndContainer(),
+			NWidget(WWT_PANEL, COLOUR_GREY, WID_GL_INFO), SetMinimalSize(200, 25), SetFill(1, 0), EndContainer(),
 			NWidget(NWID_HORIZONTAL),
 				NWidget(WWT_PUSHIMGBTN, COLOUR_GREY, WID_GL_CREATE_GROUP), SetFill(0, 1),
 						SetDataTip(SPR_GROUP_CREATE_TRAIN, STR_GROUP_CREATE_TOOLTIP),
@@ -541,7 +540,7 @@ public:
 				this->DrawGroupProfitButton(r.left + WD_FRAMERECT_LEFT, r.top + WD_FRAMERECT_TOP + 1, DEFAULT_GROUP, this->vli.vtype);
 				break;
 
-			case GRP_WIDGET_GROUP_INFO: {
+			case WID_GL_INFO: {
 				Money this_year = 0;
 				Money last_year = 0;
 
