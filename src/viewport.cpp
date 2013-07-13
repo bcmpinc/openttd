@@ -1031,7 +1031,7 @@ static void DrawPastePreviewSelection(const TileInfo *ti, bool is_redsq)
 
 	/* draw tracks */
 	Track t;
-	FOR_EACH_SET_TRACK(t, tile_preview.highlight_track_bits) DrawAutorailSelection(ti, t);
+	FOR_EACH_SET_TRACK(t, tile_preview.highlight_track_bits) DrawAutorailSelection(ti, (HighLightStyle)(t & HT_DIR_MASK));
 
 	/* draw height point */
 	PaletteID pal;
