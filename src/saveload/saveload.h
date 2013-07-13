@@ -90,6 +90,7 @@ enum SLRefType {
 /** Highest possible savegame version. */
 #define SL_MAX_VERSION 255
 #define SL_TRIP 190
+#define SL_WORMHOLE_SIGNALS 190
 #define SL_TIMESEP 190
 #define SL_DAYLENGTH 190
 #define SL_TRANSFER_PAYMENTS 191
