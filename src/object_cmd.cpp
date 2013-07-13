@@ -782,4 +782,5 @@ extern const TileTypeProcs _tile_type_object_procs = {
 	NULL,                        // vehicle_enter_tile_proc
 	GetFoundation_Object,        // get_foundation_proc
 	TerraformTile_Object,        // terraform_tile_proc
+	NULL,                        // copypaste_tile_proc
 };

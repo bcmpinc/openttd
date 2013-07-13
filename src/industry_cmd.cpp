@@ -2818,4 +2818,5 @@ extern const TileTypeProcs _tile_type_industry_procs = {
 	NULL,                        // vehicle_enter_tile_proc
 	GetFoundation_Industry,      // get_foundation_proc
 	TerraformTile_Industry,      // terraform_tile_proc
+	NULL,                        // copypaste_tile_proc
 };

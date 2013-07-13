@@ -2572,6 +2572,7 @@ enum MouseClick {
 	MAX_OFFSET_HOVER = 5,            ///< Maximum mouse movement before stopping a hover event.
 };
 extern EventState VpHandlePlaceSizingDrag();
+extern EventState VpHandleMouseWheel(int mousewheel);
 
 static void ScrollMainViewport(int x, int y)
 {
@@ -2633,11 +2634,12 @@ static void MouseLoop(MouseClick click, int mousewheel)
 	HandlePlacePresize();
 	UpdateTileSelection();
 
-	if (VpHandlePlaceSizingDrag()  == ES_HANDLED) return;
-	if (HandleMouseDragDrop()      == ES_HANDLED) return;
-	if (HandleWindowDragging()     == ES_HANDLED) return;
-	if (HandleScrollbarScrolling() == ES_HANDLED) return;
-	if (HandleViewportScroll()     == ES_HANDLED) return;
+	if (VpHandlePlaceSizingDrag()      == ES_HANDLED) return;
+	if (VpHandleMouseWheel(mousewheel) == ES_HANDLED) return;
+	if (HandleMouseDragDrop()          == ES_HANDLED) return;
+	if (HandleWindowDragging()         == ES_HANDLED) return;
+	if (HandleScrollbarScrolling()     == ES_HANDLED) return;
+	if (HandleViewportScroll()         == ES_HANDLED) return;
 
 	HandleMouseOver();
 

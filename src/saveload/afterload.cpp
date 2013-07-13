@@ -120,7 +120,7 @@ void SetWaterClassDependingOnSurroundings(TileIndex t, bool include_invalid_wate
 
 			case MP_TREES:
 				/* trees on shore */
-				has_water |= (GB(_m[neighbour].m2, 4, 2) == TREE_GROUND_SHORE);
+				has_water |= (GB(_main_map.m[neighbour].m2, 4, 2) == TREE_GROUND_SHORE);
 				break;
 
 			default: break;
@@ -146,13 +146,13 @@ static void ConvertTownOwner()
 	for (TileIndex tile = 0; tile != MapSize(); tile++) {
 		switch (GetTileType(tile)) {
 			case MP_ROAD:
-				if (GB(_m[tile].m5, 4, 2) == ROAD_TILE_CROSSING && HasBit(_m[tile].m3, 7)) {
-					_m[tile].m3 = OWNER_TOWN;
+				if (GB(_main_map.m[tile].m5, 4, 2) == ROAD_TILE_CROSSING && HasBit(_main_map.m[tile].m3, 7)) {
+					_main_map.m[tile].m3 = OWNER_TOWN;
 				}
 				/* FALL THROUGH */
 
 			case MP_TUNNELBRIDGE:
-				if (_m[tile].m1 & 0x80) SetTileOwner(tile, OWNER_TOWN);
+				if (_main_map.m[tile].m1 & 0x80) SetTileOwner(tile, OWNER_TOWN);
 				break;
 
 			default: break;
@@ -526,8 +526,8 @@ bool AfterLoadGame()
 		}
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (!IsTileType(t, MP_STATION)) continue;
-			if (_m[t].m5 > 7) continue; // is it a rail station tile?
-			st = Station::Get(_m[t].m2);
+			if (_main_map.m[t].m5 > 7) continue; // is it a rail station tile?
+			st = Station::Get(_main_map.m[t].m2);
 			assert(st->train_station.tile != 0);
 			int dx = TileX(t) - TileX(st->train_station.tile);
 			int dy = TileY(t) - TileY(st->train_station.tile);
@@ -762,7 +762,7 @@ bool AfterLoadGame()
 					break;
 
 				case MP_STATION: {
-					if (HasBit(_m[t].m6, 3)) SetBit(_m[t].m6, 2);
+					if (HasBit(_main_map.m[t].m6, 3)) SetBit(_main_map.m[t].m6, 2);
 					StationGfx gfx = GetStationGfx(t);
 					StationType st;
 					if (       IsInsideMM(gfx,   0,   8)) { // Rail station
@@ -800,7 +800,7 @@ bool AfterLoadGame()
 						ResetSignalHandlers();
 						return false;
 					}
-					SB(_m[t].m6, 3, 3, st);
+					SB(_main_map.m[t].m6, 3, 3, st);
 					break;
 				}
 			}
@@ -881,13 +881,13 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			switch (GetTileType(t)) {
 				case MP_HOUSE:
-					_m[t].m4 = _m[t].m2;
+					_main_map.m[t].m4 = _main_map.m[t].m2;
 					SetTownIndex(t, CalcClosestTownFromTile(t)->index);
 					break;
 
 				case MP_ROAD:
-					_m[t].m4 |= (_m[t].m2 << 4);
-					if ((GB(_m[t].m5, 4, 2) == ROAD_TILE_CROSSING ? (Owner)_m[t].m3 : GetTileOwner(t)) == OWNER_TOWN) {
+					_main_map.m[t].m4 |= (_main_map.m[t].m2 << 4);
+					if ((GB(_main_map.m[t].m5, 4, 2) == ROAD_TILE_CROSSING ? (Owner)_main_map.m[t].m3 : GetTileOwner(t)) == OWNER_TOWN) {
 						SetTownIndex(t, CalcClosestTownFromTile(t)->index);
 					} else {
 						SetTownIndex(t, 0);
@@ -941,20 +941,20 @@ bool AfterLoadGame()
 					if (IsPlainRail(t)) {
 						/* Swap ground type and signal type for plain rail tiles, so the
 						 * ground type uses the same bits as for depots and waypoints. */
-						uint tmp = GB(_m[t].m4, 0, 4);
-						SB(_m[t].m4, 0, 4, GB(_m[t].m2, 0, 4));
-						SB(_m[t].m2, 0, 4, tmp);
-					} else if (HasBit(_m[t].m5, 2)) {
+						uint tmp = GB(_main_map.m[t].m4, 0, 4);
+						SB(_main_map.m[t].m4, 0, 4, GB(_main_map.m[t].m2, 0, 4));
+						SB(_main_map.m[t].m2, 0, 4, tmp);
+					} else if (HasBit(_main_map.m[t].m5, 2)) {
 						/* Split waypoint and depot rail type and remove the subtype. */
-						ClrBit(_m[t].m5, 2);
-						ClrBit(_m[t].m5, 6);
+						ClrBit(_main_map.m[t].m5, 2);
+						ClrBit(_main_map.m[t].m5, 6);
 					}
 					break;
 
 				case MP_ROAD:
 					/* Swap m3 and m4, so the track type for rail crossings is the
 					 * same as for normal rail. */
-					Swap(_m[t].m3, _m[t].m4);
+					Swap(_main_map.m[t].m3, _main_map.m[t].m4);
 					break;
 
 				default: break;
@@ -968,16 +968,16 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			switch (GetTileType(t)) {
 				case MP_ROAD:
-					SB(_m[t].m5, 6, 2, GB(_m[t].m5, 4, 2));
+					SB(_main_map.m[t].m5, 6, 2, GB(_main_map.m[t].m5, 4, 2));
 					switch (GetRoadTileType(t)) {
 						default: SlErrorCorrupt("Invalid road tile type");
 						case ROAD_TILE_NORMAL:
-							SB(_m[t].m4, 0, 4, GB(_m[t].m5, 0, 4));
-							SB(_m[t].m4, 4, 4, 0);
-							SB(_m[t].m6, 2, 4, 0);
+							SB(_main_map.m[t].m4, 0, 4, GB(_main_map.m[t].m5, 0, 4));
+							SB(_main_map.m[t].m4, 4, 4, 0);
+							SB(_main_map.m[t].m6, 2, 4, 0);
 							break;
 						case ROAD_TILE_CROSSING:
-							SB(_m[t].m4, 5, 2, GB(_m[t].m5, 2, 2));
+							SB(_main_map.m[t].m4, 5, 2, GB(_main_map.m[t].m5, 2, 2));
 							break;
 						case ROAD_TILE_DEPOT:    break;
 					}
@@ -990,8 +990,8 @@ bool AfterLoadGame()
 
 				case MP_TUNNELBRIDGE:
 					/* Middle part of "old" bridges */
-					if (old_bridge && IsBridge(t) && HasBit(_m[t].m5, 6)) break;
-					if (((old_bridge && IsBridge(t)) ? (TransportType)GB(_m[t].m5, 1, 2) : GetTunnelBridgeTransportType(t)) == TRANSPORT_ROAD) {
+					if (old_bridge && IsBridge(t) && HasBit(_main_map.m[t].m5, 6)) break;
+					if (((old_bridge && IsBridge(t)) ? (TransportType)GB(_main_map.m[t].m5, 1, 2) : GetTunnelBridgeTransportType(t)) == TRANSPORT_ROAD) {
 						SetRoadTypes(t, ROADTYPES_ROAD);
 					}
 					break;
@@ -1008,24 +1008,24 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			switch (GetTileType(t)) {
 				case MP_ROAD:
-					if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_me[t].m7, 5, 3));
-					SB(_me[t].m7, 5, 1, GB(_m[t].m3, 7, 1)); // snow/desert
+					if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_main_map.me[t].m7, 5, 3));
+					SB(_main_map.me[t].m7, 5, 1, GB(_main_map.m[t].m3, 7, 1)); // snow/desert
 					switch (GetRoadTileType(t)) {
 						default: SlErrorCorrupt("Invalid road tile type");
 						case ROAD_TILE_NORMAL:
-							SB(_me[t].m7, 0, 4, GB(_m[t].m3, 0, 4)); // road works
-							SB(_m[t].m6, 3, 3, GB(_m[t].m3, 4, 3));  // ground
-							SB(_m[t].m3, 0, 4, GB(_m[t].m4, 4, 4));  // tram bits
-							SB(_m[t].m3, 4, 4, GB(_m[t].m5, 0, 4));  // tram owner
-							SB(_m[t].m5, 0, 4, GB(_m[t].m4, 0, 4));  // road bits
+							SB(_main_map.me[t].m7, 0, 4, GB(_main_map.m[t].m3, 0, 4)); // road works
+							SB(_main_map.m[t].m6, 3, 3, GB(_main_map.m[t].m3, 4, 3));  // ground
+							SB(_main_map.m[t].m3, 0, 4, GB(_main_map.m[t].m4, 4, 4));  // tram bits
+							SB(_main_map.m[t].m3, 4, 4, GB(_main_map.m[t].m5, 0, 4));  // tram owner
+							SB(_main_map.m[t].m5, 0, 4, GB(_main_map.m[t].m4, 0, 4));  // road bits
 							break;
 
 						case ROAD_TILE_CROSSING:
-							SB(_me[t].m7, 0, 5, GB(_m[t].m4, 0, 5)); // road owner
-							SB(_m[t].m6, 3, 3, GB(_m[t].m3, 4, 3));  // ground
-							SB(_m[t].m3, 4, 4, GB(_m[t].m5, 0, 4));  // tram owner
-							SB(_m[t].m5, 0, 1, GB(_m[t].m4, 6, 1));  // road axis
-							SB(_m[t].m5, 5, 1, GB(_m[t].m4, 5, 1));  // crossing state
+							SB(_main_map.me[t].m7, 0, 5, GB(_main_map.m[t].m4, 0, 5)); // road owner
+							SB(_main_map.m[t].m6, 3, 3, GB(_main_map.m[t].m3, 4, 3));  // ground
+							SB(_main_map.m[t].m3, 4, 4, GB(_main_map.m[t].m5, 0, 4));  // tram owner
+							SB(_main_map.m[t].m5, 0, 1, GB(_main_map.m[t].m4, 6, 1));  // road axis
+							SB(_main_map.m[t].m5, 5, 1, GB(_main_map.m[t].m4, 5, 1));  // crossing state
 							break;
 
 						case ROAD_TILE_DEPOT:
@@ -1035,32 +1035,32 @@ bool AfterLoadGame()
 						const Town *town = CalcClosestTownFromTile(t);
 						if (town != NULL) SetTownIndex(t, town->index);
 					}
-					_m[t].m4 = 0;
+					_main_map.m[t].m4 = 0;
 					break;
 
 				case MP_STATION:
 					if (!IsRoadStop(t)) break;
 
-					if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_m[t].m3, 0, 3));
-					SB(_me[t].m7, 0, 5, HasBit(_m[t].m6, 2) ? OWNER_TOWN : GetTileOwner(t));
-					SB(_m[t].m3, 4, 4, _m[t].m1);
-					_m[t].m4 = 0;
+					if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_main_map.m[t].m3, 0, 3));
+					SB(_main_map.me[t].m7, 0, 5, HasBit(_main_map.m[t].m6, 2) ? OWNER_TOWN : GetTileOwner(t));
+					SB(_main_map.m[t].m3, 4, 4, _main_map.m[t].m1);
+					_main_map.m[t].m4 = 0;
 					break;
 
 				case MP_TUNNELBRIDGE:
-					if (old_bridge && IsBridge(t) && HasBit(_m[t].m5, 6)) break;
-					if (((old_bridge && IsBridge(t)) ? (TransportType)GB(_m[t].m5, 1, 2) : GetTunnelBridgeTransportType(t)) == TRANSPORT_ROAD) {
-						if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_m[t].m3, 0, 3));
+					if (old_bridge && IsBridge(t) && HasBit(_main_map.m[t].m5, 6)) break;
+					if (((old_bridge && IsBridge(t)) ? (TransportType)GB(_main_map.m[t].m5, 1, 2) : GetTunnelBridgeTransportType(t)) == TRANSPORT_ROAD) {
+						if (fix_roadtypes) SetRoadTypes(t, (RoadTypes)GB(_main_map.m[t].m3, 0, 3));
 
 						Owner o = GetTileOwner(t);
-						SB(_me[t].m7, 0, 5, o); // road owner
-						SB(_m[t].m3, 4, 4, o == OWNER_NONE ? OWNER_TOWN : o); // tram owner
+						SB(_main_map.me[t].m7, 0, 5, o); // road owner
+						SB(_main_map.m[t].m3, 4, 4, o == OWNER_NONE ? OWNER_TOWN : o); // tram owner
 					}
-					SB(_m[t].m6, 2, 4, GB(_m[t].m2, 4, 4)); // bridge type
-					SB(_me[t].m7, 5, 1, GB(_m[t].m4, 7, 1)); // snow/desert
+					SB(_main_map.m[t].m6, 2, 4, GB(_main_map.m[t].m2, 4, 4)); // bridge type
+					SB(_main_map.me[t].m7, 5, 1, GB(_main_map.m[t].m4, 7, 1)); // snow/desert
 
-					_m[t].m2 = 0;
-					_m[t].m4 = 0;
+					_main_map.m[t].m2 = 0;
+					_main_map.m[t].m4 = 0;
 					break;
 
 				default: break;
@@ -1074,11 +1074,11 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (MayHaveBridgeAbove(t)) ClearBridgeMiddle(t);
 			if (IsBridgeTile(t)) {
-				if (HasBit(_m[t].m5, 6)) { // middle part
-					Axis axis = (Axis)GB(_m[t].m5, 0, 1);
+				if (HasBit(_main_map.m[t].m5, 6)) { // middle part
+					Axis axis = (Axis)GB(_main_map.m[t].m5, 0, 1);
 
-					if (HasBit(_m[t].m5, 5)) { // transport route under bridge?
-						if (GB(_m[t].m5, 3, 2) == TRANSPORT_RAIL) {
+					if (HasBit(_main_map.m[t].m5, 5)) { // transport route under bridge?
+						if (GB(_main_map.m[t].m5, 3, 2) == TRANSPORT_RAIL) {
 							MakeRailNormal(
 								t,
 								GetTileOwner(t),
@@ -1097,7 +1097,7 @@ bool AfterLoadGame()
 							);
 						}
 					} else {
-						if (GB(_m[t].m5, 3, 2) == 0) {
+						if (GB(_main_map.m[t].m5, 3, 2) == 0) {
 							MakeClear(t, CLEAR_GRASS, 3);
 						} else {
 							if (GetTileSlope(t) != SLOPE_FLAT) {
@@ -1113,12 +1113,12 @@ bool AfterLoadGame()
 					}
 					SetBridgeMiddle(t, axis);
 				} else { // ramp
-					Axis axis = (Axis)GB(_m[t].m5, 0, 1);
-					uint north_south = GB(_m[t].m5, 5, 1);
+					Axis axis = (Axis)GB(_main_map.m[t].m5, 0, 1);
+					uint north_south = GB(_main_map.m[t].m5, 5, 1);
 					DiagDirection dir = ReverseDiagDir(XYNSToDiagDir(axis, north_south));
-					TransportType type = (TransportType)GB(_m[t].m5, 1, 2);
+					TransportType type = (TransportType)GB(_main_map.m[t].m5, 1, 2);
 
-					_m[t].m5 = 1 << 7 | type << 2 | dir;
+					_main_map.m[t].m5 = 1 << 7 | type << 2 | dir;
 				}
 			}
 		}
@@ -1220,23 +1220,23 @@ bool AfterLoadGame()
 				case MP_RAILWAY:
 					if (HasSignals(t)) {
 						/* convert PBS signals to combo-signals */
-						if (HasBit(_m[t].m2, 2)) SetSignalType(t, TRACK_X, SIGTYPE_COMBO);
+						if (HasBit(_main_map.m[t].m2, 2)) SetSignalType(t, TRACK_X, SIGTYPE_COMBO);
 
 						/* move the signal variant back */
-						SetSignalVariant(t, TRACK_X, HasBit(_m[t].m2, 3) ? SIG_SEMAPHORE : SIG_ELECTRIC);
-						ClrBit(_m[t].m2, 3);
+						SetSignalVariant(t, TRACK_X, HasBit(_main_map.m[t].m2, 3) ? SIG_SEMAPHORE : SIG_ELECTRIC);
+						ClrBit(_main_map.m[t].m2, 3);
 					}
 
 					/* Clear PBS reservation on track */
 					if (!IsRailDepotTile(t)) {
-						SB(_m[t].m4, 4, 4, 0);
+						SB(_main_map.m[t].m4, 4, 4, 0);
 					} else {
-						ClrBit(_m[t].m3, 6);
+						ClrBit(_main_map.m[t].m3, 6);
 					}
 					break;
 
 				case MP_STATION: // Clear PBS reservation on station
-					ClrBit(_m[t].m3, 6);
+					ClrBit(_main_map.m[t].m3, 6);
 					break;
 
 				default: break;
@@ -1345,31 +1345,31 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(53)) {
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (IsTileType(t, MP_HOUSE)) {
-				if (GB(_m[t].m3, 6, 2) != TOWN_HOUSE_COMPLETED) {
+				if (GB(_main_map.m[t].m3, 6, 2) != TOWN_HOUSE_COMPLETED) {
 					/* Move the construction stage from m3[7..6] to m5[5..4].
 					 * The construction counter does not have to move. */
-					SB(_m[t].m5, 3, 2, GB(_m[t].m3, 6, 2));
-					SB(_m[t].m3, 6, 2, 0);
+					SB(_main_map.m[t].m5, 3, 2, GB(_main_map.m[t].m3, 6, 2));
+					SB(_main_map.m[t].m3, 6, 2, 0);
 
 					/* The "house is completed" bit is now in m6[2]. */
 					SetHouseCompleted(t, false);
 				} else {
 					/* The "lift has destination" bit has been moved from
 					 * m5[7] to m7[0]. */
-					SB(_me[t].m7, 0, 1, HasBit(_m[t].m5, 7));
-					ClrBit(_m[t].m5, 7);
+					SB(_main_map.me[t].m7, 0, 1, HasBit(_main_map.m[t].m5, 7));
+					ClrBit(_main_map.m[t].m5, 7);
 
 					/* The "lift is moving" bit has been removed, as it does
 					 * the same job as the "lift has destination" bit. */
-					ClrBit(_m[t].m1, 7);
+					ClrBit(_main_map.m[t].m1, 7);
 
 					/* The position of the lift goes from m1[7..0] to m6[7..2],
 					 * making m1 totally free, now. The lift position does not
 					 * have to be a full byte since the maximum value is 36. */
-					SetLiftPosition(t, GB(_m[t].m1, 0, 6 ));
+					SetLiftPosition(t, GB(_main_map.m[t].m1, 0, 6 ));
 
-					_m[t].m1 = 0;
-					_m[t].m3 = 0;
+					_main_map.m[t].m1 = 0;
+					_main_map.m[t].m3 = 0;
 					SetHouseCompleted(t, true);
 				}
 			}
@@ -1384,19 +1384,19 @@ bool AfterLoadGame()
 			if (IsTileType(t, MP_INDUSTRY)) {
 				switch (GetIndustryGfx(t)) {
 					case GFX_POWERPLANT_SPARKS:
-						_m[t].m3 = GB(_m[t].m1, 2, 5);
+						_main_map.m[t].m3 = GB(_main_map.m[t].m1, 2, 5);
 						break;
 
 					case GFX_OILWELL_ANIMATED_1:
 					case GFX_OILWELL_ANIMATED_2:
 					case GFX_OILWELL_ANIMATED_3:
-						_m[t].m3 = GB(_m[t].m1, 0, 2);
+						_main_map.m[t].m3 = GB(_main_map.m[t].m1, 0, 2);
 						break;
 
 					case GFX_COAL_MINE_TOWER_ANIMATED:
 					case GFX_COPPER_MINE_TOWER_ANIMATED:
 					case GFX_GOLD_MINE_TOWER_ANIMATED:
-						 _m[t].m3 = _m[t].m1;
+						 _main_map.m[t].m3 = _main_map.m[t].m1;
 						 break;
 
 					default: // No animation states to change
@@ -1445,7 +1445,7 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(52)) {
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (IsStatueTile(t)) {
-				_m[t].m2 = CalcClosestTownFromTile(t)->index;
+				_main_map.m[t].m2 = CalcClosestTownFromTile(t)->index;
 			}
 		}
 	}
@@ -1506,10 +1506,10 @@ bool AfterLoadGame()
 		/* copy the signal type/variant and move signal states bits */
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (IsTileType(t, MP_RAILWAY) && HasSignals(t)) {
-				SetSignalStates(t, GB(_m[t].m2, 4, 4));
+				SetSignalStates(t, GB(_main_map.m[t].m2, 4, 4));
 				SetSignalVariant(t, INVALID_TRACK, GetSignalVariant(t, TRACK_X));
 				SetSignalType(t, INVALID_TRACK, GetSignalType(t, TRACK_X));
-				ClrBit(_m[t].m2, 7);
+				ClrBit(_main_map.m[t].m2, 7);
 			}
 		}
 	}
@@ -1552,7 +1552,7 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(83)) {
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (IsShipDepotTile(t)) {
-				_m[t].m4 = (TileHeight(t) == 0) ? OWNER_WATER : OWNER_NONE;
+				_main_map.m[t].m4 = (TileHeight(t) == 0) ? OWNER_WATER : OWNER_NONE;
 			}
 		}
 	}
@@ -1588,8 +1588,8 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(81)) {
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (GetTileType(t) == MP_TREES) {
-				TreeGround groundType = (TreeGround)GB(_m[t].m2, 4, 2);
-				if (groundType != TREE_GROUND_SNOW_DESERT) SB(_m[t].m2, 6, 2, 3);
+				TreeGround groundType = (TreeGround)GB(_main_map.m[t].m2, 4, 2);
+				if (groundType != TREE_GROUND_SNOW_DESERT) SB(_main_map.m[t].m2, 6, 2, 3);
 			}
 		}
 	}
@@ -1656,8 +1656,8 @@ bool AfterLoadGame()
 						case STATION_OILRIG:
 						case STATION_DOCK:
 						case STATION_BUOY:
-							SetWaterClass(t, (WaterClass)GB(_m[t].m3, 0, 2));
-							SB(_m[t].m3, 0, 2, 0);
+							SetWaterClass(t, (WaterClass)GB(_main_map.m[t].m3, 0, 2));
+							SB(_main_map.m[t].m3, 0, 2, 0);
 							break;
 
 						default:
@@ -1667,8 +1667,8 @@ bool AfterLoadGame()
 					break;
 
 				case MP_WATER:
-					SetWaterClass(t, (WaterClass)GB(_m[t].m3, 0, 2));
-					SB(_m[t].m3, 0, 2, 0);
+					SetWaterClass(t, (WaterClass)GB(_main_map.m[t].m3, 0, 2));
+					SB(_main_map.m[t].m3, 0, 2, 0);
 					break;
 
 				case MP_OBJECT:
@@ -1695,7 +1695,7 @@ bool AfterLoadGame()
 							MakeCanal(t, o, Random());
 						}
 					} else if (IsShipDepot(t)) {
-						Owner o = (Owner)_m[t].m4; // Original water owner
+						Owner o = (Owner)_main_map.m[t].m4; // Original water owner
 						SetWaterClass(t, o == OWNER_WATER ? WATER_CLASS_SEA : WATER_CLASS_CANAL);
 					}
 				}
@@ -1784,8 +1784,8 @@ bool AfterLoadGame()
 		/* Increase HouseAnimationFrame from 5 to 7 bits */
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (IsTileType(t, MP_HOUSE) && GetHouseType(t) >= NEW_HOUSE_OFFSET) {
-				SB(_m[t].m6, 2, 6, GB(_m[t].m6, 3, 5));
-				SB(_m[t].m3, 5, 1, 0);
+				SB(_main_map.m[t].m6, 2, 6, GB(_main_map.m[t].m6, 3, 5));
+				SB(_main_map.m[t].m3, 5, 1, 0);
 			}
 		}
 	}
@@ -1818,7 +1818,7 @@ bool AfterLoadGame()
 
 			/* Replace "house construction year" with "house age" */
 			if (IsTileType(t, MP_HOUSE) && IsHouseCompleted(t)) {
-				_m[t].m5 = Clamp(_cur_year - (_m[t].m5 + ORIGINAL_BASE_YEAR), 0, 0xFF);
+				_main_map.m[t].m5 = Clamp(_cur_year - (_main_map.m[t].m5 + ORIGINAL_BASE_YEAR), 0, 0xFF);
 			}
 		}
 	}
@@ -1832,10 +1832,10 @@ bool AfterLoadGame()
 				case MP_RAILWAY:
 					if (HasSignals(t)) {
 						/* move the signal variant */
-						SetSignalVariant(t, TRACK_UPPER, HasBit(_m[t].m2, 2) ? SIG_SEMAPHORE : SIG_ELECTRIC);
-						SetSignalVariant(t, TRACK_LOWER, HasBit(_m[t].m2, 6) ? SIG_SEMAPHORE : SIG_ELECTRIC);
-						ClrBit(_m[t].m2, 2);
-						ClrBit(_m[t].m2, 6);
+						SetSignalVariant(t, TRACK_UPPER, HasBit(_main_map.m[t].m2, 2) ? SIG_SEMAPHORE : SIG_ELECTRIC);
+						SetSignalVariant(t, TRACK_LOWER, HasBit(_main_map.m[t].m2, 6) ? SIG_SEMAPHORE : SIG_ELECTRIC);
+						ClrBit(_main_map.m[t].m2, 2);
+						ClrBit(_main_map.m[t].m2, 6);
 					}
 
 					/* Clear PBS reservation on track */
@@ -1927,11 +1927,11 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			/* Check for HQ bit being set, instead of using map accessor,
 			 * since we've already changed it code-wise */
-			if (IsTileType(t, MP_OBJECT) && HasBit(_m[t].m5, 7)) {
+			if (IsTileType(t, MP_OBJECT) && HasBit(_main_map.m[t].m5, 7)) {
 				/* Move size and part identification of HQ out of the m5 attribute,
 				 * on new locations */
-				_m[t].m3 = GB(_m[t].m5, 0, 5);
-				_m[t].m5 = OBJECT_HQ;
+				_main_map.m[t].m3 = GB(_main_map.m[t].m5, 0, 5);
+				_main_map.m[t].m5 = OBJECT_HQ;
 			}
 		}
 	}
@@ -1941,12 +1941,12 @@ bool AfterLoadGame()
 
 			/* Reordering/generalisation of the object bits. */
 			ObjectType type = GetObjectType(t);
-			SB(_m[t].m6, 2, 4, type == OBJECT_HQ ? GB(_m[t].m3, 2, 3) : 0);
-			_m[t].m3 = type == OBJECT_HQ ? GB(_m[t].m3, 1, 1) | GB(_m[t].m3, 0, 1) << 4 : 0;
+			SB(_main_map.m[t].m6, 2, 4, type == OBJECT_HQ ? GB(_main_map.m[t].m3, 2, 3) : 0);
+			_main_map.m[t].m3 = type == OBJECT_HQ ? GB(_main_map.m[t].m3, 1, 1) | GB(_main_map.m[t].m3, 0, 1) << 4 : 0;
 
 			/* Make sure those bits are clear as well! */
-			_m[t].m4 = 0;
-			_me[t].m7 = 0;
+			_main_map.m[t].m4 = 0;
+			_main_map.me[t].m7 = 0;
 		}
 	}
 
@@ -1959,11 +1959,11 @@ bool AfterLoadGame()
 				/* No towns, so remove all objects! */
 				DoClearSquare(t);
 			} else {
-				uint offset = _m[t].m3;
+				uint offset = _main_map.m[t].m3;
 
 				/* Also move the animation state. */
-				_m[t].m3 = GB(_m[t].m6, 2, 4);
-				SB(_m[t].m6, 2, 4, 0);
+				_main_map.m[t].m3 = GB(_main_map.m[t].m6, 2, 4);
+				SB(_main_map.m[t].m6, 2, 4, 0);
 
 				if (offset == 0) {
 					/* No offset, so make the object. */
@@ -1981,14 +1981,14 @@ bool AfterLoadGame()
 					o->location.w    = size;
 					o->location.h    = size;
 					o->build_date    = _date;
-					o->town          = type == OBJECT_STATUE ? Town::Get(_m[t].m2) : CalcClosestTownFromTile(t, UINT_MAX);
-					_m[t].m2 = o->index;
+					o->town          = type == OBJECT_STATUE ? Town::Get(_main_map.m[t].m2) : CalcClosestTownFromTile(t, UINT_MAX);
+					_main_map.m[t].m2 = o->index;
 					Object::IncTypeCount(type);
 				} else {
 					/* We're at an offset, so get the ID from our "root". */
 					TileIndex northern_tile = t - TileXY(GB(offset, 0, 4), GB(offset, 4, 4));
 					assert(IsTileType(northern_tile, MP_OBJECT));
-					_m[t].m2 = _m[northern_tile].m2;
+					_main_map.m[t].m2 = _main_map.m[northern_tile].m2;
 				}
 			}
 		}
@@ -2208,8 +2208,8 @@ bool AfterLoadGame()
 	if (IsSavegameVersionBefore(128)) {
 		const Depot *d;
 		FOR_ALL_DEPOTS(d) {
-			_m[d->xy].m2 = d->index;
-			if (IsTileType(d->xy, MP_WATER)) _m[GetOtherShipDepotTile(d->xy)].m2 = d->index;
+			_main_map.m[d->xy].m2 = d->index;
+			if (IsTileType(d->xy, MP_WATER)) _main_map.m[GetOtherShipDepotTile(d->xy)].m2 = d->index;
 		}
 	}
 
@@ -2231,16 +2231,16 @@ bool AfterLoadGame()
 			if (IsTileType(t, MP_CLEAR)) {
 				if (GetRawClearGround(t) == CLEAR_SNOW) {
 					SetClearGroundDensity(t, CLEAR_GRASS, GetClearDensity(t));
-					SetBit(_m[t].m3, 4);
+					SetBit(_main_map.m[t].m3, 4);
 				} else {
-					ClrBit(_m[t].m3, 4);
+					ClrBit(_main_map.m[t].m3, 4);
 				}
 			}
 			if (IsTileType(t, MP_TREES)) {
-				uint density = GB(_m[t].m2, 6, 2);
-				uint ground = GB(_m[t].m2, 4, 2);
-				uint counter = GB(_m[t].m2, 0, 4);
-				_m[t].m2 = ground << 6 | density << 4 | counter;
+				uint density = GB(_main_map.m[t].m2, 6, 2);
+				uint ground = GB(_main_map.m[t].m2, 4, 2);
+				uint counter = GB(_main_map.m[t].m2, 0, 4);
+				_main_map.m[t].m2 = ground << 6 | density << 4 | counter;
 			}
 		}
 	}
@@ -2351,23 +2351,23 @@ bool AfterLoadGame()
 			switch (GetTileType(t)) {
 				case MP_HOUSE:
 					if (GetHouseType(t) >= NEW_HOUSE_OFFSET) {
-						uint per_proc = _me[t].m7;
-						_me[t].m7 = GB(_m[t].m6, 2, 6) | (GB(_m[t].m3, 5, 1) << 6);
-						SB(_m[t].m3, 5, 1, 0);
-						SB(_m[t].m6, 2, 6, min(per_proc, 63));
+						uint per_proc = _main_map.me[t].m7;
+						_main_map.me[t].m7 = GB(_main_map.m[t].m6, 2, 6) | (GB(_main_map.m[t].m3, 5, 1) << 6);
+						SB(_main_map.m[t].m3, 5, 1, 0);
+						SB(_main_map.m[t].m6, 2, 6, min(per_proc, 63));
 					}
 					break;
 
 				case MP_INDUSTRY: {
-					uint rand = _me[t].m7;
-					_me[t].m7 = _m[t].m3;
-					_m[t].m3 = rand;
+					uint rand = _main_map.me[t].m7;
+					_main_map.me[t].m7 = _main_map.m[t].m3;
+					_main_map.m[t].m3 = rand;
 					break;
 				}
 
 				case MP_OBJECT:
-					_me[t].m7 = _m[t].m3;
-					_m[t].m3 = 0;
+					_main_map.me[t].m7 = _main_map.m[t].m3;
+					_main_map.m[t].m3 = 0;
 					break;
 
 				default:
@@ -2692,16 +2692,16 @@ bool AfterLoadGame()
 		for (TileIndex t = 0; t < map_size; t++) {
 			if (!IsTileType(t, MP_CLEAR) && !IsTileType(t, MP_TREES)) continue;
 			if (IsTileType(t, MP_CLEAR) && IsClearGround(t, CLEAR_FIELDS)) continue;
-			uint fence = GB(_m[t].m4, 5, 3);
+			uint fence = GB(_main_map.m[t].m4, 5, 3);
 			if (fence != 0 && IsTileType(TILE_ADDXY(t, 1, 0), MP_CLEAR) && IsClearGround(TILE_ADDXY(t, 1, 0), CLEAR_FIELDS)) {
 				SetFenceNE(TILE_ADDXY(t, 1, 0), fence);
 			}
-			fence = GB(_m[t].m4, 2, 3);
+			fence = GB(_main_map.m[t].m4, 2, 3);
 			if (fence != 0 && IsTileType(TILE_ADDXY(t, 0, 1), MP_CLEAR) && IsClearGround(TILE_ADDXY(t, 0, 1), CLEAR_FIELDS)) {
 				SetFenceNW(TILE_ADDXY(t, 0, 1), fence);
 			}
-			SB(_m[t].m4, 2, 3, 0);
-			SB(_m[t].m4, 5, 3, 0);
+			SB(_main_map.m[t].m4, 2, 3, 0);
+			SB(_main_map.m[t].m4, 5, 3, 0);
 		}
 	}
 

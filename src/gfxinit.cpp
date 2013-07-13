@@ -189,6 +189,9 @@ static void LoadSpriteTables()
 		);
 	}
 
+	/* Load clipboard graphics */
+	LoadGrfFile("clipboard.grf", SPR_CLIPBOARD_BASE, i++);
+
 	/* Initialize the unicode to sprite mapping table */
 	InitializeUnicodeGlyphMap();
 

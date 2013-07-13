@@ -159,7 +159,10 @@ static const SpriteID SPR_IMG_DELETE_RIGHT           = SPR_OPENTTD_BASE + 167;
 
 static const SpriteID SPR_WINDOW_DEFSIZE             = SPR_OPENTTD_BASE + 168;
 
-static const SpriteID SPR_SIGNALS_BASE  = SPR_OPENTTD_BASE + OPENTTD_SPRITE_COUNT;
+static const SpriteID SPR_CLIPBOARD_BASE  = SPR_OPENTTD_BASE + OPENTTD_SPRITE_COUNT;
+static const SpriteID CLIPBOARD_SPRITE_COUNT = 23;
+
+static const SpriteID SPR_SIGNALS_BASE  = SPR_CLIPBOARD_BASE + CLIPBOARD_SPRITE_COUNT;
 static const uint16 PRESIGNAL_SPRITE_COUNT                   =  48;
 static const uint16 PRESIGNAL_AND_SEMAPHORE_SPRITE_COUNT     = 112;
 static const uint16 PRESIGNAL_SEMAPHORE_AND_PBS_SPRITE_COUNT = 240;
@@ -1324,6 +1327,28 @@ static const SpriteID SPR_IMG_GOAL           = SPR_OPENTTD_BASE + 171;
 static const SpriteID SPR_IMG_GOAL_COMPLETED = SPR_OPENTTD_BASE + 172;
 static const SpriteID SPR_IMG_GOAL_BROKEN_REF= SPR_OPENTTD_BASE + 173;
 
+/* clipboard_gui.cpp */
+static const SpriteID SPR_IMG_CLIPBOARD                    = SPR_CLIPBOARD_BASE + 0;
+static const SpriteID SPR_IMG_CLIPBOARD_COPY               = SPR_CLIPBOARD_BASE + 1;
+static const SpriteID SPR_IMG_CLIPBOARD_PASTE              = SPR_CLIPBOARD_BASE + 2;
+static const SpriteID SPR_IMG_CLIPBOARD_NO_RAIL_CONVERTION = SPR_CLIPBOARD_BASE + 3;
+static const SpriteID SPR_IMG_CLIPBOARD_MIRROR_SIGNALS_OFF = SPR_CLIPBOARD_BASE + 4;
+static const SpriteID SPR_IMG_CLIPBOARD_MIRROR_SIGNALS_ON  = SPR_CLIPBOARD_BASE + 5;
+static const SpriteID SPR_IMG_CLIPBOARD_UPGRADE_BRIDGES    = SPR_CLIPBOARD_BASE + 6;
+static const SpriteID SPR_IMG_CLIPBOARD_ROTATE_LEFT        = SPR_CLIPBOARD_BASE + 7;
+static const SpriteID SPR_IMG_CLIPBOARD_ROTATE_RIGHT       = SPR_CLIPBOARD_BASE + 8;
+static const SpriteID SPR_IMG_CLIPBOARD_REFLECT_NE_SW      = SPR_CLIPBOARD_BASE + 9;
+static const SpriteID SPR_IMG_CLIPBOARD_REFLECT_NW_SE      = SPR_CLIPBOARD_BASE + 10;
+static const SpriteID SPR_IMG_TRANFORMATION_IDENTITY       = SPR_CLIPBOARD_BASE + 11;
+static const SpriteID SPR_IMG_TRANFORMATION_ROT_90_R       = SPR_CLIPBOARD_BASE + 12;
+static const SpriteID SPR_IMG_TRANFORMATION_ROT_180        = SPR_CLIPBOARD_BASE + 13;
+static const SpriteID SPR_IMG_TRANFORMATION_ROT_90_L       = SPR_CLIPBOARD_BASE + 14;
+static const SpriteID SPR_IMG_TRANFORMATION_REF_NE_SW      = SPR_CLIPBOARD_BASE + 15;
+static const SpriteID SPR_IMG_TRANFORMATION_REF_W_E        = SPR_CLIPBOARD_BASE + 16;
+static const SpriteID SPR_IMG_TRANFORMATION_REF_NW_SE      = SPR_CLIPBOARD_BASE + 17;
+static const SpriteID SPR_IMG_TRANFORMATION_REF_N_S        = SPR_CLIPBOARD_BASE + 18;
+static const SpriteID SPR_IMG_CLIPBOARD_HEIGHT_PANEL       = SPR_CLIPBOARD_BASE + 19;
+
 /* intro_gui.cpp, genworld_gui.cpp */
 static const SpriteID SPR_SELECT_TEMPERATE           = 4882;
 static const SpriteID SPR_SELECT_TEMPERATE_PUSHED    = 4883;
@@ -1431,6 +1456,11 @@ static const CursorID SPR_CURSOR_CLONE_TRAIN    = SPR_OPENTTD_BASE + 110;
 static const CursorID SPR_CURSOR_CLONE_ROADVEH  = SPR_OPENTTD_BASE + 111;
 static const CursorID SPR_CURSOR_CLONE_SHIP     = SPR_OPENTTD_BASE + 112;
 static const CursorID SPR_CURSOR_CLONE_AIRPLANE = SPR_OPENTTD_BASE + 113;
+
+/* Clipboard cursors */
+static const CursorID SPR_CURSOR_COPY           = SPR_CLIPBOARD_BASE + 20;
+static const CursorID SPR_CURSOR_PASTE          = SPR_CLIPBOARD_BASE + 21;
+static const CursorID SPR_CURSOR_ADJUST_HEIGHT  = SPR_CLIPBOARD_BASE + 22;
 
 /** Animation macro in table/animcursors.h (_animcursors[]) */
 

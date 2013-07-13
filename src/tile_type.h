@@ -12,6 +12,8 @@
 #ifndef TILE_TYPE_H
 #define TILE_TYPE_H
 
+#include "map_type.h"
+
 static const uint TILE_SIZE      = 16;            ///< Tiles are 16x16 "units" in size
 static const uint TILE_UNIT_MASK = TILE_SIZE - 1; ///< For masking in/out the inner-tile units.
 static const uint TILE_PIXELS    = 32;            ///< a tile is 32x32 pixels
@@ -66,14 +68,91 @@ enum TropicZone {
 	TROPICZONE_RAINFOREST = 2,      ///< Rainforest tile
 };
 
+typedef uint32 RawTileIndex; ///< general purpose tile index, not bounded to any map
+static const RawTileIndex INVALID_TILE_INDEX = (RawTileIndex)-1;
+
 /**
- * The index/ID of a Tile.
+ * The index/ID of a Tile on the main map.
+ *
+ * While this is just another name for RawTileIndex type, it should be used
+ * in context of tiles of the main tile array.
  */
-typedef uint32 TileIndex;
+typedef RawTileIndex TileIndex;
 
 /**
  * The very nice invalid tile marker
  */
 static const TileIndex INVALID_TILE = (TileIndex)-1;
+
+/** The index/ID of a tile bounded to a given map. */
+struct GenericTileIndex {
+	RawTileIndex index; ///< position of the tile in array
+	Map *map;           ///< the map that this index is bounded to
+
+	inline GenericTileIndex() : map(NULL) { }
+	inline GenericTileIndex(const GenericTileIndex &tile) : index(tile.index), map(tile.map) { }
+	inline GenericTileIndex(RawTileIndex index, Map *map) : index(index), map(map) { }
+
+	inline explicit GenericTileIndex(const TileIndex &tile) : index(tile)
+	{
+		extern MainMap _main_map;
+		this->map = &_main_map;
+	}
+
+	inline GenericTileIndex &operator += (TileIndexDiff diff) { return this->index += diff, *this; }
+	inline GenericTileIndex &operator -= (TileIndexDiff diff) { return this->index -= diff, *this; }
+	inline GenericTileIndex operator + (TileIndexDiff diff) const { return GenericTileIndex(this->index + diff, this->map); }
+	inline GenericTileIndex operator - (TileIndexDiff diff) const { return GenericTileIndex(this->index - diff, this->map); }
+
+	inline GenericTileIndex &operator ++ () { return ++this->index, *this; }
+	inline GenericTileIndex &operator -- () { return --this->index, *this; }
+	inline GenericTileIndex operator ++ (int) { return GenericTileIndex(this->index++, this->map); }
+	inline GenericTileIndex operator -- (int) { return GenericTileIndex(this->index--, this->map); }
+
+	inline bool operator == (const GenericTileIndex &tile) const { return this->index == tile.index && this->map == tile.map; }
+	inline bool operator != (const GenericTileIndex &tile) const { return this->index != tile.index || this->map != tile.map; }
+
+	inline bool operator <= (const GenericTileIndex &tile) const
+	{
+		assert(this->map == tile.map);
+		return this->index <= tile.index;
+	}
+
+	inline bool operator >= (const GenericTileIndex &tile) const
+	{
+		assert(this->map == tile.map);
+		return this->index >= tile.index;
+	}
+
+	inline bool operator < (const GenericTileIndex &tile) const
+	{
+		assert(this->map == tile.map);
+		return this->index < tile.index;
+	}
+
+	inline bool operator > (const GenericTileIndex &tile) const
+	{
+		assert(this->map == tile.map);
+		return this->index > tile.index;
+	}
+
+};
+
+/**
+ * Helper class to construct templatized functions operating on different
+ * types of tile indices.
+ */
+template <bool Tgeneric>
+struct TileIndexT;
+
+template <>
+struct TileIndexT<false> {
+	typedef TileIndex T;
+};
+
+template <>
+struct TileIndexT<true> {
+	typedef GenericTileIndex T;
+};
 
 #endif /* TILE_TYPE_H */

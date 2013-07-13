@@ -150,6 +150,12 @@ public:
 	{
 		return !this->success;
 	}
+
+	bool operator == (const CommandCost &cost) const
+	{
+		if (!this->success) return !cost.success && this->message == cost.message;
+		return cost.success && this->expense_type == cost.expense_type && this->cost == cost.cost;
+	}
 };
 
 /**
@@ -166,6 +172,7 @@ enum Commands {
 	CMD_BUILD_RAILROAD_TRACK,         ///< build a rail track
 	CMD_REMOVE_RAILROAD_TRACK,        ///< remove a rail track
 	CMD_BUILD_SINGLE_RAIL,            ///< build a single rail track
+	CMD_BUILD_SINGLE_RAILS,           ///< build a set of rail tracks on a single tile
 	CMD_REMOVE_SINGLE_RAIL,           ///< remove a single rail track
 	CMD_LANDSCAPE_CLEAR,              ///< demolish a tile
 	CMD_BUILD_BRIDGE,                 ///< build a bridge
@@ -313,6 +320,10 @@ enum Commands {
 
 	CMD_OPEN_CLOSE_AIRPORT,           ///< open/close an airport to incoming aircraft
 
+	CMD_COPY_TO_CLIPBOARD,            ///< copy selected tile area into the clipboard
+	CMD_PASTE_FROM_CLIPBOARD,         ///< paste content of the clipboard onto the map
+	CMD_INSTANT_COPY_PASTE,           ///< copy selected tile area and instantly paste it at a given location
+
 	CMD_END,                          ///< Must ALWAYS be on the end of this list!! (period)
 };
 
@@ -322,19 +333,20 @@ enum Commands {
  * This enums defines some flags which can be used for the commands.
  */
 enum DoCommandFlag {
-	DC_NONE                  = 0x000, ///< no flag is set
-	DC_EXEC                  = 0x001, ///< execute the given command
-	DC_AUTO                  = 0x002, ///< don't allow building on structures
-	DC_QUERY_COST            = 0x004, ///< query cost only,  don't build.
-	DC_NO_WATER              = 0x008, ///< don't allow building on water
-	DC_NO_RAIL_OVERLAP       = 0x010, ///< don't allow overlap of rails (used in buildrail)
-	DC_NO_TEST_TOWN_RATING   = 0x020, ///< town rating does not disallow you from building
-	DC_BANKRUPT              = 0x040, ///< company bankrupts, skip money check, skip vehicle on tile check in some cases
-	DC_AUTOREPLACE           = 0x080, ///< autoreplace/autorenew is in progress, this shall disable vehicle limits when building, and ignore certain restrictions when undoing things (like vehicle attach callback)
-	DC_NO_CARGO_CAP_CHECK    = 0x100, ///< when autoreplace/autorenew is in progress, this shall prevent truncating the amount of cargo in the vehicle to prevent testing the command to remove cargo
-	DC_ALL_TILES             = 0x200, ///< allow this command also on MP_VOID tiles
-	DC_NO_MODIFY_TOWN_RATING = 0x400, ///< do not change town rating
-	DC_FORCE_CLEAR_TILE      = 0x800, ///< do not only remove the object on the tile, but also clear any water left on it
+	DC_NONE                  = 0x0000, ///< no flag is set
+	DC_EXEC                  = 0x0001, ///< execute the given command
+	DC_AUTO                  = 0x0002, ///< don't allow building on structures
+	DC_QUERY_COST            = 0x0004, ///< query cost only,  don't build.
+	DC_NO_WATER              = 0x0008, ///< don't allow building on water
+	DC_NO_RAIL_OVERLAP       = 0x0010, ///< don't allow overlap of rails (used in buildrail)
+	DC_NO_TEST_TOWN_RATING   = 0x0020, ///< town rating does not disallow you from building
+	DC_BANKRUPT              = 0x0040, ///< company bankrupts, skip money check, skip vehicle on tile check in some cases
+	DC_AUTOREPLACE           = 0x0080, ///< autoreplace/autorenew is in progress, this shall disable vehicle limits when building, and ignore certain restrictions when undoing things (like vehicle attach callback)
+	DC_NO_CARGO_CAP_CHECK    = 0x0100, ///< when autoreplace/autorenew is in progress, this shall prevent truncating the amount of cargo in the vehicle to prevent testing the command to remove cargo
+	DC_ALL_TILES             = 0x0200, ///< allow this command also on MP_VOID tiles
+	DC_NO_MODIFY_TOWN_RATING = 0x0400, ///< do not change town rating
+	DC_FORCE_CLEAR_TILE      = 0x0800, ///< do not only remove the object on the tile, but also clear any water left on it
+	DC_PASTE                 = 0x1000, ///< this command is a part of a paste process
 };
 DECLARE_ENUM_AS_BIT_SET(DoCommandFlag)
 
