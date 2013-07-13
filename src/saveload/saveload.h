@@ -95,6 +95,7 @@ enum SLRefType {
 #define SL_TRIP 191
 #define SL_TOWN_CARGO_FACTOR 191
 #define SL_WORMHOLE_SIGNALS 192
+#define SL_ATC_SPEED 192
 
 /** Flags of a chunk. */
 enum ChunkType {
