@@ -2041,8 +2041,8 @@ static void CopyPastePlaceTunnel(GenericTileIndex tile, DiagDirection dir, uint 
 		if (_current_pasting->last_result.Failed() && _current_pasting->last_result.GetErrorMessage() == _current_pasting->err_message && _build_tunnel_endtile != 0) {
 			_current_pasting->err_tile = _build_tunnel_endtile;
 		} else if (signals) {
-		    GenericTileIndex entry_tile = signals==1?tile:end_tile;
-			if (!IsTunnelBridgeEntrance(entry_tile)) {
+			GenericTileIndex entry_tile = signals==1?tile:end_tile;
+			if (!HasWormholeSignals(entry_tile) || !IsTunnelBridgeEntrance(entry_tile)) {
 				_current_pasting->DoCommand(AsMainMapTile(entry_tile), 0, 0, CMD_BUILD_SIGNALS);
 				if (_current_pasting->last_result.Failed() && _current_pasting->last_result.GetErrorMessage() == _current_pasting->err_message) {
 					_current_pasting->err_tile = _build_tunnel_endtile;
@@ -2073,7 +2073,10 @@ static void CopyPastePlaceBridge(GenericTileIndex tile, DiagDirection dir, uint 
 	if (IsMainMapTile(tile)) {
 		_current_pasting->DoCommand(AsMainMapTile(end_tile), AsMainMapTile(tile), bridgetype | (rail_road_types << 8) | (transport_type << 15), CMD_BUILD_BRIDGE | CMD_MSG(STR_ERROR_CAN_T_BUILD_BRIDGE_HERE));
 		if (_current_pasting->last_result.Succeeded() && signals) {
-			_current_pasting->DoCommand(AsMainMapTile(signals==1?tile:end_tile), 0, 0, CMD_BUILD_SIGNALS);
+			GenericTileIndex entry_tile = signals==1?tile:end_tile;
+			if (!HasWormholeSignals(entry_tile) || !IsTunnelBridgeEntrance(entry_tile)) {
+				_current_pasting->DoCommand(AsMainMapTile(entry_tile), 0, 0, CMD_BUILD_SIGNALS);
+			}
 		}
 	} else {
 		switch (transport_type) {
