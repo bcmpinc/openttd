@@ -1241,10 +1241,10 @@ static void DrawBrigeSignalOnMiddelPart(const TileInfo *ti, TileIndex bridge_sta
 
 			if (variant == SIG_ELECTRIC) {
 				/* Normal electric signals are picked from original sprites. */
-				sprite = SPR_ORIGINAL_SIGNALS_BASE + ((position << 1) + !HasBit(_m[bridge_start_tile].m2, m2_position));
+				sprite = SPR_ORIGINAL_SIGNALS_BASE + ((position << 1) + !HasBit(GetTile(bridge_start_tile)->m2, m2_position));
 			} else {
 				/* All other signals are picked from add on sprites. */
-				sprite = SPR_SIGNALS_BASE + ((SIGTYPE_NORMAL - 1) * 16 + variant * 64 + (position << 1) + !HasBit(_m[bridge_start_tile].m2, m2_position));
+				sprite = SPR_SIGNALS_BASE + ((SIGTYPE_NORMAL - 1) * 16 + variant * 64 + (position << 1) + !HasBit(GetTile(bridge_start_tile)->m2, m2_position));
 			}
 
 			AddSortableSpriteToDraw(sprite, PAL_NONE, x, y, 1, 1, TILE_HEIGHT, z, false, 0, 0, BB_Z_SEPARATOR);

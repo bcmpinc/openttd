@@ -2218,12 +2218,12 @@ static bool CheckTrainStayInDepot(Train *v)
 
 static void HandleLastTunnelBridgeSignals(TileIndex tile, TileIndex end, DiagDirection dir, bool free)
 {
-	if (IsBridge(end) && _m[end].m2 > 0){
+	if (IsBridge(end) && GetTile(end)->m2 > 0){
 		/* Clearing last bridge signal. */
-		uint16 m = _m[end].m2;
+		uint16 m = GetTile(end)->m2;
 		byte i = 15;
 		while((m & 0x8000) == 0 && --i > 0) m <<= 1;
-		ClrBit(_m[end].m2, i);
+		ClrBit(GetTile(end)->m2, i);
 
 		uint x = TileX(end)* TILE_SIZE;
 		uint y = TileY(end)* TILE_SIZE;
@@ -2239,8 +2239,8 @@ static void HandleLastTunnelBridgeSignals(TileIndex tile, TileIndex end, DiagDir
 	}
 	if (free) {
 	/* Open up the wormhole and clear m2. */
-		_m[tile].m2 = 0;
-		_m[end].m2 = 0;
+		GetTile(tile)->m2 = 0;
+		GetTile(end)->m2 = 0;
 
 		if (IsTunnelBridgeWithSignRed(end)) {
 			ClrBitTunnelBridgeExit(end);
@@ -3234,7 +3234,7 @@ static void HandleSignalBehindTrain(Train *v, uint signal_number)
 			MarkTileDirtyByTile(tile);
 		}
 	} else if (IsBridge(v->tile) && signal_number <= 16) {
-		ClrBit(_m[v->tile].m2, signal_number);
+		ClrBit(GetTile(v->tile)->m2, signal_number);
 		MarkTileDirtyByTile(tile);
 	}
 }
@@ -3543,7 +3543,7 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 						}
 						/* flip signal in front to red on bridges*/
 						if (distance == 0 && v->load_unload_ticks <= 15 && IsBridge(v->tile)){
-							SetBit(_m[v->tile].m2, v->load_unload_ticks);
+							SetBit(GetTile(v->tile)->m2, v->load_unload_ticks);
 							MarkTileDirtyByTile(gp.new_tile);
 						}
 					}

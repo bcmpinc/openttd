@@ -1535,8 +1535,8 @@ CommandCost CmdRemoveSingleSignal(TileIndex tile, DoCommandFlag flags, uint32 p1
 			ClrBitTunnelBridgeExit(end);
 			ClrBitTunnelBridgeSignal(tile);
 			ClrBitTunnelBridgeSignal(end);
-			_m[tile].m2 = 0;
-			_m[end].m2 = 0;
+			GetTile(tile)->m2 = 0;
+			GetTile(end)->m2 = 0;
 			MarkTileDirtyByTile(tile);
 			MarkTileDirtyByTile(end);
 			return CommandCost(EXPENSES_CONSTRUCTION, cost);
