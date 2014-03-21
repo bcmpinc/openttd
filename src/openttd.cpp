@@ -57,6 +57,7 @@
 #include "hotkeys.h"
 #include "newgrf.h"
 #include "misc/getoptdata.h"
+#include "clipboard_func.h"
 #include "game/game.hpp"
 #include "game/game_config.hpp"
 #include "town.h"
@@ -1077,8 +1078,13 @@ void SwitchToMode(SwitchMode new_mode)
 		}
 	}
 #endif /* ENABLE_NETWORK */
-	/* Make sure all AI controllers are gone at quitting game */
-	if (new_mode != SM_SAVE_GAME) AI::KillAll();
+	if (new_mode != SM_SAVE_GAME) {
+		/* Make sure all AI controllers are gone at quitting game */
+		AI::KillAll();
+
+		/* Clear the clipboard */
+		ClearClipboard();
+	}
 
 	switch (new_mode) {
 		case SM_EDITOR: // Switch to scenario editor

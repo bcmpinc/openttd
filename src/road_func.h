@@ -14,6 +14,7 @@
 
 #include "core/bitmath_func.hpp"
 #include "road_type.h"
+#include "direction_func.h"
 #include "economy_func.h"
 
 /**
@@ -114,10 +115,37 @@ static inline RoadBits MirrorRoadBits(RoadBits r)
 static inline RoadBits RotateRoadBits(RoadBits r, DiagDirDiff rot)
 {
 	assert(IsValidRoadBits(r));
-	for (; rot > (DiagDirDiff)0; rot--) {
-		r = (RoadBits)(GB(r, 0, 1) << 3 | GB(r, 1, 3));
+	rot = (DiagDirDiff)((uint)rot % DIAGDIR_END);
+	return (RoadBits)((r | (r << DIAGDIR_END)) >> rot) & ROAD_ALL;
+}
+
+/**
+ * Transform RoadBits by given transformation.
+ * @param road_bits The RoadBits to transform.
+ * @param transformation Transformation to perform.
+ * @return The transformed RoadBits.
+ */
+static inline RoadBits TransformRoadBits(RoadBits road_bits, DirTransformation transformation)
+{
+	/* reflect agains X axis before rotating */
+	if (transformation & DTR_REFLECTION_BIT) {
+		/* firstly reflect against W-E axis by swapping odd and even bits (the numbers are bit positions)
+		 *
+		 * [ROAD_NW] [ROAD_NE]    0   3                            1   2      /N\
+		 * -------------------    -----  --reflect-against-W-E-->  -----     W-+-E
+		 * [ROAD_SW] [ROAD_SE]    1   2                            0   3      \S/
+		 *
+		 * bit 0 (ROAD_NW) swaps with bit 1 (ROAD_SW)
+		 * bit 2 (ROAD_SE) swaps with bit 3 (ROAD_NE) */
+		road_bits = SwapOddEvenBits(road_bits);
+		/* Now we have reflection agains W-E axis. To get reflection agains X axis we must rotate the
+		 * result left by 90 degree. To do that we can simply add 3 to the number of 90-degree
+		 * right rotations that we will be doing in the next step. We can safely overflow. */
+		transformation = (DirTransformation)(transformation + 3);
 	}
-	return r;
+
+	/* rotate */
+	return RotateRoadBits(road_bits, (DiagDirDiff)transformation);
 }
 
 /**

@@ -674,6 +674,23 @@ CommandCost PerformStationTileSlopeCheck(TileIndex north_tile, TileIndex cur_til
 	return GetErrorMessageFromLocationCallbackResult(cb_res, statspec->grf_prop.grffile, STR_ERROR_LAND_SLOPED_IN_WRONG_DIRECTION);
 }
 
+/**
+ * Find out whether a given station type has its own layout.
+ *
+ * The default TTD station layout can be overloaded by property 0E ("define custom layout"),
+ * property 0F ("copy custom layout") or by providing callback 24 ("custom station layout").
+ *
+ * @param statspec Station spec.
+ * @return \c false if the station always uses the default TTD layout, \c true otherwise.
+ */
+bool IsCustomLayoutStation(const StationSpec *statspec)
+{
+	if (statspec->lengths != 0) return true;
+
+	StationResolverObject object(statspec, NULL, INVALID_TILE, CBID_STATION_TILE_LAYOUT);
+	const SpriteGroup *group = object.Resolve();
+	return group != NULL && group->type == SGT_CALLBACK;
+}
 
 /**
  * Allocate a StationSpec to a Station. This is called once per build operation.

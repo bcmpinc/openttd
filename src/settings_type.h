@@ -313,6 +313,7 @@ struct ConstructionSettings {
 	uint8  extra_tree_placement;             ///< (dis)allow building extra trees in-game
 	uint8  command_pause_level;              ///< level/amount of commands that can't be executed while paused
 	byte   simulated_wormhole_signals;       ///< simulate signals in tunnel
+	uint8  clipboard_capacity;               ///< maximum copy/paste area size (width/height)
 
 	uint32 terraform_per_64k_frames;         ///< how many tile heights may, over a long period, be terraformed per 65536 frames?
 	uint16 terraform_frame_burst;            ///< how many tile heights may, over a short period, be terraformed?

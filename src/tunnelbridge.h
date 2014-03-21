@@ -20,7 +20,8 @@
  * @param end   The end of the tunnel or bridge.
  * @return length of bridge/tunnel middle
  */
-static inline uint GetTunnelBridgeLength(TileIndex begin, TileIndex end)
+template <bool Tgeneric>
+static inline uint GetTunnelBridgeLength(typename TileIndexT<Tgeneric>::T begin, typename TileIndexT<Tgeneric>::T end)
 {
 	int x1 = TileX(begin);
 	int y1 = TileY(begin);
@@ -29,6 +30,10 @@ static inline uint GetTunnelBridgeLength(TileIndex begin, TileIndex end)
 
 	return abs(x2 + y2 - x1 - y1) - 1;
 }
+/** @copydoc GetTunnelBridgeLength(TileIndexT<Tgeneric>::T,TileIndexT<Tgeneric>::T) */
+static inline uint GetTunnelBridgeLength(TileIndex begin, TileIndex end) { return GetTunnelBridgeLength<false>(begin, end); }
+/** @copydoc GetTunnelBridgeLength(TileIndexT<Tgeneric>::T,TileIndexT<Tgeneric>::T) */
+static inline uint GetTunnelBridgeLength(GenericTileIndex begin, GenericTileIndex end) { return GetTunnelBridgeLength<true>(begin, end); }
 
 extern TileIndex _build_tunnel_endtile;
 

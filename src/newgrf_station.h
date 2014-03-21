@@ -175,6 +175,8 @@ SpriteID GetCustomStationFoundationRelocation(const StationSpec *statspec, BaseS
 uint16 GetStationCallback(CallbackID callback, uint32 param1, uint32 param2, const StationSpec *statspec, BaseStation *st, TileIndex tile);
 CommandCost PerformStationTileSlopeCheck(TileIndex north_tile, TileIndex cur_tile, const StationSpec *statspec, Axis axis, byte plat_len, byte numtracks);
 
+bool IsCustomLayoutStation(const StationSpec *statspec);
+
 /* Allocate a StationSpec to a Station. This is called once per build operation. */
 int AllocateSpecToStation(const StationSpec *statspec, BaseStation *st, bool exec);
 

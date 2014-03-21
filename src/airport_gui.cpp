@@ -55,7 +55,7 @@ void CcBuildAirport(const CommandCost &result, TileIndex tile, uint32 p1, uint32
 static void PlaceAirport(TileIndex tile)
 {
 	if (_selected_airport_index == -1) return;
-	uint32 p2 = _ctrl_pressed;
+	uint32 p2 = _settings_game.station.adjacent_stations && _ctrl_pressed; // adjacent?
 	SB(p2, 16, 16, INVALID_STATION); // no station to join
 
 	uint32 p1 = AirportClass::Get(_selected_airport_class)->GetSpec(_selected_airport_index)->GetIndex();

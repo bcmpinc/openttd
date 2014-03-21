@@ -16,6 +16,7 @@
 #include "track_type.h"
 #include "direction_func.h"
 #include "slope_func.h"
+#include "direction_func.h"
 
 /**
  * Iterate through each set Track in a TrackBits value.
@@ -690,6 +691,45 @@ static inline bool IsUphillTrackdir(Slope slope, Trackdir dir)
 	assert(IsValidTrackdirForRoadVehicle(dir));
 	extern const TrackdirBits _uphill_trackdirs[];
 	return HasBit(_uphill_trackdirs[RemoveHalftileSlope(slope)], dir);
+}
+
+/**
+ * Transform a Track.
+ * @param track The Track to transform.
+ * @param transformation Transformation to perform.
+ * @return The transformed Track.
+ */
+static inline Track TransformTrack(Track track, DirTransformation transformation)
+{
+	extern const byte _track_transformation_map[DTR_END][TRACK_END];
+	return (Track)_track_transformation_map[transformation][track];
+}
+
+/**
+ * Transform a TrackBits.
+ * @param track_bits The TrackBits to transform.
+ * @param transformation Transformation to perform.
+ * @return The transformed TrackBits.
+ */
+static inline TrackBits TransformTrackBits(TrackBits track_bits, DirTransformation transformation)
+{
+	TrackBits ret = track_bits & ~TRACK_BIT_ALL;
+
+	Track t;
+	FOR_EACH_SET_TRACK(t, track_bits & TRACK_BIT_ALL) SetBit(ret, TransformTrack(t, transformation));
+
+	return ret;
+}
+
+/**
+ * Transform a Trackdir.
+ * @param trackdir The Trackdir to transform.
+ * @param transformation Transformation to perform.
+ * @return The transformed Trackdir.
+ */
+static inline Trackdir TransformTrackdir(Trackdir trackdir, DirTransformation transformation)
+{
+	return TrackExitdirToTrackdir(TransformTrack(TrackdirToTrack(trackdir), transformation), TransformDiagDir(TrackdirToExitdir(trackdir), transformation));
 }
 
 #endif /* TRACK_FUNC_H */

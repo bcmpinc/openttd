@@ -184,10 +184,11 @@ struct BuildDocksToolbarWindow : Window {
 				break;
 
 			case WID_DT_STATION: { // Build station button
+				uint32 p1 = _settings_game.station.adjacent_stations && _ctrl_pressed; // adjacent?
 				uint32 p2 = (uint32)INVALID_STATION << 16; // no station to join
 
 				/* tile is always the land tile, so need to evaluate _thd.pos */
-				CommandContainer cmdcont = { tile, _ctrl_pressed, p2, CMD_BUILD_DOCK | CMD_MSG(STR_ERROR_CAN_T_BUILD_DOCK_HERE), CcBuildDocks, "" };
+				CommandContainer cmdcont = { tile, p1, p2, CMD_BUILD_DOCK | CMD_MSG(STR_ERROR_CAN_T_BUILD_DOCK_HERE), CcBuildDocks, "" };
 
 				/* Determine the watery part of the dock. */
 				DiagDirection dir = GetInclinedSlopeDirection(GetTileSlope(tile));
