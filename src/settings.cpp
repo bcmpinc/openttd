@@ -813,7 +813,7 @@ static bool RedrawScreen(int32 p1)
 }
 
 /**
- * Redraw the smallmap after a colour scheme change.
+ * Redraw the smallmap after a colour scheme or a grid-related setting change.
  * @param p1 Callback parameter.
  * @return Always true.
  */
@@ -821,7 +821,8 @@ static bool RedrawSmallmap(int32 p1)
 {
 	BuildLandLegend();
 	BuildOwnerLegend();
-	SetWindowClassesDirty(WC_SMALLMAP);
+	/* inform the window that a grid-related setting changed and force it to redraw */
+	InvalidateWindowData(WC_SMALLMAP, 0, 2);
 	return true;
 }
 

@@ -2179,7 +2179,7 @@ public:
 		WID_SM_MAP_BORDER                            = ::WID_SM_MAP_BORDER,                            ///< Border around the smallmap.
 		WID_SM_MAP                                   = ::WID_SM_MAP,                                   ///< Panel containing the smallmap.
 		WID_SM_LEGEND                                = ::WID_SM_LEGEND,                                ///< Bottom panel to display smallmap legends.
-		WID_SM_BLANK                                 = ::WID_SM_BLANK,                                 ///< Empty button as placeholder.
+		WID_SM_TOGGLE_GRID                           = ::WID_SM_TOGGLE_GRID,                           ///< Button to show/hide smallmap grid.
 		WID_SM_ZOOM_IN                               = ::WID_SM_ZOOM_IN,                               ///< Button to zoom in one step.
 		WID_SM_ZOOM_OUT                              = ::WID_SM_ZOOM_OUT,                              ///< Button to zoom out one step.
 		WID_SM_CONTOUR                               = ::WID_SM_CONTOUR,                               ///< Button to select the contour view (height map).

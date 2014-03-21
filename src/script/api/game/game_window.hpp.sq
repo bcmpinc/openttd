@@ -1043,7 +1043,7 @@ void SQGSWindow_Register(Squirrel *engine)
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_MAP_BORDER,                         "WID_SM_MAP_BORDER");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_MAP,                                "WID_SM_MAP");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_LEGEND,                             "WID_SM_LEGEND");
-	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_BLANK,                              "WID_SM_BLANK");
+	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_TOGGLE_GRID,                        "WID_SM_TOGGLE_GRID");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_ZOOM_IN,                            "WID_SM_ZOOM_IN");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_ZOOM_OUT,                           "WID_SM_ZOOM_OUT");
 	SQGSWindow.DefSQConst(engine, ScriptWindow::WID_SM_CONTOUR,                            "WID_SM_CONTOUR");

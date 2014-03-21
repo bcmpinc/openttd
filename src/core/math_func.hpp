@@ -98,6 +98,20 @@ static inline T abs(const T a)
 }
 
 /**
+ * Get the sign of a value.
+ *
+ * @param x The value
+ * @return -1 if x compares less than 0, +1 if more, 0 otherwise
+ *
+ * @note the function returns 0 for any floating point zero (e.g. -0.0)
+ */
+template <typename T>
+static inline int sgn(const T x)
+{
+	return (int)(x > (T)0) - (int)(x < (T)0);
+}
+
+/**
  * Return the smallest multiple of n equal or greater than x
  *
  * @note n must be a power of 2
@@ -356,6 +370,24 @@ static inline int RoundDivSU(int a, uint b)
 		/* -0.5 is rounded to 0 */
 		return (a - ((int)b - 1) / 2) / (int)b;
 	}
+}
+
+/**
+ * Round up to the nearrest power of two.
+ * @param num the number to round
+ * @return the rounded number
+ * @note returns 0 if num == 0 or num > 2^31
+ */
+static inline uint32 RoundUpPow2(uint32 num)
+{
+	/* found at http://graphics.stanford.edu/~seander/bithacks.html */
+	--num;
+	num |= num >> 1;
+	num |= num >> 2;
+	num |= num >> 4;
+	num |= num >> 8;
+	num |= num >> 16;
+	return ++num;
 }
 
 uint32 IntSqrt(uint32 num);
