@@ -1057,7 +1057,7 @@ Window::~Window()
 	free(this->nested_array); // Contents is released through deletion of #nested_root.
 	delete this->nested_root;
 
-	this->window_class = WC_INVALID;
+	const_cast<volatile WindowClass &>(this->window_class) = WC_INVALID;
 }
 
 /**
